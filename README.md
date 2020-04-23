@@ -159,7 +159,8 @@ export VERIFIER_AUDIENCE="temp"
 gcloud run deploy verifier --image gcr.io/$ALICE_PROJECT_ID/alicesapp \
    --update-env-vars VERIFIER_AUDIENCE=$VERIFIER_AUDIENCE,BOBS_VM_SERVICE_ACCOUNT=$BOBS_VM_SERVICE_ACCOUNT,ALICE_PROJECT_ID=$ALICE_PROJECT_ID --project $ALICE_PROJECT_ID
 
-#   for now, (note we are not really allowing unauthenticated invocations since we check access at the api layer..but we'll come back to this)
+#   for now, (note we are not really allowing unauthenticated invocations since we check access at the api layer..but we'll come back to this in the "Enhancements" section below)
+
 #      Allow unauthenticated invocations to [verifier] (y/N)?  y  <<
 #	 Service [verifier] revision [verifier-00001-ziw] has been deployed and is serving 100 percent of traffic at https://verifier-nvm6vsykba-uc.a.run.app 
 
@@ -267,7 +268,12 @@ gcloud compute instances add-iam-policy-binding  cos-1 --member=user:alice@esode
 
 ### 4. Alice (user), verifies Bob's VM state
 
-Note at this point, `alice@esodemoapp2.com` can view the VM's metadata:
+Note at this point, `alice@esodemoapp2.com` can verify by looking at
+
+* VM's metadata
+* VM logs
+
+#### Verify metadata
 
 ```bash
 gcloud config set account alice@esodemoapp2.com
@@ -333,6 +339,19 @@ $ gcloud compute instances describe cos-1 --project $BOB_PROJECT_ID
     serviceAccounts:
     - email: 313701472922-compute@developer.gserviceaccount.com
 ```
+
+#### Verify Logging
+
+Bob can also grant ALice the IAM ability to view the audit logs for the VM on his project. 
+
+Todo this, BOb grants the `logging.Viewer` role to his project.  (note: the logging viewer allows inspection of all logs in that project; not just the VM)
+
+![images/log_iam.png](images/log_iam.png)
+
+Once thats one, Alice can directly view logs on the target project
+
+![images/log_viewer.png](images/log_viewer.png)
+
 
 ### 4. Alice
 
@@ -492,6 +511,13 @@ Further enhancements can be to use
 * `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see [this repo](https://github.com/salrashid123/restricted_security_gce)
 
 * TPM-based keys:  You can also transmit TPM encrypted data.  However, that requires a lot of other tooling and complexity.  For that see [https://github.com/salrashid123/tpm_key_distribution](https://github.com/salrashid123/tpm_key_distribution)
+
+* [Cloud Run Authentication](https://cloud.google.com/run/docs/authenticating/service-to-service).  Since Alice deployed the service to Cloud Run, she can use GCP itself to restrict access to the specific servcie account Bob's VM runs as:
+  In the following, we only allow an id_token that is owned by `313701472922-compute@developer.gserviceaccount.com` through. 
+  ![images/run_invoker.png](images/run_invoker.png)
+  Cloud Run will check the audience claim but will ofcourse do nothing to validate the instanceID, etc. You should doublecheck in your app always.
+
+* [IAM Conditions](https://cloud.google.com/iam/docs/conditions-overview):  You can enable IAM conditions on any of the GCP resources in question. Since Alice and Bob are using GCP, you can place a condition on when the TokenService or on the GCS bucket or on Alice's ability to view the VM or logging metadata.
 
 
 ## EndToEnd Encryption
