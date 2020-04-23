@@ -489,7 +489,10 @@ Further enhancements can be to use
 * [VPC-SC](https://cloud.google.com/vpc-service-controls):  This will ensure only requests originating from whitelisted projects and origin IPs are allowed API access to Alices GCS objects.  However, cross-orginzation VPC-SC isn't something i think is possible at the mment.  If Bob sets up a NAT egress endpoint, Alice can define a VPC prerimeter to include that egress
 * [Organizational Policy](https://cloud.google.com/resource-manager/docs/organization-policy/org-policy-constraints): Bob's orgianzation can have restrictions on the type of VM and specifications Bob can start (eg, ShieldedVM, OSLogin).  
 
-* `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see (this repo)[https://github.com/salrashid123/restricted_security_gce]
+* `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see [this repo](https://github.com/salrashid123/restricted_security_gce)
+
+* TPM-based keys:  You can also transmit TPM encrypted data.  However, that requires a lot of other tooling and complexity.  For that see [https://github.com/salrashid123/tpm_key_distribution](https://github.com/salrashid123/tpm_key_distribution)
+
 
 ## EndToEnd Encryption
   
