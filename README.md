@@ -1,6 +1,8 @@
 ## Remote Authorization and TokenDistributor for GCP VMs
 
-Sample workflow to distribute a secret between two parties where one party much directly deliver the secret to a _specific_ virtual machine.
+Sample workflow to distribute a secret between two parties where one party directly delivers the secret to a _specific_ virtual machine.  Normally on GCP, one party that owns some data will grant a service account or user permissions to some resource.  The owner of the service account has discretionary power on at that point and can assume the identity of that service account to access the same data.
+
+This flow inverts the access where the data owner shares some secret material that ultimately grants access to their data to a isolated system owned by the remote party  that has been attested by the data owner previously.  This isolated system in this case is a VM that the remote party owns but is configured such that not even the remote party VM owner can access it nor extract the secret that was delivered.
 
 In prose:
 
