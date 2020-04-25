@@ -35,6 +35,11 @@ The critical thing to note in this flow is the instance identity document provid
 
 If Alice is satisfied that the requesting VM is legitimate by inspecting its metadata earlier on (ie, what image is it running, is SSH disabled, etc), then if she gets a request with that document, she knows it must have originated from that same VM.
 
+As sequence:
+
+The flow shown below is not exactly what this repo has.  The variation is how Bob's VM attempts to get the token.  In this repo, i've exposed an http port which kicks off the process.  In the sequence diagram, Bob's VM polls periodically.   I picked the external trigger just for convenience.
+
+![images/sequence.png](images/sequence.png)
 ---
 
 The procedure below is one such setup;
