@@ -55,6 +55,7 @@ The protocol is pretty fragile and specific..but the core idea about usign the i
 
 Start with two projects where Alice will host the TokenService and the GCS file while Bob will run a VM that needs to prove and acquire a token from Alice's Serivce
 
+For me they were::
 * Alice: `alice-275112`
 * Bob:  `bobb-275112`
 
@@ -69,7 +70,6 @@ export ALICE_PROJECT_NUMBER=`gcloud projects describe $ALICE_PROJECT_ID --format
 gcloud config set project bobb-275112 
 export BOB_PROJECT_ID=`gcloud config get-value core/project`
 export BOB_PROJECT_NUMBER=`gcloud projects describe $BOB_PROJECT_ID --format="value(projectNumber)"`
-
 ```
 ### 1. Bob 
 
@@ -87,17 +87,21 @@ gcloud compute routers nats create nat-config \
     --auto-allocate-nat-external-ips \
     --nat-all-subnet-ip-ranges \
     --enable-logging --region us-central1 --project $BOB_PROJECT_ID
+```
 
-# Create the service account Bob VM will run as. 
-# THis service account will have **no** privileges at all;  We will use this to assert the VM's identity only.
+Create the service account Bob VM will run as. 
+This service account will have **no** privileges at all;  We will use this to assert the VM's identity only.
 
-# this is the service account bob's VM will initially identify itself as
+this is the service account bob's VM will initially identify itself as
+
+```bash
 export BOBS_VM_SERVICE_ACCOUNT=sa-bob@$BOB_PROJECT_ID.iam.gserviceaccount.com
 
 echo $BOBS_VM_SERVICE_ACCOUNT
   sa-bob@bobb-275112.iam.gserviceaccount.com
 
-gcloud iam service-accounts create sa-bob --display-name "Bob Service Account" --project $BOB_PROJECT_ID
+gcloud iam service-accounts create sa-bob \
+  --display-name "Bob Service Account" --project $BOB_PROJECT_ID
 ```
 
 ### 2. Alice
@@ -105,42 +109,58 @@ gcloud iam service-accounts create sa-bob --display-name "Bob Service Account" -
 Switch to Alice now and create a service that is intended to get distributed **TO** bob after verification.
 This service account does have access to the secret file.
 
+This is the service account that will have access to the alices file that she will distribute only to bob's VM later.
 ```bash
 cd alice/
 
-# This is the service account that will have access to the alices file that she will distribute only to bob's VM later.
 export SA_EMAIL_FOR_BOB=sa-for-bob@$ALICE_PROJECT_ID.iam.gserviceaccount.com
 echo $SA_EMAIL_FOR_BOB
   sa-for-bob@alice-275017.iam.gserviceaccount.com
+```
 
+Note the service account that Alice's service runs as.  THis is the default service account Cloud Run 
+This service account is used in verifying the audience field in the inbound id_token (i'll explain later)
 
-# Note the service account that Alice's service runs as.  THis is the default service account Cloud Run 
-# This service account is used in verifying the audience field in the inbound id_token (i'll explain later)
+```bash
 export DEFAULT_RUN_SA=$ALICE_PROJECT_NUMBER-compute@developer.gserviceaccount.com
-echo $DEFAULT_RUN_SA
+ echo $DEFAULT_RUN_SA
+```
 
-# Download a service account key that you will ultimately distribute
-# NOTE you should not do this in production; there are plenty of other ways to this step properly
-#   eg. Alice's serivce uses Hashicorp Vault; Alice Service generates a service account at runtime; Alices service sends a short-term token 
-#   to Bob, etc.   I'm just doing the steps here as a sample
+Download a service account key that you will ultimately distribute
+NOTE you should not do this in production; there are plenty of other ways to this step properly
+  eg. Alice's serivce uses Hashicorp Vault; Alice Service generates a service account at runtime; Alices service sends a short-term token 
+  to Bob, etc.   I'm just doing the steps here as a sample
 
-gcloud iam service-accounts create sa-for-bob --display-name "Service Account for Bobs Vm" --project $ALICE_PROJECT_ID
-gcloud iam service-accounts keys create sa-for-bob.json --iam-account=$SA_EMAIL_FOR_BOB  --project $ALICE_PROJECT_ID
+```bash
+gcloud iam service-accounts create sa-for-bob \
+  --display-name "Service Account for Bobs Vm" \
+  --project $ALICE_PROJECT_ID
+
+gcloud iam service-accounts keys create sa-for-bob.json \
+  --iam-account=$SA_EMAIL_FOR_BOB  \
+  --project $ALICE_PROJECT_ID
   created key [f6146640db65db70a766a6f850654fed588859ab] of type [json] as [sa-for-bob.json] for [sa-for-bob@alice-275112.iam.gserviceaccount.com]
+```
 
-# Create a GCS bucket where alice will save the secret files
+Create a GCS bucket where alice will save the secret files
 
+```bash
 export SHARED_BUCKET=$ALICE_PROJECT_ID-shared-bucket
+
 gsutil mb -p $ALICE_PROJECT_ID -l US-CENTRAL1 gs://$SHARED_BUCKET  
 
   Creating gs://alice-275112-shared-bucket/
+```
 
-# Allow the serice account Bob's VM will eventually get access to that bucket
-# Again, in production you will probably want to do this 'just in time' and not like this upfront..
+Allow the serice account Bob's VM will eventually get access to that bucket
+Again, in production you will probably want to do this 'just in time' and not like this upfront..
 
+```bash
 gsutil iam ch serviceAccount:$SA_EMAIL_FOR_BOB:objectViewer gs://$SHARED_BUCKET
+```
 
-# create and upload the file
+create and upload the file
+```bash
 echo "meet me at..." > secret.txt
 
 gsutil cp secret.txt gs://$SHARED_BUCKET/
@@ -155,35 +175,43 @@ gcloud services enable containerregistry.googleapis.com secretmanager.googleapis
 
 docker build -t gcr.io/$ALICE_PROJECT_ID/alicesapp .
 docker push gcr.io/$ALICE_PROJECT_ID/alicesapp
+```
 
-# We will now deploy a _staging_ version of alice's token service
-#  we're only doing this as a consequence of how this app is structured:  Alice's app uses some environment variabes
-# it only knows about later..i know, this is a bit lazy and i can ofcourse improve on this...
+We will now deploy a _staging_ version of alice's token service
+  we're only doing this as a consequence of how this app is structured:  Alice's app uses some environment variabes
+  it only knows about later..i know, this is a bit lazy and i can ofcourse improve on this...
 
+```bash
 export BOBS_VM_ID="temp"
 export VERIFIER_AUDIENCE="temp"
 
 gcloud run deploy verifier --image gcr.io/$ALICE_PROJECT_ID/alicesapp \
    --update-env-vars VERIFIER_AUDIENCE=$VERIFIER_AUDIENCE,BOBS_VM_SERVICE_ACCOUNT=$BOBS_VM_SERVICE_ACCOUNT,ALICE_PROJECT_ID=$ALICE_PROJECT_ID --project $ALICE_PROJECT_ID
+```
 
-#   for now, (note we are not really allowing unauthenticated invocations since we check access at the api layer..but we'll come back to this in the "Enhancements" section below)
+  for now, (note we are not really allowing unauthenticated invocations since we check access at the api layer..but we'll come back to this in the "Enhancements" section below).  Select yest to `Allow unauthenticated invocations to`
 
-#      Allow unauthenticated invocations to [verifier] (y/N)?  y  <<
-#	 Service [verifier] revision [verifier-00001-ziw] has been deployed and is serving 100 percent of traffic at https://verifier-nvm6vsykba-uc.a.run.app 
+  you should see the name of the Cloud Run instance:
+```bash
+   Service [verifier] revision [verifier-00001-ziw] has been deployed 
+     and is serving 
+     100 percent of traffic at https://verifier-nvm6vsykba-uc.a.run.app 
+```
 
-# Note the endpoint for Alice's Tokens Service: 
+Note the endpoint for Alice's Tokens Service: 
 
+```bash
 export VERIFICATION_ENDPOINT=https://verifier-nvm6vsykba-uc.a.run.app 
+```
 
-# try an endpoint that doens't ask for proof the request is from Bobs VM
+try an endpoint that doens't ask for proof the request is from Bobs VM
 
+```bash
 $ curl $VERIFICATION_ENDPOINT
 ok
 
-# and one that does
 $ curl $VERIFICATION_ENDPOINT/verify
 :(
-
 ```
 
 ### 3. Bob
@@ -192,10 +220,10 @@ Bob Deploy VM
 
 ```bash
 cd ../../bob/
-
-# Edit `app/server.go`, change it to the value of `$VERIFICATION_ENDPOINT` and `$SHARED_BUCKET`
-# in my case they were:
 ```
+
+Edit `app/server.go`, change it to the value of `$VERIFICATION_ENDPOINT` and `$SHARED_BUCKET`
+in my case they were:
 
 ```golang
 	targetAudience = "https://verifier-nvm6vsykba-uc.a.run.app"  
@@ -255,22 +283,28 @@ We are far from done.  We need to find out what the unique `vm_id` is as well as
 
 We also need to allow alice's (User) command line ability to inspect the VM's metadata
 
+Find Bob's server external address and instanceID
+
 ```bash
-
-# Find Bob's server external address and instanceID
-
 export BOBS_SERVER=`gcloud compute instances describe cos-1 --project $BOB_PROJECT_ID --format="value(networkInterfaces[0].accessConfigs.natIP)"`
 export BOBS_INSTANCE_1_ID=`gcloud compute instances describe cos-1 --format="value(id)" --project $BOB_PROJECT_ID`
 
 echo $BOBS_SERVER
 echo $BOBS_INSTANCE_1_ID
+```
 
-# in my case they were:
+in my case they were:
+```bash
 # 34.71.31.232
 # 1079298362778070454
+```
 
-# no grant a **User** in alice's company ability to inspect the VM
-gcloud compute instances add-iam-policy-binding  cos-1 --member=user:alice@esodemoapp2.com --role roles/compute.viewer --project $BOB_PROJECT_ID
+Now grant a **User** in alice's company ability to inspect the VM
+```bash
+gcloud compute instances add-iam-policy-binding  cos-1 \
+  --member=user:alice@esodemoapp2.com \
+  --role roles/compute.viewer \
+  --project $BOB_PROJECT_ID
 ```
 
 ### 4. Alice (user), verifies Bob's VM state
@@ -364,46 +398,61 @@ Once thats one, Alice can directly view logs on the target project
 
 Alice is now satisfied that the VM is in a correct state and will authorize that `vmID` access to the secret.
 
+switch to ALice's home directory; Convert the private key to base64 and verify you still have the env-vars set
+
 ```bash
-# switch to ALice's home directory
-
 cd alice/
-
-# Convert the private key to base64 and verify you still have the env-vars set
 
 base64 sa-for-bob.json | tr -d '\n\r' >sa-for-bob.json.b64
 
 export DEFAULT_RUN_SA=$ALICE_PROJECT_NUMBER-compute@developer.gserviceaccount.com
 echo $BOBS_INSTANCE_1_ID
 echo $DEFAULT_RUN_SA
+```
+In my case they were
+```
+1079298362778070454
+291362580151-compute@developer.gserviceaccount.com
+```
 
-# In my case they were
-# 1079298362778070454
-# 291362580151-compute@developer.gserviceaccount.com
+Alice uses Cloud Secrets to save a symmetric key and the actual service account private key.
+Alice will authorize sher token service access to these secrets
 
-# Alice uses Cloud Secrets to save a symmetric key and the actual service account private key.
-# Alice will authorize sher token service access to these secrets
-
+```bash
 export AES_KEY_FOR_INSTANCE_1="somesecret"
 echo -n $AES_KEY_FOR_INSTANCE_1 | gcloud beta secrets create aes-$BOBS_INSTANCE_1_ID --replication-policy=automatic   --project $ALICE_PROJECT_ID --data-file=-
 gcloud beta secrets create rsa-$BOBS_INSTANCE_1_ID --replication-policy=automatic --data-file=sa-for-bob.json.b64 --project $ALICE_PROJECT_ID
 
-gcloud beta secrets add-iam-policy-binding aes-$BOBS_INSTANCE_1_ID --member=serviceAccount:$DEFAULT_RUN_SA --role=roles/secretmanager.secretAccessor  --project $ALICE_PROJECT_ID -q
-gcloud beta secrets add-iam-policy-binding rsa-$BOBS_INSTANCE_1_ID --member=serviceAccount:$DEFAULT_RUN_SA --role=roles/secretmanager.secretAccessor  --project $ALICE_PROJECT_ID -q
+gcloud beta secrets add-iam-policy-binding aes-$BOBS_INSTANCE_1_ID \
+  --member=serviceAccount:$DEFAULT_RUN_SA \
+  --role=roles/secretmanager.secretAccessor  \
+  --project $ALICE_PROJECT_ID -q
 
-## The two secrets are formated like this:
+gcloud beta secrets add-iam-policy-binding rsa-$BOBS_INSTANCE_1_ID \
+  --member=serviceAccount:$DEFAULT_RUN_SA \
+  --role=roles/secretmanager.secretAccessor  \
+  --project $ALICE_PROJECT_ID -q
+```
+
+The two secrets are formated like this:
+```
 #  AESKeyName:    aes-<vm_instance_id>
 #  RSAKeyName:    rsa-<vm_instance_id>
+```
 
-# Once Alice's service authenticates the inbound API call from Bob's VM, it will validate the JWT and then use
-# the secrets API using the instanceiD in the name
-# This way, you can have unique secrets per instance
+Once Alice's service authenticates the inbound API call from Bob's VM, it will validate the JWT and then use
+the secrets API using the instanceiD in the name
+This way, you can have unique secrets per instance
 
-# Redeploy Alice's app again and this time provide some more env vars that was left out earlier (i.,e the audience field for 'itself')
+Redeploy Alice's app again and this time provide some more env vars that was left out earlier (i.,e the audience field for 'itself')
+
+
+```bash
 export VERIFICATION_ENDPOINT=https://verifier-nvm6vsykba-uc.a.run.app 
 
 gcloud run deploy verifier --image gcr.io/$ALICE_PROJECT_ID/alicesapp \
-   --update-env-vars VERIFIER_AUDIENCE=$VERIFICATION_ENDPOINT,BOBS_VM_SERVICE_ACCOUNT=$BOBS_VM_SERVICE_ACCOUNT  --project $ALICE_PROJECT_ID
+   --update-env-vars VERIFIER_AUDIENCE=$VERIFICATION_ENDPOINT,BOBS_VM_SERVICE_ACCOUNT=$BOBS_VM_SERVICE_ACCOUNT \
+   --project $ALICE_PROJECT_ID
 ```
 
 ### 5. Bob
@@ -450,21 +499,31 @@ gcloud compute instances add-iam-policy-binding  cos-1 --member=user:alice@esode
   gcloud compute instances describe cos-1 --format="value(id)" --project $BOB_PROJECT_ID
 
 - as Alice grants the new vmID access to secrets
-```
+
+```bash
 export AES_KEY_FOR_INSTANCE_1="somesecret"
 echo -n $AES_KEY_FOR_INSTANCE_1 | gcloud beta secrets create aes-$BOBS_INSTANCE_1_ID --replication-policy=automatic   --project $ALICE_PROJECT_ID --data-file=-
 
-gcloud beta secrets create rsa-$BOBS_INSTANCE_1_ID --replication-policy=automatic --data-file=sa-for-bob.json.b64 --project $ALICE_PROJECT_ID
+gcloud beta secrets create rsa-$BOBS_INSTANCE_1_ID \
+  --replication-policy=automatic \
+  --data-file=sa-for-bob.json.b64 \
+  --project $ALICE_PROJECT_ID
 
-gcloud beta secrets add-iam-policy-binding aes-$BOBS_INSTANCE_1_ID --member=serviceAccount:$DEFAULT_RUN_SA --role=roles/secretmanager.secretAccessor  --project $ALICE_PROJECT_ID -q
-gcloud beta secrets add-iam-policy-binding rsa-$BOBS_INSTANCE_1_ID --member=serviceAccount:$DEFAULT_RUN_SA --role=roles/secretmanager.secretAccessor  --project $ALICE_PROJECT_ID -q
+gcloud beta secrets add-iam-policy-binding aes-$BOBS_INSTANCE_1_ID \
+  --member=serviceAccount:$DEFAULT_RUN_SA \
+  --role=roles/secretmanager.secretAccessor  \
+  --project $ALICE_PROJECT_ID -q
 
+gcloud beta secrets add-iam-policy-binding rsa-$BOBS_INSTANCE_1_ID \
+  --member=serviceAccount:$DEFAULT_RUN_SA \
+  --role=roles/secretmanager.secretAccessor \
+  --project $ALICE_PROJECT_ID -q
 ```
 - as Bob
 
 Access VM's endpoint
 
-```
+```bash
 $ curl -s http://$BOBS_SERVER:8080/
 :) AES Key [somesecret]       GCS Data [meet me at...]
 ```
