@@ -104,6 +104,21 @@ gcloud iam service-accounts create sa-bob \
   --display-name "Bob Service Account" --project $BOB_PROJECT_ID
 ```
 
+Note: we are using just the email to denote the VM's identity to Alice's server.  The better signal is using the `uniqueId` field shown below.  That value is immutable always and is a better signal than the email field.
+
+```bash
+$ gcloud iam service-accounts describe sa-bob@$BOB_PROJECT_ID.iam.gserviceaccount.com
+displayName: Bob Service Account
+email: sa-bob@$BOB_PROJECT_ID.iam.gserviceaccount.com
+name: projects/$BOB_PROJECT_ID/serviceAccounts/sa-bob@$BOB_PROJECT_ID.iam.gserviceaccount.com
+oauth2ClientId: '102709880403863933213'
+projectId: $BOB_PROJECT_ID
+uniqueId: '102709880403863933213'
+```
+
+TODO: update procedure and Alice's Verify code to use `sub` field instead of `email`
+
+
 ### 2. Alice
 
 Switch to Alice now and create a service that is intended to get distributed **TO** bob after verification.
@@ -214,6 +229,8 @@ $ curl $VERIFICATION_ENDPOINT/verify
 :(
 ```
 
+Note: The verify application we run here will use the identity document `BOBS_VM` will send and within the verify application the `email` claim is checked to match `$BOBS_VM_SERVICE_ACCOUNT`.  The better signal is to use the `sub` field which shows up as a opaque, immutable number.  In the example above, Bob's VM service account had is `"sub":"100147106996764479085"` which is its `uniqueId` field. 
+
 ### 3. Bob
 
 Bob Deploy VM 
@@ -251,6 +268,13 @@ cd app
 # Note the image hash
 $ docker push gcr.io/$BOB_PROJECT_ID/bobsapp
       latest: digest: sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2 size: 949
+
+$ gcloud container images describe gcr.io/$BOB_PROJECT_ID/bobsapp
+image_summary:
+  digest: sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
+  fully_qualified_digest: gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
+  registry: gcr.io
+  repository: $BOB_PROJECT_ID/bobsapp
 
 export VALIDATED_IMAGE=gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
 echo $VALIDATED_IMAGE
