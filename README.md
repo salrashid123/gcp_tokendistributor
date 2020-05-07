@@ -111,9 +111,9 @@ $ gcloud iam service-accounts describe sa-bob@$BOB_PROJECT_ID.iam.gserviceaccoun
 displayName: Bob Service Account
 email: sa-bob@$BOB_PROJECT_ID.iam.gserviceaccount.com
 name: projects/$BOB_PROJECT_ID/serviceAccounts/sa-bob@$BOB_PROJECT_ID.iam.gserviceaccount.com
-oauth2ClientId: '102709880403863933213'
+oauth2ClientId: '100147106996764479085'
 projectId: $BOB_PROJECT_ID
-uniqueId: '102709880403863933213'
+uniqueId: '100147106996764479085'
 ```
 
 TODO: update procedure and Alice's Verify code to use `sub` field instead of `email`
