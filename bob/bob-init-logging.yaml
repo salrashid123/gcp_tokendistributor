@@ -1,0 +1,91 @@
+#cloud-config
+
+users:
+- name: cloudservice
+  uid: 2000
+
+write_files:
+
+- path: /etc/google-fluentd/fluentd.conf
+  permissions: 0644
+  owner: root
+  content: |
+    # This config comes 
+    # https://stackoverflow.com/questions/51014295/google-cloud-container-optimized-os-host-logs-to-stackdriver
+    <source>
+        type systemd
+        path /var/log/journal
+        filters [{ "SYSLOG_IDENTIFIER": "systemd" }]
+        pos_file /var/log/gcp-journald.pos
+        tag cos_system
+        read_from_head true
+    </source>
+    <source>
+        type systemd
+        filters [{ "SYSLOG_IDENTIFIER": "docker" }]
+        path /var/log/journal
+        pos_file /var/log/gcp-app.pos
+        tag cos_containers
+        read_from_head true
+    </source>    
+    <match **>
+      @type copy
+       <store>
+        @type google_cloud
+        buffer_type file
+        buffer_path /var/log/google-fluentd/cos-system.buffer
+        buffer_queue_full_action block
+        buffer_chunk_limit 2M
+        buffer_queue_limit 6
+        flush_interval 5s
+        max_retry_wait 30
+        disable_retry_limit
+        num_threads 2
+      </store>
+    </match>
+
+- path: /etc/systemd/system/logger.service
+  permissions: 0644
+  owner: root
+  content: |
+    [Unit]
+    Description=logging docker container
+    Requires=network-online.target
+    After=network-online.target
+
+    [Service]
+    Environment="HOME=/home/logger"
+    ExecStartPre=/usr/share/google/dockercfg_update.sh
+    ExecStartPre=/bin/mkdir -p /var/log/google-fluentd/
+    ExecStartPre=-/usr/bin/docker rm -fv logger
+    ExecStart=/usr/bin/docker run --rm -u 0 \
+       --name=logger \
+       -v /var/log/:/var/log/ \
+       -v /var/lib/docker/containers:/var/lib/docker/containers \
+       -v /etc/google-fluentd/:/etc/fluent/config.d/ \
+       --env='FLUENTD_ARGS=-q' \
+       gcr.io/google-containers/fluentd-gcp:2.0.17
+    Restart=always
+    RestartSec=1
+
+- path: /etc/systemd/system/cloudservice.service
+  permissions: 0644
+  owner: root
+  content: |
+    [Unit]
+    Description=Start a simple docker container
+    Wants=gcr-online.target
+    After=gcr-online.target
+
+    [Service]
+    Environment="HOME=/home/cloudservice"
+    ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
+    ExecStart=/usr/bin/docker run --rm -u 2000 -p 8080:8080 --name=mycloudservice gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
+    ExecStop=/usr/bin/docker stop mycloudservice
+    ExecStopPost=/usr/bin/docker rm mycloudservice
+
+runcmd:
+- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT   
+- systemctl daemon-reload
+- systemctl start logger.service
+- systemctl start cloudservice.service

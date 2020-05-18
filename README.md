@@ -303,6 +303,20 @@ gcloud compute instances create cos-1   --image-family cos-stable     --image-pr
      --metadata-from-file user-data=bob-init.yaml   --project $BOB_PROJECT_ID
 ```
 
+(optional) Note, you would like Stackdriver Logging enabled, you need to first allow the VM's service account logging write access
+  ```bash
+  gcloud projects add-iam-policy-binding $BOB_PROJECT_ID \
+    --member serviceAccount:$BOBS_VM_DEFAULT_SERVICE_ACCOUNT \
+    --role roles/logging.logWriter
+  ```
+  Then enable fluentd within COS as shown in `bob-init-logging.yaml` file
+ 
+(optional) By default, the COS images disable SSH access.  If this is the first deployment of this tutorial, suggest commenting out iptables line in the yaml and ssh into the VM.  You can then view the `systemd` logs by typing `journalctl -l`
+
+  ```bash
+  - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT   
+  ```
+
 We are far from done.  We need to find out what the unique `vm_id` is as well as let Alice's TokenService know about it.
 
 We also need to allow alice's (User) command line ability to inspect the VM's metadata
