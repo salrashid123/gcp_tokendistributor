@@ -103,6 +103,12 @@ func verifyhandler(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Authenticated email: %v", idDoc.Email)
 
+		if idDoc.Email != bobsServiceAccount {
+			log.Printf("Authorized origin email does not match email in Identity Document")
+			http.Error(w, sad, http.StatusInternalServerError)
+			return
+		}
+
 		ctx := context.Background()
 
 		client, err := secretmanager.NewClient(ctx)

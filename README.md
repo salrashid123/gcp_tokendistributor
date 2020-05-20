@@ -303,7 +303,7 @@ gcloud compute instances create cos-1   --image-family cos-stable     --image-pr
      --metadata-from-file user-data=bob-init.yaml   --project $BOB_PROJECT_ID
 ```
 
->> (optional) Note, you would like Stackdriver Logging enabled, you need to first allow the VM's service account logging write access
+>> (optional) Note, if you would like Stackdriver Monitoring and Logging enabled, you need to first allow the VM's service account logging write access
   ```bash
   gcloud projects add-iam-policy-binding $BOB_PROJECT_ID \
     --member serviceAccount:$BOBS_VM_DEFAULT_SERVICE_ACCOUNT \
@@ -628,6 +628,7 @@ Further enhancements can be to use
 
 * [IAM Conditions](https://cloud.google.com/iam/docs/conditions-overview):  You can enable IAM conditions on any of the GCP resources in question. Since Alice and Bob are using GCP, you can place a condition on when the TokenService or on the GCS bucket or on Alice's ability to view the VM or logging metadata.
 
+* [OS Config Agent](https://cloud.google.com/compute/docs/manage-os):  You can also install the OS config agent on the VM.  This agent will report specifications of the packages installed on the VM.  However, this agent can also be configured to [update packages](https://cloud.google.com/compute/docs/os-config-management) by the VM's admin by updating its metadata from outside the VM.  If you do not want Bob to dynamically update a packages on the VM, do not enable this feature.
 
 ## EndToEnd Encryption
   
