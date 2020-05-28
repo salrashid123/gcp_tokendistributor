@@ -618,7 +618,7 @@ Further enhancements can be to use
 
 * `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see [this repo](https://github.com/salrashid123/restricted_security_gce)
 
-* TPM-based keys:  You can also transmit TPM encrypted data.  However, that requires a lot of other tooling and complexity.  For that see [https://github.com/salrashid123/tpm_key_distribution](https://github.com/salrashid123/tpm_key_distribution).  To enable TPM access from COS instance, run the COS container as root as `uid=0` `--privleged`:
+* TPM-based keys:  You can also transmit TPM encrypted data.  However, that requires a lot of other tooling and complexity.  For that see [https://github.com/salrashid123/tpm_key_distribution](https://github.com/salrashid123/tpm_key_distribution).  To enable TPM access from COS instance, run the COS container as root as `uid=0` and allow device map: `--device=/dev/tpm0:/dev/tpm0`:
 
 ```yaml
 #cloud-config
@@ -636,7 +636,7 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm  -u 0 --privileged -v /dev/tpm0:/dev/tpm0 -p 8080:8080 --name=mycloudservice gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
+    ExecStart=/usr/bin/docker run --rm  -u 0 --device=/dev/tpm0:/dev/tpm0 -p 8080:8080 --name=mycloudservice gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
