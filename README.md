@@ -1,8 +1,8 @@
 ## Remote Authorization and TokenDistributor for GCP VMs
 
-Sample workflow to distribute a secret between two parties where one party directly delivers the secret to a _specific_ virtual machine.  Normally on GCP, one party that owns some data will grant a service account or user permissions to some resource.  The owner of the service account has discretionary power on at that point and can assume the identity of that service account to access the same data.
+Sample workflow to distribute a secret between two parties where one party directly delivers the secret to a _specific_ virtual machine.  Normally on GCP, one party that owns some data will grant a `service account` or `user` permissions to that data resource.  The owner of that service account now has discretionary power on the data and can access that data from anywhere by default by assuming the identity of that service account he/she has permission over.
 
-This flow inverts the access where the data owner shares some secret material that ultimately grants access to their data to a isolated system owned by the remote party  that has been attested by the data owner previously.  This isolated system in this case is a VM that the remote party owns but is configured such that not even the remote party VM owner can access it nor extract the secret that was delivered.
+This flow inverts the access where the data owner shares some secret material that ultimately has permissions to their data but **ONLY** to a isolated system owned by the remote party.  The data owner will share access _exclusively__ to an isolated system such that the credentials cannot be exported.  The isolated system in this case is a VM that the remote party owns but is configured such that not even the remote party VM owner can access it nor extract the secret that was delivered by the data owner.
 
 In prose:
 
@@ -10,24 +10,23 @@ In prose:
 
 Bob Starts a VM
   * Bob's VM runs as `serviceAccount` that has no permissions nor any no ssh access.
-  * Bob (user) gives Alice (user) access to read that VM's startup and external runtime metadata
-  * Bob can also give Alice access to view Stackdriver Logs for that VM
+  * Bob (user) gives Alice (user) access to read that VM's startup, logs and external runtime metadata
 
 Alice authorizes her `"TokenDistribution"` service
   * Alice (user) reads the VM's metadata, startup script and notes the `instanceID`, `serviceAccount` and other fields for that VM
-  * After Alice (user) is satisfied the VM integrity (i.,e running a known docker container, no ssh access)
-  * Alice manages a custom API server `TokenDistribution` that any distributes secrets and tokens to VMs that she authorized
-  * Alice adds the serivceAccount and instanceID as "authorized" VMs and are entitled to access a secret which inturn grants access to the file.
+  * Alice (user) is satisfied the VM integrity (i.,e running a known docker container, no ssh access)
+  * Alice manages a custom API server `TokenDistribution` that  distributes secrets and tokens to VMs that she authorizes
+  * Alice adds the `serivceAccount` and `instanceID` as "authorized" VMs and are entitled to access a secret which inturn grants access to the data file.
 
 Bobs VM contacts "TokenDistribution" service
   * Bobs VM uses its [instance_identity_document](https://cloud.google.com/compute/docs/instances/verifying-instance-identity#verify_signature) as an auth token to call Alice's TokenDistribution endpoint.
-  * Alice's verifies the identity document is signed by Google
+  * Alice's verifies the `identity document` is signed by Google
   * Alice's service checks `instanceID`, `serviceAccount`, `audience` and other claims in the document.
   * Alice's service now knows the VM that contacted it is the VM she authorized earlier.
-  * Alice's service can now distribute  credentials back on the API call
+  * Alice's service can now distribute the data access credentials she owns back on the API call to Bob
   * Bob's service now has credentials to access the secret file
 
-Bobs acquires files
+Bobs acquires data file
   * Bob's VM now bootstraps a GCS client with those newly acquired credentials and access the files.
 
 
@@ -619,7 +618,36 @@ Further enhancements can be to use
 
 * `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see [this repo](https://github.com/salrashid123/restricted_security_gce)
 
-* TPM-based keys:  You can also transmit TPM encrypted data.  However, that requires a lot of other tooling and complexity.  For that see [https://github.com/salrashid123/tpm_key_distribution](https://github.com/salrashid123/tpm_key_distribution)
+* TPM-based keys:  You can also transmit TPM encrypted data.  However, that requires a lot of other tooling and complexity.  For that see [https://github.com/salrashid123/tpm_key_distribution](https://github.com/salrashid123/tpm_key_distribution).  To enable TPM access from COS instance, run the COS container as root as `uid=0` `--privleged`:
+
+```yaml
+#cloud-config
+
+write_files:
+- path: /etc/systemd/system/cloudservice.service
+  permissions: 0644
+  owner: root
+  content: |
+    [Unit]
+    Description=Start a simple docker container
+    Wants=gcr-online.target
+    After=gcr-online.target
+
+    [Service]
+    Environment="HOME=/home/cloudservice"
+    ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
+    ExecStart=/usr/bin/docker run --rm  -u 0 --privileged -v /dev/tpm0:/dev/tpm0 -p 8080:8080 --name=mycloudservice gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
+    ExecStop=/usr/bin/docker stop mycloudservice
+    ExecStopPost=/usr/bin/docker rm mycloudservice
+
+runcmd:
+- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT   
+- systemctl daemon-reload
+- systemctl start cloudservice.service
+```
+
+
+
 
 * [Cloud Run Authentication](https://cloud.google.com/run/docs/authenticating/service-to-service).  Since Alice deployed the service to Cloud Run, she can use GCP itself to restrict access to the specific servcie account Bob's VM runs as:
   In the following, we only allow an id_token that is owned by `313701472922-compute@developer.gserviceaccount.com` through. 
