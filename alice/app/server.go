@@ -109,6 +109,17 @@ func verifyhandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// TODO: perform a live verification of Bob's VM startup script and metadata
+		//       We do this step to prevent Bob from "stopping" his vm after he got
+		//       the rsa and aes keys from a previous run from Alice
+		//       That is, if Bobs vm already got the secret, he can 'stop' the vm
+		//       then comment out the line in the startup script that prevents ssh
+		//       (meaning he can now ssh to the VM).  Then startup the VM again.  On startup
+		//       Bob's VM will use its instanceID doc to retart this protocol.
+		//       To prevent replay and to verify state, Alice should use Compute Engine APIs
+		//       to inspect Bob's VM metadata and double check that ssh is disabled, the right 	
+		//       image is running, etc	
+
 		ctx := context.Background()
 
 		client, err := secretmanager.NewClient(ctx)

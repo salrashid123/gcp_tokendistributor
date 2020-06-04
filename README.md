@@ -423,6 +423,20 @@ $ gcloud compute instances describe cos-1 --project $BOB_PROJECT_ID
     - email: 313701472922-compute@developer.gserviceaccount.com
 ```
 
+*** Important *** 
+
+Alice should be verifying the image specs in code on any API call she gets on her server by Bob's VM (not one time as in this example!)
+THis is done to prevent Bob from stopping the VM that Alice already authorized and released secrets to and then removing the line that prevented ssh.
+
+Once Bob startups that modified VM, it will try to contact Alices' server for credentials.  Alice has already authorized the vm_id so it would release the
+secret again.  But this time Bob has SSH access.   
+
+One way to mitigate this: Alice can check the Bob's VM metadata every time her TokenServer gets an API request from Bob's server (i,e use the Google Compute Engine API).
+Once Alice's server performs a live check of the VM metadata thats making the request, her server can then return the secret.
+
+Alternatively, Alice can only release the secret once to a given vm_id or log and compare the instance creation time when it was first authorized...
+
+
 #### Verify Logging
 
 Bob can also grant ALice the IAM ability to view the audit logs for the VM on his project. 
