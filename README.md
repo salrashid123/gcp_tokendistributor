@@ -315,10 +315,11 @@ gcloud compute instances create cos-1   --image-family cos-stable     --image-pr
   Then enable fluentd within COS by specifying `--metadata google-logging-enabled=true,google-monitoring-enabled=true` in the container create command above as well as allowing the VM to write to logging and monitoring APIs: `--scopes=userinfo-email,storage-ro,logging-write,monitoring-write`
 
  
->> (optional) By default, the COS images disable SSH access.  If this is the first deployment of this tutorial, suggest commenting out iptables line in the yaml and ssh into the VM.  You can then view the `systemd` logs by typing `journalctl -l`
+>> (optional) By default, the COS images disable SSH access and serial console.  If this is the first deployment of this tutorial, suggest commenting out iptables line in the yaml and ssh into the VM.  You can then view the `systemd` logs by typing `journalctl -l`
 
   ```bash
-  - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT   
+  - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+  - systemctl mask --now serial-getty@ttyS0.service
   ```
 
 We are far from done.  We need to find out what the unique `vm_id` is as well as let Alice's TokenService know about it.
@@ -379,6 +380,9 @@ She notes the following bit of metadata:
 * confirms no ssh access is possible:
   `iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT`    
 
+* confirms serial console is disabled
+  `- systemctl mask --now serial-getty@ttyS0.service`
+
 ```yaml
 $ gcloud compute instances describe cos-1 --project $BOB_PROJECT_ID
     cpuPlatform: Intel Haswell
@@ -414,7 +418,8 @@ $ gcloud compute instances describe cos-1 --project $BOB_PROJECT_ID
               ExecStopPost=/usr/bin/docker rm mycloudservice
 
           runcmd:
-          - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT   
+          - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+          - systemctl mask --now serial-getty@ttyS0.service
           - systemctl daemon-reload
           - systemctl start cloudservice.service
       kind: compute#metadata
@@ -618,7 +623,8 @@ write_files:
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
 runcmd:
-- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT   
+- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+- systemctl mask --now serial-getty@ttyS0.service
 - systemctl daemon-reload
 - systemctl start cloudservice.service
 ```

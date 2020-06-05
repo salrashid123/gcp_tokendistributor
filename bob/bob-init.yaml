@@ -22,6 +22,7 @@ write_files:
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
 runcmd:
-- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT   
+- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+- systemctl mask --now serial-getty@ttyS0.service
 - systemctl daemon-reload
 - systemctl start cloudservice.service
