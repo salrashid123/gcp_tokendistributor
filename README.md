@@ -27,21 +27,33 @@ Bob grants Alice and `serviceAccountA` permissions to read GCE startup script an
 `TokenService` is not yet authorized for to give any token for `serviceAccountB` or `VM-B` and does not return a token.
 
 Alice (offline) runs a `Provisioning` application which:
-  Reads `VM-B` startup script data
-  Validates that `VM-B` has been deprivileged (no ssh access)
-  Validates the docker image running on `VM-B` is known image hash and trusted by Alice) 
-  Provisioning Server creates `RSAKey-A`, `AESKey-A`.   RSAKeyA maybe a GCP ServiceAccount Key.
-  Provisioning Server uses `VM-A`'s TPM based data to seal RSA and AES key.
-  Provisioning server encrypts RSA and AES key with `VM-B` TPM.
-  Provisioning Server generates hash of `VM-B` startup script that includes commands to prevent SSH and `docker run` command for the trusted image image.
-  Provisioning Server saves encrypted RSA/AES keys, hash of startupscript to Google FireStore using the `instance_id` for `VM-B` as the primary key
+  
+Reads `VM-B` startup script data
+  
+Validates that `VM-B` has been deprivileged (no ssh access)
+
+Validates the docker image running on `VM-B` is known image hash and trusted by Alice) 
+
+Provisioning Server creates `RSAKey-A`, `AESKey-A`.   RSAKeyA maybe a GCP ServiceAccount Key.
+
+Provisioning Server uses `VM-A`'s TPM based data to seal RSA and AES key.
+
+Provisioning server encrypts RSA and AES key with `VM-B` TPM.
+
+Provisioning Server generates hash of `VM-B` startup script that includes commands to prevent SSH and `docker run` command for the trusted image image.
+
+Provisioning Server saves encrypted RSA/AES keys, hash of startupscript to Google FireStore using the `instance_id` for `VM-B` as the primary key
   
 
 `VM-B` contacts `TokenService`
-  `VM-B` uses its [instance_identity_document](https://cloud.google.com/compute/docs/instances/verifying-instance-identity#verify_signature) as an auth token to call `VM-A`
-  `VM-A` verifies the `identity document` is signed by Google
-  `VM-A` checks `instanceID`, `serviceAccount`, `audience` and other claims in the document.
-  `VM-A` looks up Firestore using the `instanceID` as  the key.
+
+`VM-B` uses its [instance_identity_document](https://cloud.google.com/compute/docs/instances/verifying-instance-identity#verify_signature) as an auth token to call `VM-A`
+
+`VM-A` verifies the `identity document` is signed by Google
+
+`VM-A` checks `instanceID`, `serviceAccount`, `audience` and other claims in the document.
+
+`VM-A` looks up Firestore using the `instanceID` as  the key.
 
 `VM-B` returns encrypted RSA/AES key
 
