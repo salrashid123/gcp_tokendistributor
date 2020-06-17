@@ -1,609 +1,331 @@
 ## Remote Authorization and TokenDistributor for GCP VMs
 
-Sample workflow to distribute a secret between two parties where one party directly delivers the secret to a _specific_ virtual machine.  Normally on GCP, one party that owns some data will grant a `service account` or `user` permissions to that data resource.  The owner of that service account now has discretionary power on the data and can access that data from anywhere by default by assuming the identity of that service account he/she has permission over.
+Sample workflow to distribute a secret between two parties where one party directly delivers the secret to a _specific_, deprivileged virtual machine on GCP.  Normally when two parties want to share some data, one party grants IAM permissions on that resource to an identity owned by the other.  That is, if Alice wants to share data with a VM Bob owns,  Alice will grant IAM permissions on some data with the ServiceAccount Bob's VM runs as.  However, Bob essentially has indirect rights on that data simply by assuming the identity of the service account or by simply ssh into that VM and acquiring the service account credentials.  
 
-This flow inverts the access where the data owner shares some secret material that ultimately has permissions to their data but **ONLY** to a isolated system owned by the remote party.  The data owner will share access _exclusively__ to an isolated system such that the credentials cannot be exported.  The isolated system in this case is a VM that the remote party owns but is configured such that not even the remote party VM owner can access it nor extract the secret that was delivered by the data owner.
+This is problematic in some situations where Alice would like Bob's VM to process data in isolation but not alow Bob himself from acquiring that data and exfilterating.
+
+The flow described in this repo flow inverts the access where the data owner (Alice) shares some secret material with permissions to sensitive data but **ONLY** to a isolated system owned by Bob.  The data owner (Alice) will share access _exclusively__ to the VM only after attesting some known binary that Alice is aware of and trusts is running on that VM and that that Bob cannot access the VM via SSH or any other means.
 
 In prose:
 
-* Alice wants to share a file she has on a GCS with a specific VM Bob started.  Alice and Bob do not work in the same company and do not share GCP projects.
+Alice wants to share a file she has on a GCS with a specific VM Bob started.  Alice and Bob do not work in the same company and do not share GCP projects.
 
-Bob Starts a VM
-  * Bob's VM runs as `serviceAccount` that has no permissions nor any no ssh access.
-  * Bob (user) gives Alice (user) access to read that VM's startup, logs and external runtime metadata
+Alice creates a GCP `projectA`
+Bob creates a GCP `projectB`
 
-Alice authorizes her `"TokenDistribution"` service
-  * Alice (user) reads the VM's metadata, startup script and notes the `instanceID`, `serviceAccount` and other fields for that VM
-  * Alice (user) is satisfied the VM integrity (i.,e running a known docker container, no ssh access)
-  * Alice manages a custom API server `TokenDistribution` that  distributes secrets and tokens to VMs that she authorizes
-  * Alice adds the `serivceAccount` and `instanceID` as "authorized" VMs and are entitled to access a secret which inturn grants access to the data file.
+Alice creates creates a VM (`VM-A`) with  `serviceAccountA` and public ip_address `ip-A`
+Bob creates creates a VM (`VM-B`) with `serviceAccountB`.
 
-Bobs VM contacts "TokenDistribution" service
-  * Bobs VM uses its [instance_identity_document](https://cloud.google.com/compute/docs/instances/verifying-instance-identity#verify_signature) as an auth token to call Alice's TokenDistribution endpoint.
-  * Alice's verifies the `identity document` is signed by Google
-  * Alice's service checks `instanceID`, `serviceAccount`, `audience` and other claims in the document.
-  * Alice's service now knows the VM that contacted it is the VM she authorized earlier.
-  * Alice's service can now distribute the data access credentials she owns back on the API call to Bob
-  * Bob's service now has credentials to access the secret file
+Bob and Alice exchange information offline about `ip-A`, `serviceAccountA` and `serviceAccountB` each party uses
 
-Bobs acquires data file
-  * Bob's VM now bootstraps a GCS client with those newly acquired credentials and access the files.
+Bob grants Alice and `serviceAccountA` permissions to read GCE startup script and metadata for `VM-A`
 
+`VM-A` runs a `TokenService` that functions to validate and return authorized token requests from `VM-B` 
 
-The critical thing to note in this flow is the instance identity document provided by a GCE VM is unique:  it cannot be forged anywhere outside of that specific VM.
+`VM-B` starts and attempts to contact `ip-A` and acquire the secret from the `TokenService`.
 
-If Alice is satisfied that the requesting VM is legitimate by inspecting its metadata earlier on (ie, what image is it running, is SSH disabled, etc), then if she gets a request with that document, she knows it must have originated from that same VM.
+`TokenService` is not yet authorized for to give any token for `serviceAccountB` or `VM-B` and does not return a token.
 
-As sequence:
+Alice (offline) runs a `Provisioning` application which:
+  Reads `VM-B` startup script data
+  Validates that `VM-B` has been deprivileged (no ssh access)
+  Validates the docker image running on `VM-B` is known image hash and trusted by Alice) 
+  Provisioning Server creates `RSAKey-A`, `AESKey-A`.   RSAKeyA maybe a GCP ServiceAccount Key.
+  Provisioning Server uses `VM-A`'s TPM based data to seal RSA and AES key.
+  Provisioning server encrypts RSA and AES key with `VM-B` TPM.
+  Provisioning Server generates hash of `VM-B` startup script that includes commands to prevent SSH and `docker run` command for the trusted image image.
+  Provisioning Server saves encrypted RSA/AES keys, hash of startupscript to Google FireStore using the `instance_id` for `VM-B` as the primary key
+  
 
-The flow shown below is not exactly what this repo has.  The variation is how Bob's VM attempts to get the token.  In this repo, i've exposed an http port which kicks off the process.  In the sequence diagram, Bob's VM polls periodically.   I picked the external trigger just for convenience.
+`VM-B` contacts `TokenService`
+  `VM-B` uses its [instance_identity_document](https://cloud.google.com/compute/docs/instances/verifying-instance-identity#verify_signature) as an auth token to call `VM-A`
+  `VM-A` verifies the `identity document` is signed by Google
+  `VM-A` checks `instanceID`, `serviceAccount`, `audience` and other claims in the document.
+  `VM-A` looks up Firestore using the `instanceID` as  the key.
+
+`VM-B` returns encrypted RSA/AES key
+
+`VM-A` uses its TPM to decrypt RSA and AES key
+  If RSA key is a GCP Service Account, use that to download data from Google Services.  The AES/RSA key can be from any provider (AWS/Azure, etc)
 
 ![images/sequence.png](images/sequence.png)
+
 ---
 
-The procedure below is one such setup;
+### Setup
 
-**THIS code is NOT supported by google; its just a sample;  _caveat emptor_**
+This repo will configure the full TokenService infrastructure and Service:
 
-THis is a trivial protocol that you are free to extend in anyway you want as long as the 'side-channel' verification is present and you make sure the instance identity document can't be forged and reused by Bob.  
-You can do that by demonstrating ssh access is disabled.
+1. Alice will use Terraform to create new GCP Project
+2. Bob will Terraform to create new GCP Project
+3. Alice and Bob will exchange specifications of ServiceAccounts and IP address of TokenService
+5. Alice will use Terraform to create TokenServer
+6. Bob will use Terraform to create TokenClient
+7. Alice will use `Provisioning` application to authorize Bob's VM and ServiceAccount.
+8. TokenServer will return secret to TokenClient
 
-The protocol is pretty fragile and specific..but the core idea about usign the id_token and JWT verification 
+  *It is expected customers will customize the client and server to suite their needs.*
 
-## Setup
+Alice and Bob will both need:
 
-Start with two projects where Alice will host the TokenService and the GCS file while Bob will run a VM that needs to prove and acquire a token from Alice's Serivce
+* [terraform](terraform.io)
+* `go 1.14`
+* Permissions to create GCP Projects
 
-For me they were::
-* Alice: `alice-275112`
-* Bob:  `bobb-275112`
+### Start TokenServer Infrastructure (Alice)
 
-> These steps are best done in _one_ shell since it makes use of env-vars extensively
+As Alice, you will need your
+
+*  [Billing Account ID](https://cloud.google.com/billing/docs/how-to/manage-billing-account) 
+
+* OrganizationID
+  `gcloud organzations list`
+  If you do not have an organization, edit `alice/main.tf` and remove the `org_id` variable from `google_project`
+ 
+```bash
+cd alice/
+export TF_VAR_org_id=673208782222
+export TF_VAR_billing_account=000C16-9779B5-12345
+
+terraform apply --target=module.setup 
+```
+
+You should see the new project details and IP address allocated/assigned for the `TokenServer`
 
 ```bash
-gcloud config set project alice-275112 
-export ALICE_PROJECT_ID=`gcloud config get-value core/project`
-export ALICE_PROJECT_NUMBER=`gcloud projects describe $ALICE_PROJECT_ID --format="value(projectNumber)"`
+Outputs:
+
+gcr_id = artifacts.ts-039e6b6a.appspot.com
+natip_address = 34.70.0.86
+project_id = ts-039e6b6a
+project_number = 97447295174
+ts_address = 34.72.145.220
+ts_service_account = tokenserver@ts-039e6b6a.iam.gserviceaccount.com
 
 
-gcloud config set project bobb-275112 
-export BOB_PROJECT_ID=`gcloud config get-value core/project`
-export BOB_PROJECT_NUMBER=`gcloud projects describe $BOB_PROJECT_ID --format="value(projectNumber)"`
+export TF_VAR_project_id=ts-039e6b6a
 ```
-### 1. Bob 
 
-Bob configures his VM to use a NAT (since the VM will not have an external IP)
+Provide Bob the values of `ts_address` and `ts_service_account` variables anytime later:
+
+```bash
+export TF_VAR_ts_service_account=tokenserver@ts-039e6b6a.iam.gserviceaccount.com
+export TF_VAR_ts_address=34.72.145.220  
+```
+
+### Start TokenClient Infrastructure (Bob)
+
+As Bob, you will need your
+
+*  [Billing Account ID](https://cloud.google.com/billing/docs/how-to/manage-billing-account) 
+
+* OrganizationID
+  `gcloud organzations list`
+  If you do not have an organization, edit `alice/main.tf` and remove the `org_id` variable from `google_project`
+ 
+The following will startup Bobs infrastructure (GCP project, and allocate IP for tokenClient).
+
+This step can be done independently of Alice at anytime.
+
+
+```bash
+cd bob/
+export TF_VAR_org_id=111108786098
+export TF_VAR_billing_account=22121-9779B5-30076F
+
+
+terraform apply --target=module.setup 
+```
+
+The command will create a new GCP project, enable GCP api services, create a service account for the Token server and allocate a static IP:
+
+```bash
+Outputs:
+
+gcr_id = artifacts.tc-87fa8a4d.appspot.com
+natip_address = 34.71.145.8
+project_id = tc-87fa8a4d
+project_number = 597577201234
+tc_address = 35.232.215.216
+tc_service_account = tokenclient@tc-87fa8a4d.iam.gserviceaccount.com
+```
+
+export TokenClient projectID
+
+```bash
+export TC_PROJECT=tc-87fa8a4d
+```
+
+### Deploy TokenServer (Alice)
+
+As Alice, build the TokenServer and push to Google Container Registry
+
+```bash
+cd ../app
+echo $TF_VAR_project_id
+echo $TF_VAR_ts_service_account
+echo $TF_VAR_ts_address
+
+
+gcloud builds submit  --config cloudbuild-ts.yaml --project  $TF_VAR_project_id
+gcloud container images describe gcr.io/$TF_VAR_project_id/tokenserver --project $TF_VAR_project_id
+```
+
+Note down the image digest value
+
+```bash
+image_summary:
+  digest: sha256:59fcee8a100012e1e1ab651aab1aa6e2d096cffadfb4dd69c86fee0a1588c174
+  fully_qualified_digest: gcr.io/ts-039e6b6a/tokenserver@sha256:59fcee8a100012e1e1ab651aab1aa6e2d096cffadfb4dd69c86fee0a1588c174
+  registry: gcr.io
+  repository: ts-039e6b6a/tokenserver
+```
+
+Note the `digest` 
+
+```bash
+export TF_VAR_image_hash=sha256:59fcee8a100012e1e1ab651aab1aa6e2d096cffadfb4dd69c86fee0a1588c174
+```
+
+Make sure the environment variables are populated
+
+```bash
+cd ../alice/
+
+echo $TF_VAR_project_id
+echo $TF_VAR_ts_service_account
+echo $TF_VAR_image_hash
+
+terraform apply --target=module.deploy
+```
+
+You should see an output like:
+
+```bash
+Outputs:
+
+gcr_id = artifacts.ts-039e6b6a.appspot.com
+natip_address = 34.70.0.86
+project_id = ts-039e6b6a
+project_number = 97447295174
+token_server_instance_id = 6431532147148074775
+ts_address = 34.72.145.220
+ts_service_account = tokenserver@ts-039e6b6a.iam.gserviceaccount.com
+```
+
+### Deploy TokenClient (Bob)
+
+Bob will now deploy the TokenClient
+
+Bob needs to set some additional environment variables that were *provided by Alice* earlier:
+
+* `TF_VAR_ts_service_account`:  this is the service account Alice is using for the TokenServer (`tokenserver@ts-039e6b6a.iam.gserviceaccount.com`)
+* `TF_VAR_ts_address`: this is the IP address of the TokenServer (`34.72.145.220`)
+* `TF_VAR_ts_provisioner`: this is Alice's email address that Bob will authorize to read the TokenClients metadata values (`alice@esodemoapp2.com`)
+
+
+```bash
+cd ../app/
+echo $export TC_PROJECT
+
+gcloud builds submit  --config cloudbuild-tc.yaml --project  $TC_PROJECT
+gcloud container images describe gcr.io/$TC_PROJECT/tokenclient --project $TC_PROJECT
+```
+
+should yield the image for the TokenCLient:
+
+```
+  image_summary:
+    digest: sha256:adb6d6b229f1cd8046ce4c98d848df16f3e15982e72332d4c1980eaf439c9c10
+    fully_qualified_digest: gcr.io/tc-87fa8a4d/tokenclient@sha256:adb6d6b229f1cd8046ce4c98d848df16f3e15982e72332d4c1980eaf439c9c10
+    registry: gcr.io
+    repository: tc-87fa8a4d/tokenclient
+```
+
+Note the `digest` and export its value 
+
+```bash
+export TF_VAR_image_hash=sha256:adb6d6b229f1cd8046ce4c98d848df16f3e15982e72332d4c1980eaf439c9c10
+```
+
+Make sure the env variables are populated
 
 ```bash
 cd bob/
 
-gcloud compute routers create nat-router \
-    --network default \
-    --region us-central1 --project $BOB_PROJECT_ID
+export TF_VAR_ts_provisioner=alice@esodemoapp2.com
 
-gcloud compute routers nats create nat-config \
-    --router=nat-router \
-    --auto-allocate-nat-external-ips \
-    --nat-all-subnet-ip-ranges \
-    --enable-logging --region us-central1 --project $BOB_PROJECT_ID
+echo $TF_VAR_ts_service_account
+echo $TF_VAR_ts_address
+echo $TF_VAR_ts_provisioner
+echo $TF_VAR_image_hash
 ```
 
-Create the service account Bob VM will run as. 
-This service account will have **no** privileges at all;  We will use this to assert the VM's identity only.
-
-this is the service account bob's VM will initially identify itself as
+deploy:
 
 ```bash
-export BOBS_VM_SERVICE_ACCOUNT=sa-bob@$BOB_PROJECT_ID.iam.gserviceaccount.com
+terraform apply --target=module.deploy
 
-echo $BOBS_VM_SERVICE_ACCOUNT
-  sa-bob@bobb-275112.iam.gserviceaccount.com
+Outputs:
 
-gcloud iam service-accounts create sa-bob \
-  --display-name "Bob Service Account" --project $BOB_PROJECT_ID
+gcr_id = artifacts.tc-87fa8a4d.appspot.com
+natip_address = 34.71.145.8
+project_id = tc-87fa8a4d
+project_number = 597577201234
+tc_address = 35.232.215.216
+tc_service_account = tokenclient@tc-87fa8a4d.iam.gserviceaccount.com
+token_client_instance_id = 2503055333933721897
 ```
 
-Note: we are using just the email to denote the VM's identity to Alice's server.  The better signal is using the `uniqueId` field shown below.  That value is immutable always and is a better signal than the email field.
-
-```bash
-$ gcloud iam service-accounts describe sa-bob@$BOB_PROJECT_ID.iam.gserviceaccount.com
-displayName: Bob Service Account
-email: sa-bob@$BOB_PROJECT_ID.iam.gserviceaccount.com
-name: projects/$BOB_PROJECT_ID/serviceAccounts/sa-bob@$BOB_PROJECT_ID.iam.gserviceaccount.com
-oauth2ClientId: '100147106996764479085'
-projectId: $BOB_PROJECT_ID
-uniqueId: '100147106996764479085'
-```
-
-TODO: update procedure and Alice's Verify code to use `sub` field instead of `email`
+Note the `token_client_instance_id`.  
 
 
-### 2. Alice
+### Interlude
 
-Switch to Alice now and create a service that is intended to get distributed **TO** bob after verification.
-This service account does have access to the secret file.
+At this point the TokenClient and Server have started communicating but every request for a new token would fail since Alice hasn't yet vetted the integrity of the TokenServer:
 
-This is the service account that will have access to the alices file that she will distribute only to bob's VM later.
-```bash
-cd alice/
+You can see this in the logs
 
-export SA_EMAIL_FOR_BOB=sa-for-bob@$ALICE_PROJECT_ID.iam.gserviceaccount.com
-echo $SA_EMAIL_FOR_BOB
-  sa-for-bob@alice-275017.iam.gserviceaccount.com
-```
+The tokenClient will attempt to contact tokenServer.  Since no vmID is provisioned, the tokenserver will respond w/ error
 
-Note the service account that Alice's service runs as.  THis is the default service account Cloud Run 
-This service account is used in verifying the audience field in the inbound id_token (i'll explain later)
+- TokenServer
+![images/tserrors.png](images/tserrors.png)
 
-```bash
-export DEFAULT_RUN_SA=$ALICE_PROJECT_NUMBER-compute@developer.gserviceaccount.com
- echo $DEFAULT_RUN_SA
-```
+- TokenClient
+![images/tcerrors.png](images/tcerrors.png)
 
-Download a service account key that you will ultimately distribute
-NOTE you should not do this in production; there are plenty of other ways to this step properly
-  eg. Alice's serivce uses Hashicorp Vault; Alice Service generates a service account at runtime; Alices service sends a short-term token 
-  to Bob, etc.   I'm just doing the steps here as a sample
+So...now 
 
-```bash
-gcloud iam service-accounts create sa-for-bob \
-  --display-name "Service Account for Bobs Vm" \
-  --project $ALICE_PROJECT_ID
+>> **Provide token_client_instance_id to TokenServer Provisioning admin (Alice) so it can be provisioned**
 
-gcloud iam service-accounts keys create sa-for-bob.json \
-  --iam-account=$SA_EMAIL_FOR_BOB  \
-  --project $ALICE_PROJECT_ID
-  created key [f6146640db65db70a766a6f850654fed588859ab] of type [json] as [sa-for-bob.json] for [sa-for-bob@alice-275112.iam.gserviceaccount.com]
-```
+Optionally provide `tc_address` to TokenServer (to apply on-demand firewall or origin checks if NAT isn't used)
 
-Create a GCS bucket where alice will save the secret files
 
-```bash
-export SHARED_BUCKET=$ALICE_PROJECT_ID-shared-bucket
+### Provision TokenClient vm_id
 
-gsutil mb -p $ALICE_PROJECT_ID -l US-CENTRAL1 gs://$SHARED_BUCKET  
+Use VMID to provision the Firestore Database after validating Bob's VM state
 
-  Creating gs://alice-275112-shared-bucket/
-```
-
-Allow the serice account Bob's VM will eventually get access to that bucket
-Again, in production you will probably want to do this 'just in time' and not like this upfront..
-
-```bash
-gsutil iam ch serviceAccount:$SA_EMAIL_FOR_BOB:objectViewer gs://$SHARED_BUCKET
-```
-
-create and upload the file
-```bash
-echo "meet me at..." > secret.txt
-
-gsutil cp secret.txt gs://$SHARED_BUCKET/
-```
-
-Alice Deploys the TokenService
-
+As Alice, 
 ```bash
 cd app/
 
-gcloud services enable containerregistry.googleapis.com secretmanager.googleapis.com --project $ALICE_PROJECT_ID
+export TOKEN_SERVER_PROJECT=ts-039e6b6a
+export TOKEN_CLIENT_PROJECT=tc-87fa8a4d
+export VM_ID=2503055333933721897
 
-docker build -t gcr.io/$ALICE_PROJECT_ID/alicesapp .
-docker push gcr.io/$ALICE_PROJECT_ID/alicesapp
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TOKEN_SERVER_PROJECT --firestoreCollectionName foo     --clientProjectId $TOKEN_CLIENT_PROJECT --clientVMZone us-central1-a --clientVMId $VM_ID --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+
 ```
 
-We will now deploy a _staging_ version of alice's token service
-  we're only doing this as a consequence of how this app is structured:  Alice's app uses some environment variabes
-  it only knows about later..i know, this is a bit lazy and i can ofcourse improve on this...
+The output of the provisioning step will prompt you to confirm that the image startup script and metadata looks valid.
 
-```bash
-export BOBS_VM_ID="temp"
-export VERIFIER_AUDIENCE="temp"
+At that point, the image hash value will be saved into Firestore `Kwmp//kyXrJQUCw3tzVu0ydSZrQa1ehLdVRQ9wEm4Jo=`  using the `vm_id=2503055333933721897` in firestore document key.  Every time the TOkenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
 
-gcloud run deploy verifier --image gcr.io/$ALICE_PROJECT_ID/alicesapp \
-   --update-env-vars VERIFIER_AUDIENCE=$VERIFIER_AUDIENCE,BOBS_VM_SERVICE_ACCOUNT=$BOBS_VM_SERVICE_ACCOUNT,ALICE_PROJECT_ID=$ALICE_PROJECT_ID --project $ALICE_PROJECT_ID
 ```
-
-  for now, (note we are not really allowing unauthenticated invocations since we check access at the api layer..but we'll come back to this in the "Enhancements" section below).  Select yest to `Allow unauthenticated invocations to`
-
-  you should see the name of the Cloud Run instance:
-```bash
-   Service [verifier] revision [verifier-00001-ziw] has been deployed 
-     and is serving 
-     100 percent of traffic at https://verifier-nvm6vsykba-uc.a.run.app 
-```
-
-Note the endpoint for Alice's Tokens Service: 
-
-```bash
-export VERIFICATION_ENDPOINT=https://verifier-nvm6vsykba-uc.a.run.app 
-```
-
-try an endpoint that doens't ask for proof the request is from Bobs VM
-
-```bash
-$ curl $VERIFICATION_ENDPOINT
-ok
-
-$ curl $VERIFICATION_ENDPOINT/verify
-:(
-```
-
-Note: The verify application we run here will use the identity document `BOBS_VM` will send and within the verify application the `email` claim is checked to match `$BOBS_VM_SERVICE_ACCOUNT`.  The better signal is to use the `sub` field which shows up as a opaque, immutable number.  In the example above, Bob's VM service account had is `"sub":"100147106996764479085"` which is its `uniqueId` field. 
-
-### 3. Bob
-
-Bob Deploy VM 
-
-```bash
-cd ../../bob/
-```
-
-Edit `app/server.go`, change it to the value of `$VERIFICATION_ENDPOINT` and `$SHARED_BUCKET`
-in my case they were:
-
-```golang
-	targetAudience = "https://verifier-nvm6vsykba-uc.a.run.app"  
-	url            = "https://verifier-nvm6vsykba-uc.a.run.app/verify"
-	bucketName = "$ALICE_PROJECT_ID-shared-bucket"
-	objectName = "secret.txt"	
-```
-
-
-Now build a container image.  This container image is what ALice verifies is running on Bob's VM.  Alice will only grant access if
-she sees that this VM is running w/o SSH access and something with this specific hash.
-
-This container image does nothing special:  its a simple http server that when it receives a request will attempt to call the
-TokenService using its identity token.  If it gets a token back from Alice's service (who at that point is happy with the work Bob did),
-that token can be used to access the secret file
-
-```bash
-gcloud services enable containerregistry.googleapis.com --project $BOB_PROJECT_ID
-
-cd app
-  docker build -t gcr.io/$BOB_PROJECT_ID/bobsapp .
-  docker push gcr.io/$BOB_PROJECT_ID/bobsapp
-
-
-# Note the image hash
-$ docker push gcr.io/$BOB_PROJECT_ID/bobsapp
-      latest: digest: sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2 size: 949
-
-$ gcloud container images describe gcr.io/$BOB_PROJECT_ID/bobsapp
-image_summary:
-  digest: sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
-  fully_qualified_digest: gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
-  registry: gcr.io
-  repository: $BOB_PROJECT_ID/bobsapp
-
-export VALIDATED_IMAGE=gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
-echo $VALIDATED_IMAGE
-```
-
-Edit the VM Container Init script and enter the value of `$VALIDATED_IMAGE`
-
-edit `bob-init.yaml`
-```yaml
-    ExecStart=/usr/bin/docker run --rm -u 2000 --name=mycloudservice gcr.io/bobb-275112/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
-```
-
-Open a firewall to all you to test if this whole thing even works:  Bob's container runs a simple http sever which
-
-Allow  http access to Bob's server and deploy the VM
-
-```bash
-gcloud compute  firewall-rules create firewall-rules-bob --allow=tcp:8080 --source-ranges=0.0.0.0/0  --target-tags=bob --project $BOB_PROJECT_ID
-
-cd ../
-export BOBS_VM_DEFAULT_SERVICE_ACCOUNT=$BOB_PROJECT_NUMBER-compute@developer.gserviceaccount.com
-
-gcloud compute instances create cos-1   --image-family cos-stable     --image-project cos-cloud \
-     --zone us-central1-a --service-account=$BOBS_VM_DEFAULT_SERVICE_ACCOUNT \
-     --scopes=userinfo-email,storage-ro  --tags=bob --machine-type n1-standard-1 \
-     --metadata-from-file user-data=bob-init.yaml   --project $BOB_PROJECT_ID
-```
-
->> (optional) Note, if you would like Stackdriver Monitoring and Logging enabled, you need to first allow the VM's service account logging write access
-  ```bash
-  gcloud projects add-iam-policy-binding $BOB_PROJECT_ID \
-    --member serviceAccount:$BOBS_VM_DEFAULT_SERVICE_ACCOUNT \
-    --role roles/logging.logWriter
-
-  gcloud projects add-iam-policy-binding $BOB_PROJECT_ID \
-    --member serviceAccount:$BOBS_VM_DEFAULT_SERVICE_ACCOUNT \
-    --role roles/monitoring.metricWriter
-  ```
-  Then enable fluentd within COS by specifying `--metadata google-logging-enabled=true,google-monitoring-enabled=true` in the container create command above as well as allowing the VM to write to logging and monitoring APIs: `--scopes=userinfo-email,storage-ro,logging-write,monitoring-write`
-
- 
->> (optional) By default, the COS images disable SSH access and serial console.  If this is the first deployment of this tutorial, suggest commenting out iptables line in the yaml and ssh into the VM.  You can then view the `systemd` logs by typing `journalctl -l`
-
-  ```bash
-  - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
-  - systemctl mask --now serial-getty@ttyS0.service
-  ```
-
-We are far from done.  We need to find out what the unique `vm_id` is as well as let Alice's TokenService know about it.
-
-We also need to allow alice's (User) command line ability to inspect the VM's metadata
-
-Find Bob's server external address and instanceID
-
-```bash
-export BOBS_SERVER=`gcloud compute instances describe cos-1 --project $BOB_PROJECT_ID --format="value(networkInterfaces[0].accessConfigs.natIP)"`
-export BOBS_INSTANCE_1_ID=`gcloud compute instances describe cos-1 --format="value(id)" --project $BOB_PROJECT_ID`
-
-echo $BOBS_SERVER
-echo $BOBS_INSTANCE_1_ID
-```
-
-in my case they were:
-```bash
-# 34.71.31.232
-# 1079298362778070454
-```
-
-Now grant a **User** in alice's company ability to inspect the VM
-```bash
-gcloud compute instances add-iam-policy-binding  cos-1 \
-  --member=user:alice@esodemoapp2.com \
-  --role roles/compute.viewer \
-  --project $BOB_PROJECT_ID
-```
-
-### 4. Alice (user), verifies Bob's VM state
-
-Note at this point, `alice@esodemoapp2.com` can verify by looking at
-
-* VM's metadata
-* VM logs
-
-#### Verify metadata
-
-```bash
-gcloud config set account alice@esodemoapp2.com
-gcloud compute instances describe cos-1 --project $BOB_PROJECT_ID
-```
-
-She notes the following bit of metadata:
-
-* confirms the serviceAccount: `313701472922-compute@developer.gserviceaccount.com`
-  The inbound service account's JWT token to Alice's Service **must be for this service account**
-
-* confirms the `vm_id`: `5516919140634077099`
-  Alice will later use a [Secret Manager](https://cloud.google.com/solutions/secrets-management) to save some key material
-  associated with this id.  That is, the aes key Alice's service will send back to this VM is saved in secret manager as:
-  `aes-5516919140634077099` and RSA is `rsa-5516919140634077099`
-
-* confirms the init script is running the image hash:
-  `gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2`
-
-* confirms no ssh access is possible:
-  `iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT`    
-
-* confirms serial console is disabled
-  `- systemctl mask --now serial-getty@ttyS0.service`
-
-```yaml
-$ gcloud compute instances describe cos-1 --project $BOB_PROJECT_ID
-    cpuPlatform: Intel Haswell
-    creationTimestamp: '2020-04-23T06:33:57.037-07:00'
-    id: '5516919140634077099'
-    kind: compute#instance
-
-    metadata:
-      items:
-      - key: user-data
-        value: |-
-          #cloud-config
-
-          users:
-          - name: cloudservice
-            uid: 2000
-
-          write_files:
-          - path: /etc/systemd/system/cloudservice.service
-            permissions: 0644
-            owner: root
-            content: |
-              [Unit]
-              Description=Start a simple docker container
-              Wants=gcr-online.target
-              After=gcr-online.target
-
-              [Service]
-              Environment="HOME=/home/cloudservice"
-              ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-              ExecStart=/usr/bin/docker run --rm -u 2000 -p 8080:8080 --name=mycloudservice gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
-              ExecStop=/usr/bin/docker stop mycloudservice
-              ExecStopPost=/usr/bin/docker rm mycloudservice
-
-          runcmd:
-          - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
-          - systemctl mask --now serial-getty@ttyS0.service
-          - systemctl daemon-reload
-          - systemctl start cloudservice.service
-      kind: compute#metadata
-
-    serviceAccounts:
-    - email: 313701472922-compute@developer.gserviceaccount.com
-```
-
-*** Important *** 
-
-Alice should be verifying the image specs in code on any API call she gets on her server by Bob's VM (not one time as in this example!)
-THis is done to prevent Bob from stopping the VM that Alice already authorized and released secrets to and then removing the line that prevented ssh.
-
-Once Bob startups that modified VM, it will try to contact Alices' server for credentials.  Alice has already authorized the vm_id so it would release the
-secret again.  But this time Bob has SSH access.   
-
-One way to mitigate this: Alice can check the Bob's VM metadata every time her TokenServer gets an API request from Bob's server (i,e use the Google Compute Engine API).
-Once Alice's server performs a live check of the VM metadata thats making the request, her server can then return the secret.
-
-Alternatively, Alice can only release the secret once to a given vm_id or log and compare the instance creation time when it was first authorized...
-
-
-#### Verify Logging
-
-Bob can also grant ALice the IAM ability to view the audit logs for the VM on his project. 
-
-Todo this, BOb grants the `logging.Viewer` role to his project.  (note: the logging viewer allows inspection of all logs in that project; not just the VM)
-
-![images/log_iam.png](images/log_iam.png)
-
-Once thats one, Alice can directly view logs on the target project
-
-![images/log_viewer.png](images/log_viewer.png)
-
-
-### 4. Alice
-
-Alice is now satisfied that the VM is in a correct state and will authorize that `vmID` access to the secret.
-
-switch to ALice's home directory; Convert the private key to base64 and verify you still have the env-vars set
-
-```bash
-cd alice/
-
-base64 sa-for-bob.json | tr -d '\n\r' >sa-for-bob.json.b64
-
-export DEFAULT_RUN_SA=$ALICE_PROJECT_NUMBER-compute@developer.gserviceaccount.com
-echo $BOBS_INSTANCE_1_ID
-echo $DEFAULT_RUN_SA
-```
-In my case they were
-```
-1079298362778070454
-291362580151-compute@developer.gserviceaccount.com
-```
-
-Alice uses Cloud Secrets to save a symmetric key and the actual service account private key.
-Alice will authorize sher token service access to these secrets
-
-```bash
-export AES_KEY_FOR_INSTANCE_1="somesecret"
-echo -n $AES_KEY_FOR_INSTANCE_1 | gcloud beta secrets create aes-$BOBS_INSTANCE_1_ID --replication-policy=automatic   --project $ALICE_PROJECT_ID --data-file=-
-gcloud beta secrets create rsa-$BOBS_INSTANCE_1_ID --replication-policy=automatic --data-file=sa-for-bob.json.b64 --project $ALICE_PROJECT_ID
-
-gcloud beta secrets add-iam-policy-binding aes-$BOBS_INSTANCE_1_ID \
-  --member=serviceAccount:$DEFAULT_RUN_SA \
-  --role=roles/secretmanager.secretAccessor  \
-  --project $ALICE_PROJECT_ID -q
-
-gcloud beta secrets add-iam-policy-binding rsa-$BOBS_INSTANCE_1_ID \
-  --member=serviceAccount:$DEFAULT_RUN_SA \
-  --role=roles/secretmanager.secretAccessor  \
-  --project $ALICE_PROJECT_ID -q
-```
-
-The two secrets are formated like this:
-```
-#  AESKeyName:    aes-<vm_instance_id>
-#  RSAKeyName:    rsa-<vm_instance_id>
-```
-
-Once Alice's service authenticates the inbound API call from Bob's VM, it will validate the JWT and then use
-the secrets API using the instanceiD in the name
-This way, you can have unique secrets per instance
-
-Redeploy Alice's app again and this time provide some more env vars that was left out earlier (i.,e the audience field for 'itself')
-
-
-```bash
-export VERIFICATION_ENDPOINT=https://verifier-nvm6vsykba-uc.a.run.app 
-
-gcloud run deploy verifier --image gcr.io/$ALICE_PROJECT_ID/alicesapp \
-   --update-env-vars VERIFIER_AUDIENCE=$VERIFICATION_ENDPOINT,BOBS_VM_SERVICE_ACCOUNT=$BOBS_VM_SERVICE_ACCOUNT \
-   --project $ALICE_PROJECT_ID
-```
-
-### 5. Bob
-
-Access Bobs webserver:
-
-```bash
-$ curl -s http://$BOBS_SERVER:8080/
-:) AES Key [somesecret]       GCS Data [meet me at...]
-```
-
-Bobs server sent its instanceid do to alice's Token Endpoint which recognized Bob's VMID.
-
-Alices service sent back a symmetric key `somesecret` and actual private key material that has access to this Alices' files.
-
-
-### 6. Bob
-
-Bob wants to start a new VM image but with the same service account.
-
-Thats fine but this protocol used vm_id specific secrets.  You need to reassign secrets to the new vm_id
-
-- as Bob
-```bash
-gcloud compute instances create cos-1   --image-family cos-stable     --image-project cos-cloud \
-     --zone us-central1-a --service-account=$BOBS_VM_DEFAULT_SERVICE_ACCOUNT \
-     --scopes=userinfo-email,storage-ro  --tags=bob --machine-type n1-standard-1 \
-     --metadata-from-file user-data=bob-init.yaml   --project $BOB_PROJECT_ID
-
-
-export BOBS_SERVER=`gcloud compute instances describe cos-1 --project $BOB_PROJECT_ID --format="value(networkInterfaces[0].accessConfigs.natIP)"`
-export BOBS_INSTANCE_1_ID=`gcloud compute instances describe cos-1 --format="value(id)" --project $BOB_PROJECT_ID`
-
-echo $BOBS_SERVER
-echo $BOBS_INSTANCE_1_ID
-# 34.71.31.232
-# 5516919140634077099
-
-gcloud compute instances add-iam-policy-binding  cos-1 --member=user:alice@esodemoapp2.com --role roles/compute.viewer --project $BOB_PROJECT_ID
-```
-
-- Bob tells Alice about the new instanceID value 
-- Alice inspects the vm using 
-  gcloud compute instances describe cos-1 --format="value(id)" --project $BOB_PROJECT_ID
-
-- as Alice grants the new vmID access to secrets
-
-```bash
-export AES_KEY_FOR_INSTANCE_1="somesecret"
-echo -n $AES_KEY_FOR_INSTANCE_1 | gcloud beta secrets create aes-$BOBS_INSTANCE_1_ID --replication-policy=automatic   --project $ALICE_PROJECT_ID --data-file=-
-
-gcloud beta secrets create rsa-$BOBS_INSTANCE_1_ID \
-  --replication-policy=automatic \
-  --data-file=sa-for-bob.json.b64 \
-  --project $ALICE_PROJECT_ID
-
-gcloud beta secrets add-iam-policy-binding aes-$BOBS_INSTANCE_1_ID \
-  --member=serviceAccount:$DEFAULT_RUN_SA \
-  --role=roles/secretmanager.secretAccessor  \
-  --project $ALICE_PROJECT_ID -q
-
-gcloud beta secrets add-iam-policy-binding rsa-$BOBS_INSTANCE_1_ID \
-  --member=serviceAccount:$DEFAULT_RUN_SA \
-  --role=roles/secretmanager.secretAccessor \
-  --project $ALICE_PROJECT_ID -q
-```
-- as Bob
-
-Access VM's endpoint
-
-```bash
-$ curl -s http://$BOBS_SERVER:8080/
-:) AES Key [somesecret]       GCS Data [meet me at...]
-```
-
----
-
-## Appendix
-
-### Not externalIP
-  Bob can also start  the VM without an external IP using the `--no-network` flag but it makes this tutorial much more complicated to 'invoke' Bob's VM to fetch secrets...I just left it out.
-
-
-- `cos-init.yaml`
-```yaml
-#cloud-config
-
-users:
-- name: cloudservice
-  uid: 2000
+2020/06/17 00:20:20 tc-87fa8a4d  us-central1-a  2503055333933721897
+2020/06/17 00:20:20 Found  VM instanceID "2503055333933721897"
+2020/06/17 00:20:20 Found s VM ServiceAccount "tokenclient@tc-87fa8a4d.iam.gserviceaccount.com"
+2020/06/17 00:20:20 Image Data: #cloud-config
 
 write_files:
 - path: /etc/systemd/system/cloudservice.service
@@ -618,17 +340,133 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm -u 2000 -p 8080:8080 --name=mycloudservice gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-87fa8a4d/tokenclient@sha256:adb6d6b229f1cd8046ce4c98d848df16f3e15982e72332d4c1980eaf439c9c10 --address 34.72.145.220:50051 --tsAudience https://tokenserver --useALTS --doAttestation --exchangeSigningKey --v=20 -alsologtostderr
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
 runcmd:
-- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
-- systemctl mask --now serial-getty@ttyS0.service
 - systemctl daemon-reload
 - systemctl start cloudservice.service
+
+2020/06/17 00:20:20 ImageStartup Hash: [Kwmp//kyXrJQUCw3tzVu0ydSZrQa1ehLdVRQ9wEm4Jo=]
+2020/06/17 00:20:21 Derived EKPub for Instance:
+2020/06/17 00:20:21 -----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxfb4nQbUWQ4WjdhTnEsR
+8ShLFGzigoFi4FRFmr5tMNn9AyabTk0Sso7+VZyYGO7TtgBlDA5NnJerkB/ohjfS
+VO3gBkHH4UStUnovFzI2q5ksASIzsLC+M7DjXusGDVkAV1+Tu5gd65KAU8hLM6h4
+beOmtk744Jp7Rl84qADrBdEzusk4xPcmAlQdtxfjIbfxFRQot4U5JOc/XlKIrKhj
+oEF6X8ShGJgQ8UC/QVlvLdFUK2mZx+qMH6wlRoxzfcz4XpPdlYWM6gep849JOY5o
+fZW82w+dS/VP9z3HD+lj76pZki+nQVlKM2kHVkmAiZK06nu1IhTz9KLX3ou8Xtq3
+bwIDAQAB
+-----END PUBLIC KEY-----
+2020/06/17 00:20:21 looks ok? (y/N): 
+y
+2020/06/17 00:20:24 Generating RSA Key
+2020/06/17 00:20:24 Sample control Signed data: Cft9cjKm3/S3gORbEd6DY9IOnL0i7i3io2Ax/CBJzqOd1yhuenXH2XCwDi0Rc/GQVeGo1HEFKhO+ZttZMyhx6xde39JrxErOOMPc5ixN3gYOVyAcHY0ZF+RqTrCRLhj16Ny8+tPFy239Q8CVFKtUU/ajzwOGSw/+dprlLZpP9NyOVRV+j/zklCi3+hayWeu0I6CNu42qg32chinMiZgL1vTW/cu7OrdiBPhuK561HYqd0ZC8K8jqZbabyJxdHxf949G+vsR2AWnCDhyBVknRbv107m/gnV9yJ1VOb2Vltic82K4Kr1wKiC/lwgI0ha+rFvedWdQBjvUYxh/JP2gNIQ
+2020/06/17 00:20:24 Generating AES Key
+2020/06/17 00:20:24 Sealed AES Key with hash: IpkeBfTAL/1+G6/T9tFiTfAx5XoCpvBKk/AWc37+z5U=
+2020/06/17 00:20:25 2020-06-17 04:20:25.393835 +0000 UTC
+2020/06/17 00:20:25 Document data: "2503055333933721897"
+
 ```
 
+#### After Provisioning
+
+After provisioning, the full sequence to exchange encrypted keys takes place.  In addition, remoteAttestation (quote/verify) and TPM signing key is transmitted from the client to the server
+
+- TokenServer
+![images/tccomplete.png](images/tccomplete.png)
+
+- TokenClient
+![images/tscomplete.png](images/tscomplete.png)
+
+
+#### Firestore
+
+Each clientVM unique vm_id is saved in TokenServer's Firestore database
+
+The AES and RSA keys intended for the client VM is encrypted using the client VM's _own_ TPM EkPub
+
+![images/ts_firestore.png](images/ts_firestore.png)
+
+#### mTLS or ALTS
+
+Both alice and bob must decide upfront if they wish to use mTLS or ALTS (Application Layer Transport Security) for encryption and in the case of ALTS, supplemental authentication.  ALTS only works on GCP at the moment so mTLS is applicable if Alice runs the TokenServer onprem.   The default value is mTLS in this example.
+
+the `main.tf` files for both Alice and Bob have the cloud-init configuration for ALTS commented out.  To use alts, redeploy the service on both ends using the commented versions.
+
+- For reference, see [grpc_alts](https://github.com/salrashid123/grpc_alts)
+
+If mTLS is uses, the issue of key distribution and security of the TLS keys becomes an issue.  The TLS aspect here is used for confidentiality mostly since API requests are always authenticated (using bob's oidc token) and the raw RSA/AES keys that do get transmitted are encrypted such that it can only get decrypted by the TokenClient's vTPM.
+
+#### (enhancement) Generating GCP Service account
+
+Provisioning application contained in the default deploy does **NOT** generate and and return a GCP ServiceAccount as the raw RSA material
+
+Supporting GCP ServiceAccounts is still a TODO:
+
+tasks involved in doing that:
+
+a. Modify the TokenResponse proto When TokenClient receives the to include the KeyID serviceAccountName 
+
+```proto
+message TokenResponse {
+  string responseID = 1;
+  string inResponseTo = 2;
+  bytes sealedRSAKey = 3;
+  bytes sealedAESKey = 4;
+  int64 pcr = 5;
+  string resourceReference = 6;
+  string serviceAccountKeyId = 7;
+  string serviceAccountEmail = 8;
+}
+```
+
+b. Modify the `provisioner.go` to create a GCP serviceAccount ([Creating service account keys](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-go))
+c. Extract *just* the RSA part of the key, remove the passphrase (which by default is `notasecret` on GCP ).  
+d. Use TokenClient's TPM to save that as the `sealedRSAKey`, isave the keyID and serviceAccountEmail value
+
+e. TokenClient will embed the `sealedRSAKey` to the TPM and use that to generate GCP access_tokens as described here:
+
+- [oauth2.TPMTokenSource](https://github.com/salrashid123/oauth2#usage-tpmtokensource)
+
+
+#### (enhancement) Transmitting short term token
+
+TokenServer does not *have to* return rsa or aes keys and involve a tpm at all.  If Alice and Bob agree, the TokenServer can simply return a short term `access_token` directly to the TokenClient.   The Client can use that raw, non-refreshable token to access a GCP resource
+
+The server can also issue a [downscoped Token](https://github.com/salrashid123/downscoped_token)
+
+To support this, the TokenResponse proto would include just the token and maybe its expiration time
+```proto
+message TokenResponse {
+  string responseID = 1;
+  string inResponseTo = 2;
+  string access_token = 3;
+  int64  expire_at = 4;
+}
+```
+
+#### (tofix) Concurrent access to TPM
+
+TokenClient and TokenServer access the local TPM for various operations.  This device on GCP is at `/dev/tpm0` and cannot be accessed concurrently by various processes.  
+
+TODO: perform locking 
+
+#### TPM Quote/Verify and Unrestricted Signing Key
+
+The default protocol included in this repo also performs two TPM based flows:
+
+* Quote/Verify:  this allows the TokenClient to issue an Attestation Key which the TokenServer can save.  THis Key can be used to repeatedly verify PCR values resident on the Token Client
+* Unrestricted Signing Key: Normally, the AK cannot sign any arbitrary data (it is a restricted key).  Instead, the TokenClient can generate a new RSA key on the TPM where the private key is **always** on the tpm. Once thats done, the AK can sign it and return the public part to the TOken Server.  Since the Endorsement Key and Attestation key were now associated together, the new unrestricted key can also be indirectly associated with that specific TOkenClient.  The TokenClient can now sign for any arbitrary data, send it to the TokenServer which can veirfy its authenticity by using the public key previously sent
+
+![images/quoteverify.png](images/quoteverify.png)
+
+
+## Appendix
+
+### Not externalIP
+  Bob can also start  the VM without an external IP using the `--no-network` flag but it makes this tutorial much more complicated to 'invoke' Bob's VM to fetch secrets...I just left it out.
 
 ## Enhancements
 
@@ -637,37 +475,6 @@ Further enhancements can be to use
 * [Organizational Policy](https://cloud.google.com/resource-manager/docs/organization-policy/org-policy-constraints): Bob's orgianzation can have restrictions on the type of VM and specifications Bob can start (eg, ShieldedVM, OSLogin).  
 
 * `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see [this repo](https://github.com/salrashid123/restricted_security_gce)
-
-* TPM-based keys:  You can also transmit TPM encrypted data.  However, that requires a lot of other tooling and complexity.  For that see [https://github.com/salrashid123/tpm_key_distribution](https://github.com/salrashid123/tpm_key_distribution).  To enable TPM access from COS instance, run the COS container as root as `uid=0` and allow device map: `--device=/dev/tpm0:/dev/tpm0`:
-
-```yaml
-#cloud-config
-
-write_files:
-- path: /etc/systemd/system/cloudservice.service
-  permissions: 0644
-  owner: root
-  content: |
-    [Unit]
-    Description=Start a simple docker container
-    Wants=gcr-online.target
-    After=gcr-online.target
-
-    [Service]
-    Environment="HOME=/home/cloudservice"
-    ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm  -u 0 --device=/dev/tpm0:/dev/tpm0 -p 8080:8080 --name=mycloudservice gcr.io/$BOB_PROJECT_ID/bobsapp@sha256:51ee3d987db860f6aa543c3d6a995b856feb2bdb78f0999b5e770277f2d495a2
-    ExecStop=/usr/bin/docker stop mycloudservice
-    ExecStopPost=/usr/bin/docker rm mycloudservice
-
-runcmd:
-- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT   
-- systemctl daemon-reload
-- systemctl start cloudservice.service
-```
-
-
-
 
 * [Cloud Run Authentication](https://cloud.google.com/run/docs/authenticating/service-to-service).  Since Alice deployed the service to Cloud Run, she can use GCP itself to restrict access to the specific servcie account Bob's VM runs as:
   In the following, we only allow an id_token that is owned by `313701472922-compute@developer.gserviceaccount.com` through. 
