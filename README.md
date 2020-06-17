@@ -53,12 +53,19 @@ Provisioning Server saves encrypted RSA/AES keys, hash of startupscript to Googl
 
 `VM-A` checks `instanceID`, `serviceAccount`, `audience` and other claims in the document.
 
+
 `VM-A` looks up Firestore using the `instanceID` as  the key.
 
-`VM-B` returns encrypted RSA/AES key
+`VM-A` uses GCP Compute API to retrieve the current/active startup script for `VM-B`
 
-`VM-A` uses its TPM to decrypt RSA and AES key
-  If RSA key is a GCP Service Account, use that to download data from Google Services.  The AES/RSA key can be from any provider (AWS/Azure, etc)
+`VM-A` compares the hash of the retrieved startup script against the value in Firestore previously authorized.  If mismatch, return error.
+
+`VM-A` returns encrypted RSA/AES key to `VM-B`
+
+`VM-B` uses its TPM to decrypt RSA and AES key
+
+If RSA key is a GCP Service Account, use that to download data from Google Services.  
+The AES/RSA key can be from any provider  (AWS/Azure, etc) or really any arbitrary secret
 
 ![images/sequence.png](images/sequence.png)
 
