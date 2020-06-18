@@ -90,17 +90,26 @@ Alice and Bob will both need:
 * [terraform](terraform.io)
 * `go 1.14`
 * Permissions to create GCP Projects
+* `gcloud` CLI
 
 ### Start TokenServer Infrastructure (Alice)
 
 As Alice, you will need your
 
 *  [Billing Account ID](https://cloud.google.com/billing/docs/how-to/manage-billing-account) 
+  `gcloud beta billing accounts list`
 
 * OrganizationID
   `gcloud organzations list`
   If you do not have an organization, edit `alice/main.tf` and remove the `org_id` variable from `google_project`
  
+Alice should also login to local gcloud for both cli and application-default credentials sources
+
+```bash
+gcloud auth login
+gcloud auth application-default login
+```
+
 ```bash
 cd alice/
 export TF_VAR_org_id=673208782222
@@ -112,24 +121,24 @@ terraform apply --target=module.setup
 You should see the new project details and IP address allocated/assigned for the `TokenServer`
 
 ```bash
-Outputs:
+      Outputs:
 
-gcr_id = artifacts.ts-039e6b6a.appspot.com
-natip_address = 34.70.0.86
-project_id = ts-039e6b6a
-project_number = 97447295174
-ts_address = 34.72.145.220
-ts_service_account = tokenserver@ts-039e6b6a.iam.gserviceaccount.com
+      gcr_id = artifacts.ts-a7c2b080.appspot.com
+      natip_address = 35.223.60.4
+      project_id = ts-a7c2b080
+      project_number = 847928479885
+      ts_address = 34.70.21.17
+      ts_service_account = tokenserver@ts-a7c2b080.iam.gserviceaccount.com
 
 
-export TF_VAR_project_id=ts-039e6b6a
+export TF_VAR_project_id=ts-a7c2b080
 ```
 
-Provide Bob the values of `ts_address` and `ts_service_account` variables anytime later:
+**Provide Bob the values of `ts_address` and `ts_service_account` variables anytime later**
 
 ```bash
-export TF_VAR_ts_service_account=tokenserver@ts-039e6b6a.iam.gserviceaccount.com
-export TF_VAR_ts_address=34.72.145.220  
+export TF_VAR_ts_service_account=tokenserver@ts-a7c2b080.iam.gserviceaccount.com
+export TF_VAR_ts_address=34.70.21.17
 ```
 
 ### Start TokenClient Infrastructure (Bob)
@@ -159,20 +168,17 @@ terraform apply --target=module.setup
 The command will create a new GCP project, enable GCP api services, create a service account for the Token server and allocate a static IP:
 
 ```bash
-Outputs:
+        Outputs:
 
-gcr_id = artifacts.tc-87fa8a4d.appspot.com
-natip_address = 34.71.145.8
-project_id = tc-87fa8a4d
-project_number = 597577201234
-tc_address = 35.232.215.216
-tc_service_account = tokenclient@tc-87fa8a4d.iam.gserviceaccount.com
-```
+        gcr_id = artifacts.tc-d151585d.appspot.com
+        natip_address = 104.197.93.80
+        project_id = tc-d151585d
+        project_number = 461150660741
+        tc_address = 34.72.193.13
+        tc_service_account = tokenclient@tc-d151585d.iam.gserviceaccount.com
 
-export TokenClient projectID
 
-```bash
-export TC_PROJECT=tc-87fa8a4d
+export TF_VAR_project_id=tc-d151585d
 ```
 
 ### Deploy TokenServer (Alice)
@@ -180,56 +186,29 @@ export TC_PROJECT=tc-87fa8a4d
 As Alice, build the TokenServer and push to Google Container Registry
 
 ```bash
-cd ../app
 echo $TF_VAR_project_id
-echo $TF_VAR_ts_service_account
-echo $TF_VAR_ts_address
 
-
-gcloud builds submit  --config cloudbuild-ts.yaml --project  $TF_VAR_project_id
-gcloud container images describe gcr.io/$TF_VAR_project_id/tokenserver --project $TF_VAR_project_id
+terraform apply --target=module.build
 ```
 
-Note down the image digest value
+Then deploy it to a VM
 
 ```bash
-image_summary:
-  digest: sha256:59fcee8a100012e1e1ab651aab1aa6e2d096cffadfb4dd69c86fee0a1588c174
-  fully_qualified_digest: gcr.io/ts-039e6b6a/tokenserver@sha256:59fcee8a100012e1e1ab651aab1aa6e2d096cffadfb4dd69c86fee0a1588c174
-  registry: gcr.io
-  repository: ts-039e6b6a/tokenserver
-```
-
-Note the `digest` 
-
-```bash
-export TF_VAR_image_hash=sha256:59fcee8a100012e1e1ab651aab1aa6e2d096cffadfb4dd69c86fee0a1588c174
-```
-
-Make sure the environment variables are populated
-
-```bash
-cd ../alice/
-
-echo $TF_VAR_project_id
-echo $TF_VAR_ts_service_account
-echo $TF_VAR_image_hash
-
 terraform apply --target=module.deploy
 ```
-
 You should see an output like:
 
 ```bash
-Outputs:
+        Outputs:
 
-gcr_id = artifacts.ts-039e6b6a.appspot.com
-natip_address = 34.70.0.86
-project_id = ts-039e6b6a
-project_number = 97447295174
-token_server_instance_id = 6431532147148074775
-ts_address = 34.72.145.220
-ts_service_account = tokenserver@ts-039e6b6a.iam.gserviceaccount.com
+        gcr_id = artifacts.ts-a7c2b080.appspot.com
+        image_hash = sha256:e65777ab8016346169c63b444287952f0b43e71717d67eb9af971a9b5bb1ec2a
+        natip_address = 35.223.60.4
+        project_id = ts-a7c2b080
+        project_number = 847928479885
+        token_server_instance_id = 485890575766587729
+        ts_address = 34.70.21.17
+        ts_service_account = tokenserver@ts-a7c2b080.iam.gserviceaccount.com
 ```
 
 ### Deploy TokenClient (Bob)
@@ -242,58 +221,42 @@ Bob needs to set some additional environment variables that were *provided by Al
 * `TF_VAR_ts_address`: this is the IP address of the TokenServer (`34.72.145.220`)
 * `TF_VAR_ts_provisioner`: this is Alice's email address that Bob will authorize to read the TokenClients metadata values (`alice@esodemoapp2.com`)
 
+Make sure the env vars are set (`TF_VAR_project_id` would be the the TokenClient (Bob) project)
 
 ```bash
-cd ../app/
-echo $export TC_PROJECT
-
-gcloud builds submit  --config cloudbuild-tc.yaml --project  $TC_PROJECT
-gcloud container images describe gcr.io/$TC_PROJECT/tokenclient --project $TC_PROJECT
-```
-
-should yield the image for the TokenCLient:
-
-```
-  image_summary:
-    digest: sha256:adb6d6b229f1cd8046ce4c98d848df16f3e15982e72332d4c1980eaf439c9c10
-    fully_qualified_digest: gcr.io/tc-87fa8a4d/tokenclient@sha256:adb6d6b229f1cd8046ce4c98d848df16f3e15982e72332d4c1980eaf439c9c10
-    registry: gcr.io
-    repository: tc-87fa8a4d/tokenclient
-```
-
-Note the `digest` and export its value 
-
-```bash
-export TF_VAR_image_hash=sha256:adb6d6b229f1cd8046ce4c98d848df16f3e15982e72332d4c1980eaf439c9c10
-```
-
-Make sure the env variables are populated
-
-```bash
-cd bob/
-
-export TF_VAR_ts_provisioner=alice@esodemoapp2.com
-
 echo $TF_VAR_ts_service_account
 echo $TF_VAR_ts_address
 echo $TF_VAR_ts_provisioner
-echo $TF_VAR_image_hash
+
+echo $TF_VAR_project_id
 ```
 
-deploy:
+then build the app
+
+```bash
+terraform apply --target=module.build
+```
+
+Then deploy it to a VM
 
 ```bash
 terraform apply --target=module.deploy
+```
 
-Outputs:
+You should see an output like:
 
-gcr_id = artifacts.tc-87fa8a4d.appspot.com
-natip_address = 34.71.145.8
-project_id = tc-87fa8a4d
-project_number = 597577201234
-tc_address = 35.232.215.216
-tc_service_account = tokenclient@tc-87fa8a4d.iam.gserviceaccount.com
-token_client_instance_id = 2503055333933721897
+```bash
+        Outputs:
+
+        gcr_id = artifacts.tc-d151585d.appspot.com
+        image_hash = sha256:3b83f5306f3572576ee3dd65fdb778cc606bc07e282cd7adb9ce2e16fc4ac1f7
+        natip_address = 104.197.93.80
+        project_id = tc-d151585d
+        project_number = 461150660741
+        tc_address = 34.72.193.13
+        tc_service_account = tokenclient@tc-d151585d.iam.gserviceaccount.com
+        token_client_instance_id = 9005331281126819222
+
 ```
 
 Note the `token_client_instance_id`.  
@@ -322,15 +285,15 @@ Optionally provide `tc_address` to TokenServer (to apply on-demand firewall or o
 
 ### Provision TokenClient vm_id
 
-Use VMID to provision the Firestore Database after validating Bob's VM state
+Use `vm_id` to provision the Firestore Database after validating Bob's VM state
 
 As Alice, 
 ```bash
 cd app/
 
-export TOKEN_SERVER_PROJECT=ts-039e6b6a
-export TOKEN_CLIENT_PROJECT=tc-87fa8a4d
-export VM_ID=2503055333933721897
+export TOKEN_SERVER_PROJECT=ts-a7c2b080
+export TOKEN_CLIENT_PROJECT=tc-d151585d
+export VM_ID=9005331281126819222
 
 $ go run src/provisioner/provisioner.go --fireStoreProjectId $TOKEN_SERVER_PROJECT --firestoreCollectionName foo     --clientProjectId $TOKEN_CLIENT_PROJECT --clientVMZone us-central1-a --clientVMId $VM_ID --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
 

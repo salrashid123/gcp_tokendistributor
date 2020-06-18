@@ -29,6 +29,11 @@ variable "zone" {
   default = "us-central1-a"
 }
 
+variable "app_source_dir" {
+  type    = string
+  default = "../app"
+}
+
 variable "gae_location_id" {
   type    = string
   default = "us-central"

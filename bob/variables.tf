@@ -34,6 +34,11 @@ variable "ts_address" {
   default = ""
 }
 
+variable "app_source_dir" {
+  type    = string
+  default = "../app"
+}
+
 variable "ts_provisioner" {
   type    = string
   default = ""

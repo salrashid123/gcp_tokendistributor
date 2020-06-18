@@ -25,3 +25,7 @@ output "gcr_id" {
 output "token_server_instance_id" {
   value = module.deploy.instance_id
 }
+
+output "image_hash" {
+  value = module.build.image_hash
+}
