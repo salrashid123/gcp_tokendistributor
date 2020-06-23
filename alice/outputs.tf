@@ -1,9 +1,9 @@
 
-output "project_id" {
-  value = module.setup.project_id
+output "ts_project_id" {
+  value = module.setup.ts_project_id
 }
-output "project_number" {
-  value = module.setup.project_number
+output "ts_project_number" {
+  value = module.setup.ts_project_number
 }
 
 output "ts_service_account" {
@@ -22,10 +22,10 @@ output "gcr_id" {
   value = module.setup.gcr_id
 }
 
-output "token_server_instance_id" {
+output "ts_instance_id" {
   value = module.deploy.instance_id
 }
 
-output "image_hash" {
-  value = module.build.image_hash
+output "ts_image_hash" {
+  value = module.build.ts_image_hash
 }

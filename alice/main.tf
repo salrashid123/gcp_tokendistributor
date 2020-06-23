@@ -10,9 +10,9 @@ module "setup" {
   billing_account = var.billing_account
   org_id = var.org_id
   allowedclientsubnet = var.allowedclientsubnet
-  tlsca = var.tlsca
-  tls_crt = var.tls_crt
-  tls_key = var.tls_key
+  tls_server_ca = var.tls_server_ca
+  tls_server_crt = var.tls_server_crt
+  tls_server_key = var.tls_server_key
   gae_location_id = var.gae_location_id
 }
 
@@ -20,7 +20,6 @@ module "build" {
   source = "./build"
   app_source_dir = var.app_source_dir
   project_id = module.setup.project_id
-  project_number = module.setup.project_number  
 }
 
 module "deploy" {

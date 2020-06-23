@@ -10,12 +10,12 @@ variable "org_id" {
 variable "region" {
   type = string
 }
-variable "tlsca" {
+variable "tls_client_ca" {
   type    = string
 }
-variable "tls_crt" {
+variable "tls_client_crt" {
   type    = string
 }
-variable "tls_key" {
+variable "tls_client_key" {
   type    = string
 }

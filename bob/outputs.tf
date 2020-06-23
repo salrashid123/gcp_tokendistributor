@@ -1,8 +1,8 @@
 
-output "project_id" {
+output "tc_project_id" {
   value = module.setup.project_id
 }
-output "project_number" {
+output "tc_project_number" {
   value = module.setup.project_number
 }
 
@@ -22,13 +22,14 @@ output "gcr_id" {
   value = module.setup.gcr_id
 }
 
-output "token_client_instance_id" {
+output "tc_image_hash" {
+  value = module.build.image_hash
+}
+
+output "tc_instance_id" {
   value = module.deploy.instance_id
 }
 
-output "image_hash" {
-  value = module.build.image_hash
-}
 
 # output "token_client_address" {
 #   value = module.deploy.ip

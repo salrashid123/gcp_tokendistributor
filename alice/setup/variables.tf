@@ -16,12 +16,12 @@ variable "gae_location_id" {
 variable "allowedclientsubnet" {
   type    = string
 }
-variable "tlsca" {
+variable "tls_server_ca" {
   type    = string
 }
-variable "tls_crt" {
+variable "tls_server_crt" {
   type    = string
 }
-variable "tls_key" {
+variable "tls_server_key" {
   type    = string
 }

@@ -53,7 +53,6 @@ Provisioning Server saves encrypted RSA/AES keys, hash of startupscript to Googl
 
 `VM-A` checks `instanceID`, `serviceAccount`, `audience` and other claims in the document.
 
-
 `VM-A` looks up Firestore using the `instanceID` as  the key.
 
 `VM-A` uses GCP Compute API to retrieve the current/active startup script for `VM-B`
@@ -70,6 +69,11 @@ The AES/RSA key can be from any provider  (AWS/Azure, etc) or really any arbitra
 ![images/sequence.png](images/sequence.png)
 
 ---
+- [Start TokenServer Infrastructure and Service (Alice)](#Start-TokenServer-Infrastructure-and-Service-(Alice))
+- [Deploy TokenService (Alice)](#Deploy-TokenService-(Alice))
+- [Start TokenClient Infrastructure (Bob)](#Start-TokenClient-Infrastructure-(Bob))
+- [Deploy TokenClient (Bob)](#Deploy-TokenClient-(Bob))
+- [Provision TokenClient vm_id (Alice)](#Provision-TokenClient-vm_id-(Alice))
 
 ### Setup
 
@@ -92,7 +96,7 @@ Alice and Bob will both need:
 * Permissions to create GCP Projects
 * `gcloud` CLI
 
-### Start TokenServer Infrastructure (Alice)
+### Start TokenServer Infrastructure and Service (Alice)
 
 As Alice, you will need your
 
@@ -111,34 +115,51 @@ gcloud auth application-default login
 ```
 
 ```bash
-cd alice/
 export TF_VAR_org_id=673208782222
 export TF_VAR_billing_account=000C16-9779B5-12345
 
-terraform apply --target=module.setup 
+terraform init  
+
+terraform apply --target=module.ts_setup -auto-approve
+terraform apply --target=module.ts_build -auto-approve
 ```
 
 You should see the new project details and IP address allocated/assigned for the `TokenServer`
 
 ```bash
-      Outputs:
+    Outputs:
 
-      gcr_id = artifacts.ts-a7c2b080.appspot.com
-      natip_address = 35.223.60.4
-      project_id = ts-a7c2b080
-      project_number = 847928479885
-      ts_address = 34.70.21.17
-      ts_service_account = tokenserver@ts-a7c2b080.iam.gserviceaccount.com
-
-
-export TF_VAR_project_id=ts-a7c2b080
+    ts_address = 35.239.242.219
+    ts_image_hash = sha256:d15fca0990db0e106cae91e975c3093fed96131250702cdd7db1d45ca77e1c21
+    ts_project_id = ts-de7f98d5
+    ts_project_number = 973084368812
+    ts_service_account = tokenserver@ts-de7f98d5.iam.gserviceaccount.com
 ```
 
 **Provide Bob the values of `ts_address` and `ts_service_account` variables anytime later**
 
 ```bash
-export TF_VAR_ts_service_account=tokenserver@ts-a7c2b080.iam.gserviceaccount.com
-export TF_VAR_ts_address=34.70.21.17
+export TF_VAR_ts_project_id=`terraform output -state=terraform.tfstate ts_project_id`
+export TF_VAR_ts_service_account=`terraform output -state=terraform.tfstate ts_service_account`
+export TF_VAR_ts_address=`terraform output -state=terraform.tfstate ts_address`
+```
+
+In this case its ofcourse
+
+```bash
+$ echo $TF_VAR_ts_service_account
+  tokenserver@ts-de7f98d5.iam.gserviceaccount.com
+
+$ echo $TF_VAR_ts_address
+  35.239.36.219
+```
+
+### Deploy TokenService (Alice)
+
+Deploy the TokenService with defaults.  The command below will deploy an _unconfigured_ TokenServer with a static IP address (`TF_VAR_ts_address`)
+
+```
+terraform apply --target=module.ts_deploy -auto-approve
 ```
 
 ### Start TokenClient Infrastructure (Bob)
@@ -151,64 +172,32 @@ As Bob, you will need your
   `gcloud organzations list`
   If you do not have an organization, edit `alice/main.tf` and remove the `org_id` variable from `google_project`
  
-The following will startup Bobs infrastructure (GCP project, and allocate IP for tokenClient).
+The following will startup Bobs infrastructure (GCP project, and allocate IP for tokenClient). The `tc_build` step will also generate the docker image
+for the TokenClient but not deploy it yet
 
 This step can be done independently of Alice at anytime.
 
 
 ```bash
-cd bob/
 export TF_VAR_org_id=111108786098
 export TF_VAR_billing_account=22121-9779B5-30076F
 
+terraform init
 
-terraform apply --target=module.setup 
+terraform apply --target=module.tc_setup -auto-approve
+terraform apply --target=module.tc_build -auto-approve
 ```
 
 The command will create a new GCP project, enable GCP api services, create a service account for the Token server and allocate a static IP:
 
 ```bash
-        Outputs:
+    Outputs:
 
-        gcr_id = artifacts.tc-d151585d.appspot.com
-        natip_address = 104.197.93.80
-        project_id = tc-d151585d
-        project_number = 461150660741
-        tc_address = 34.72.193.13
-        tc_service_account = tokenclient@tc-d151585d.iam.gserviceaccount.com
-
-
-export TF_VAR_project_id=tc-d151585d
-```
-
-### Deploy TokenServer (Alice)
-
-As Alice, build the TokenServer and push to Google Container Registry
-
-```bash
-echo $TF_VAR_project_id
-
-terraform apply --target=module.build
-```
-
-Then deploy it to a VM
-
-```bash
-terraform apply --target=module.deploy
-```
-You should see an output like:
-
-```bash
-        Outputs:
-
-        gcr_id = artifacts.ts-a7c2b080.appspot.com
-        image_hash = sha256:e65777ab8016346169c63b444287952f0b43e71717d67eb9af971a9b5bb1ec2a
-        natip_address = 35.223.60.4
-        project_id = ts-a7c2b080
-        project_number = 847928479885
-        token_server_instance_id = 485890575766587729
-        ts_address = 34.70.21.17
-        ts_service_account = tokenserver@ts-a7c2b080.iam.gserviceaccount.com
+    tc_address = 35.193.246.123
+    tc_image_hash = sha256:661f10eeaf66af697a1d463ad6db2467b2ef990277cf85b0d40a53b239391704
+    tc_project_id = tc-16a39413
+    tc_project_number = 538014872919
+    tc_service_account = tokenclient@tc-16a39413.iam.gserviceaccount.com
 ```
 
 ### Deploy TokenClient (Bob)
@@ -223,44 +212,54 @@ Bob needs to set some additional environment variables that were *provided by Al
 
 Make sure the env vars are set (`TF_VAR_project_id` would be the the TokenClient (Bob) project)
 
+>> this step is really important <<<
+
 ```bash
+export TF_VAR_ts_service_account=<value given by Alice>
+export TF_VAR_ts_address=<value given by Alice>
+export TF_VAR_ts_provisioner=<value given by Alice>
+
 echo $TF_VAR_ts_service_account
 echo $TF_VAR_ts_address
 echo $TF_VAR_ts_provisioner
-
-echo $TF_VAR_project_id
 ```
 
-then build the app
-
-```bash
-terraform apply --target=module.build
-```
+or specify them inline here:
 
 Then deploy it to a VM
 
 ```bash
-terraform apply --target=module.deploy
+terraform apply --target=module.tc_deploy \
+ -var="ts_service_account=$TF_VAR_ts_service_account" \
+ -var="ts_address=$TF_VAR_ts_address" \
+ -var="ts_provisioner=$TF_VAR_ts_provisioner" \
+ -auto-approve
 ```
 
 You should see an output like:
 
 ```bash
-        Outputs:
-
-        gcr_id = artifacts.tc-d151585d.appspot.com
-        image_hash = sha256:3b83f5306f3572576ee3dd65fdb778cc606bc07e282cd7adb9ce2e16fc4ac1f7
-        natip_address = 104.197.93.80
-        project_id = tc-d151585d
-        project_number = 461150660741
-        tc_address = 34.72.193.13
-        tc_service_account = tokenclient@tc-d151585d.iam.gserviceaccount.com
-        token_client_instance_id = 9005331281126819222
-
+      Outputs:
+      tc_address = 35.193.246.123
+      tc_image_hash = sha256:661f10eeaf66af697a1d463ad6db2467b2ef990277cf85b0d40a53b239391704
+      tc_instance_id = 7953211237324536786
+      tc_project_id = tc-16a39413
+      tc_project_number = 538014872919
+      tc_service_account = tokenclient@tc-16a39413.iam.gserviceaccount.com
+      ts_project_id = ts-48e50fad
 ```
 
-Note the `token_client_instance_id`.  
+Note the `tc_instance_id` and `tc_project_id`. 
 
+```bash
+export TF_VAR_tc_project_id=`terraform output -state=terraform.tfstate tc_project_id`
+export TF_VAR_tc_instance_id=`terraform output -state=terraform.tfstate tc_instance_id`
+
+echo $TF_VAR_tc_project_id
+echo $TF_VAR_tc_instance_id
+```
+
+** Provide these values to Alice for provisioning**
 
 ### Interlude
 
@@ -283,19 +282,22 @@ So...now
 Optionally provide `tc_address` to TokenServer (to apply on-demand firewall or origin checks if NAT isn't used)
 
 
-### Provision TokenClient vm_id
+### Provision TokenClient vm_id (Alice)
 
 Use `vm_id` to provision the Firestore Database after validating Bob's VM state
 
 As Alice, 
 ```bash
-cd app/
+export TF_VAR_tc_project_id=`<value given by Bob>`
+export TF_VAR_tc_instance_id=`<value given by Bob>`
+export TF_VAR_ts_project_id=`terraform output -state=terraform.tfstate ts_project_id`
 
-export TOKEN_SERVER_PROJECT=ts-a7c2b080
-export TOKEN_CLIENT_PROJECT=tc-d151585d
-export VM_ID=9005331281126819222
+echo $TF_VAR_tc_project_id
+echo $TF_VAR_tc_instance_id
+echo $TF_VAR_ts_project_id
 
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TOKEN_SERVER_PROJECT --firestoreCollectionName foo     --clientProjectId $TOKEN_CLIENT_PROJECT --clientVMZone us-central1-a --clientVMId $VM_ID --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+$ cd app/
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
 
 ```
 
@@ -304,10 +306,10 @@ The output of the provisioning step will prompt you to confirm that the image st
 At that point, the image hash value will be saved into Firestore `Kwmp//kyXrJQUCw3tzVu0ydSZrQa1ehLdVRQ9wEm4Jo=`  using the `vm_id=2503055333933721897` in firestore document key.  Every time the TOkenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
 
 ```
-2020/06/17 00:20:20 tc-87fa8a4d  us-central1-a  2503055333933721897
-2020/06/17 00:20:20 Found  VM instanceID "2503055333933721897"
-2020/06/17 00:20:20 Found s VM ServiceAccount "tokenclient@tc-87fa8a4d.iam.gserviceaccount.com"
-2020/06/17 00:20:20 Image Data: #cloud-config
+2020/06/23 09:47:32 tc-16a39413  us-central1-a  7953211237324536786
+2020/06/23 09:47:32 Found  VM instanceID "7953211237324536786"
+2020/06/23 09:47:32 Found s VM ServiceAccount "tokenclient@tc-16a39413.iam.gserviceaccount.com"
+2020/06/23 09:47:32 Image Data: #cloud-config
 
 write_files:
 - path: /etc/systemd/system/cloudservice.service
@@ -322,35 +324,51 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-87fa8a4d/tokenclient@sha256:adb6d6b229f1cd8046ce4c98d848df16f3e15982e72332d4c1980eaf439c9c10 --address 34.72.145.220:50051 --tsAudience https://tokenserver --useALTS --doAttestation --exchangeSigningKey --v=20 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-16a39413/tokenclient@sha256:661f10eeaf66af697a1d463ad6db2467b2ef990277cf85b0d40a53b239391704 --address 35.239.242.219:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useSecrets --tlsClientCert projects/538014872919/secrets/tls_crt --tlsClientKey projects/538014872919/secrets/tls_key --tlsCertChain projects/538014872919/secrets/tls-ca --doAttestation --exchangeSigningKey --v=20 -alsologtostderr
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
 runcmd:
+- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+- systemctl mask --now serial-getty@ttyS0.service
 - systemctl daemon-reload
 - systemctl start cloudservice.service
 
-2020/06/17 00:20:20 ImageStartup Hash: [Kwmp//kyXrJQUCw3tzVu0ydSZrQa1ehLdVRQ9wEm4Jo=]
-2020/06/17 00:20:21 Derived EKPub for Instance:
-2020/06/17 00:20:21 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxfb4nQbUWQ4WjdhTnEsR
-8ShLFGzigoFi4FRFmr5tMNn9AyabTk0Sso7+VZyYGO7TtgBlDA5NnJerkB/ohjfS
-VO3gBkHH4UStUnovFzI2q5ksASIzsLC+M7DjXusGDVkAV1+Tu5gd65KAU8hLM6h4
-beOmtk744Jp7Rl84qADrBdEzusk4xPcmAlQdtxfjIbfxFRQot4U5JOc/XlKIrKhj
-oEF6X8ShGJgQ8UC/QVlvLdFUK2mZx+qMH6wlRoxzfcz4XpPdlYWM6gep849JOY5o
-fZW82w+dS/VP9z3HD+lj76pZki+nQVlKM2kHVkmAiZK06nu1IhTz9KLX3ou8Xtq3
-bwIDAQAB
+2020/06/23 09:47:32 ImageStartup Hash: [nwQqn5/Ql/NJu5c68EuO5v8i0ee+4jpUGwOBqkXcX7Y=]
+2020/06/23 09:47:33 Derived EKPub for Instance:
+2020/06/23 09:47:33 -----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy8Fz/K9LNhF2Ir0b7uGW
+pFFZwnPXUk9e6Jp/+4ZblZKGj/F63Wp5mVbsL/aeJ7OELg0TLmMCxTQC5wLpH/39
+/uR9R826PuiYOvs7Fbj5DdE6DLq4sNvrRu5uwzp4Ho60xx46wuH8BF7P+bVS7m/u
+1nmFLJwAoMPsgEmMonHQyRd4BNzjYThUdP68muy47tngASOsqtbXP4H99U6bwes1
+aPqAe/3Tbc4f6kDg7QqqgKRBAjJowVhydnCgCEud7KVBisIBgjmBhoRGoISUBIDv
+HQd5D5afIdOd9ni1sHfaTFW35TBvtgkgsJwcFIptP7IhTaQzDrkQ4ZdpzBK/JjxX
+uwIDAQAB
 -----END PUBLIC KEY-----
-2020/06/17 00:20:21 looks ok? (y/N): 
+2020/06/23 09:47:33 looks ok? (y/N): 
 y
-2020/06/17 00:20:24 Generating RSA Key
-2020/06/17 00:20:24 Sample control Signed data: Cft9cjKm3/S3gORbEd6DY9IOnL0i7i3io2Ax/CBJzqOd1yhuenXH2XCwDi0Rc/GQVeGo1HEFKhO+ZttZMyhx6xde39JrxErOOMPc5ixN3gYOVyAcHY0ZF+RqTrCRLhj16Ny8+tPFy239Q8CVFKtUU/ajzwOGSw/+dprlLZpP9NyOVRV+j/zklCi3+hayWeu0I6CNu42qg32chinMiZgL1vTW/cu7OrdiBPhuK561HYqd0ZC8K8jqZbabyJxdHxf949G+vsR2AWnCDhyBVknRbv107m/gnV9yJ1VOb2Vltic82K4Kr1wKiC/lwgI0ha+rFvedWdQBjvUYxh/JP2gNIQ
-2020/06/17 00:20:24 Generating AES Key
-2020/06/17 00:20:24 Sealed AES Key with hash: IpkeBfTAL/1+G6/T9tFiTfAx5XoCpvBKk/AWc37+z5U=
-2020/06/17 00:20:25 2020-06-17 04:20:25.393835 +0000 UTC
-2020/06/17 00:20:25 Document data: "2503055333933721897"
-
+2020/06/23 09:47:34 Generating RSA Key
+2020/06/23 09:47:35 Sample control Signed data: Cln+uxlGriFF4oVqI0kPGIQjLr9gT+MDtLzScj/2xPlfZxjyjNJ5r2g3I8bNgnv48znYx9BggGnz3EbojZMmJMRNorl3YEXYX9tnTdMRE46LZ+xVcms7/fmB9tpqdG7lhtD5QNUPU69HMbW7x44qv2g2t1sAFFSXMtzy1JS2N48HgFQn9LOa2mqBh7OwW4KpF1KD8eVDnlFRa5n4jPEZTWOGk74B4pbVKpbRuEGp6lh3lVBkHM+s3q4D3JDiWkBLGamTfw1+wlTPmWRKWqfcnNqb2k4sj3yRwVHN46wYaJZWqoCW8lkoL9Juz3G489hnYMugMPseZpXevtZrUOhaIg
+2020/06/23 09:47:35 Generating AES Key
+2020/06/23 09:47:35 Sealed AES Key with hash: OUpYGm7Vwr48Yv6bj8e4i/CJazCcgmtB1eQFhUSLIww=
+2020/06/23 09:47:35 2020-06-23 13:47:35.863366 +0000 UTC
+2020/06/23 09:47:36 Document data: "7953211237324536786"
 ```
+
+Note, there is also a terraform module included here to _automatically_ process requests. 
+
+To use that, first compile the provisioner
+
+```bash
+cd app/
+go build -o provisioner src/provisioner/provisioner.go
+```
+
+then invoke it
+```
+terraform apply --target=module.ts_provisioner -auto-approve
+```
+Note, the autoprovisioner approves any and all requests...If you want to use this in real life, you must bake in logic to the approval process in the provisioner to check for signals (eg a "golden" image hash, sourceIP, project, tec)
 
 #### After Provisioning
 
@@ -458,11 +476,6 @@ Further enhancements can be to use
 
 * `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see [this repo](https://github.com/salrashid123/restricted_security_gce)
 
-* [Cloud Run Authentication](https://cloud.google.com/run/docs/authenticating/service-to-service).  Since Alice deployed the service to Cloud Run, she can use GCP itself to restrict access to the specific servcie account Bob's VM runs as:
-  In the following, we only allow an id_token that is owned by `313701472922-compute@developer.gserviceaccount.com` through. 
-  ![images/run_invoker.png](images/run_invoker.png)
-  Cloud Run will check the audience claim but will ofcourse do nothing to validate the instanceID, etc. You should doublecheck in your app always.
-
 * [IAM Conditions](https://cloud.google.com/iam/docs/conditions-overview):  You can enable IAM conditions on any of the GCP resources in question. Since Alice and Bob are using GCP, you can place a condition on when the TokenService or on the GCS bucket or on Alice's ability to view the VM or logging metadata.
 
 * [OS Config Agent](https://cloud.google.com/compute/docs/manage-os):  You can also install the OS config agent on the VM.  This agent will report specifications of the packages installed on the VM.  However, this agent can also be configured to [update packages](https://cloud.google.com/compute/docs/os-config-management) by the VM's admin by updating its metadata from outside the VM.  If you do not want Bob to dynamically update a packages on the VM, do not enable this feature.
@@ -480,3 +493,15 @@ Further enhancements can be to use
   * Mount Persistent Disk with LUKS encryption:
     - [https://github.com/salrashid123/gcp_luks_csek_disks](https://github.com/salrashid123/gcp_luks_csek_disks)
     
+
+
+## Automated Testing
+
+TODO:
+
+- Allow cloud build "project creator" and "billing admin IAM rights
+  `project_number@cloudbuild.gserviceaccount.com`
+
+- see `test/cloudbuild.yaml`
+
+

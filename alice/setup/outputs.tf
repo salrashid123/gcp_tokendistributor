@@ -1,10 +1,10 @@
 
 
-output "project_id" {
+output "ts_project_id" {
   value = google_project.project.project_id
 }
 
-output "project_number" {
+output "ts_project_number" {
   value = google_project.project.number
 }
 

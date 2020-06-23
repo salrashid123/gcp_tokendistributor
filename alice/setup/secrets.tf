@@ -11,7 +11,7 @@ resource "google_secret_manager_secret" "tlsca" {
 resource "google_secret_manager_secret_version" "tlsca" {
   provider = google-beta    
   secret = google_secret_manager_secret.tlsca.id
-  secret_data = file(var.tlsca)
+  secret_data = file(var.tls_server_ca)
 }
 
 resource "google_secret_manager_secret_iam_member" "ts-reader" {
@@ -35,7 +35,7 @@ resource "google_secret_manager_secret" "tls_crt" {
 resource "google_secret_manager_secret_version" "tls_crt" {
   provider = google-beta    
   secret = google_secret_manager_secret.tls_crt.id
-  secret_data = file(var.tls_crt)
+  secret_data = file(var.tls_server_crt)
 }
 
 resource "google_secret_manager_secret_iam_member" "ts-cert-reader" {
@@ -45,8 +45,6 @@ resource "google_secret_manager_secret_iam_member" "ts-cert-reader" {
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.tokenserver.email}"
 }
-
-
 
 resource "google_secret_manager_secret" "tls_key" {
   provider = google-beta
@@ -61,7 +59,7 @@ resource "google_secret_manager_secret" "tls_key" {
 resource "google_secret_manager_secret_version" "tls_key" {
   provider = google-beta    
   secret = google_secret_manager_secret.tls_key.id
-  secret_data = file(var.tls_key)
+  secret_data = file(var.tls_server_key)
 }
 
 resource "google_secret_manager_secret_iam_member" "ts-key-reader" {

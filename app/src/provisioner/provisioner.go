@@ -56,8 +56,8 @@ var (
 	clientProjectId = flag.String("clientProjectId", "", "clientProjectId for VM")
 	clientVMZone    = flag.String("clientVMZone", "", "clientVMZone for VM")
 	clientVMId      = flag.String("clientVMId", "", "clientVMId for VM")
-
-	pcrMap = map[uint32][]byte{}
+	autoAccept      = flag.Bool("autoAccept", false, "autoAccept configuration")
+	pcrMap          = map[uint32][]byte{}
 )
 
 func createSigningKeyImportBlob(ekPubPEM string, rsaKeyPEM string) (sealedOutput []byte, retErr error) {
@@ -177,17 +177,21 @@ func main() {
 
 	var s string
 
-	log.Printf("looks ok? (y/N): ")
-	_, err = fmt.Scan(&s)
-	if err != nil {
-		log.Fatalf("Error getting input %v\n", err)
-	}
+	if *autoAccept {
+		log.Println("Automatically accepting VM Configuration (used for testing")
+	} else {
+		log.Printf("looks ok? (y/N): ")
+		_, err = fmt.Scan(&s)
+		if err != nil {
+			log.Fatalf("Error getting input %v\n", err)
+		}
 
-	s = strings.TrimSpace(s)
-	s = strings.ToLower(s)
+		s = strings.TrimSpace(s)
+		s = strings.ToLower(s)
 
-	if !(s == "y" || s == "yes") {
-		return
+		if !(s == "y" || s == "yes") {
+			return
+		}
 	}
 
 	// For testing, just generate an RSA key

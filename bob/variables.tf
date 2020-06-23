@@ -49,15 +49,12 @@ variable "sni_servername" {
   default = "tokenservice.esodemoapp2.com"
 }
 
-variable "tlsca" {
+variable "tls_client_ca" {
   type    = string
-  default = "certs/tls-ca.crt"
 }
-variable "tls_crt" {
+variable "tls_client_crt" {
   type    = string
-  default = "certs/tokenclient.crt"
 }
-variable "tls_key" {
+variable "tls_client_key" {
   type    = string
-  default = "certs/tokenclient.key"
 }

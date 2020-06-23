@@ -1,0 +1,106 @@
+    
+steps:
+- name: gcr.io/cloud-builders/git
+  id: terraform_src
+  args: ["clone", "https://github.com/GoogleCloudPlatform/cloud-builders-community.git"]
+  waitFor: ['-']  
+- name: gcr.io/cloud-builders/gcloud
+  id: terraform_install
+  args:
+  - builds
+  - submit
+  - --config
+  - cloud-builders-community/terraform/cloudbuild.yaml
+  - cloud-builders-community/terraform/
+  waitFor: ['terraform_src']  
+
+- name: gcr.io/cloud-builders/git
+  id: token_src
+  args: ["clone", "https://source.developers.google.com/p/$PROJECT_ID/r/gcp_tokendistributor"]
+  waitFor: ['-']
+
+- name: gcr.io/$PROJECT_ID/terraform
+  id: terraform_init
+  dir: gcp_tokendistributor  
+  args:
+  - init
+  - alice
+  waitFor: ['token_src', 'terraform_install']
+
+- name: gcr.io/$PROJECT_ID/terraform
+  id: build_ts
+  dir: gcp_tokendistributor
+  args:
+  - apply
+  - -auto-approve
+  - --target=module.setup 
+  - alice
+  waitFor: ['terraform_init']
+
+- name: gcr.io/$PROJECT_ID/terraform
+  id: export_ts_service_account
+  dir: gcp_tokendistributor  
+  args:
+  - output
+  - -state=alice/terraform.tfstate ts_service_account > ts.tfvars
+  waitFor: ['build_ts']  
+
+- name: gcr.io/$PROJECT_ID/terraform
+  id: export_ts_address
+  dir: gcp_tokendistributor  
+  args:
+  - output
+  - -state=alice/terraform.tfstate ts_address > ts.tfvars
+  waitFor: ['build_ts']  
+
+- name: 'ubuntu'
+  id: display_tfvar
+  dir: gcp_tokendistributor  
+  args: ['echo', 'ts.tfvars']  
+  waitFor: ['export_ts_address', 'export_ts_service_account']  
+
+#   terraform output -state=scripts/terraform.tfstate oidc_token
+#   -var-file
+
+# - name: gcr.io/$PROJECT_ID/terraform
+#   id: terraform_init_tc
+#   dir: gcp_tokendistributor  
+#   args:
+#   - init
+#   - bob
+#   waitFor: ['terraform_install']
+
+# - name: gcr.io/$PROJECT_ID/terraform
+#   id: build_tc
+#   dir: gcp_tokendistributor  
+#   args:
+#   - apply
+#   - -auto-approve
+#   - --target=module.setup 
+#   waitFor: ['terraform_init', 'build_ts']
+
+
+- name: gcr.io/$PROJECT_ID/terraform
+  id: destroy_ts
+  args:
+  - destroy
+  - -auto-approve
+  - --target=module.setup 
+  - gcp_tokendistributor/alice
+  waitFor: ['display_tfvar','build_ts']  
+
+# - name: gcr.io/$PROJECT_ID/terraform
+#   id: destroy_tc
+#   args:
+#   - destroy
+#   - -auto-approve
+#   - --target=module.setup 
+#   - gcp_tokendistributor/bob
+#   waitFor: ['build_tc']
+
+
+options:
+  env:
+  - "TF_VAR_org_id=112121"
+  - "TF_VAR_billing_account=000C16-9779B5-11111"
+timeout: 1000s

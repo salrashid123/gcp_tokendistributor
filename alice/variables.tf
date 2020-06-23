@@ -3,6 +3,10 @@ variable "project_name" {
   type    = string
   default = "tokenserver"
 }
+variable "project_id" {
+  type    = string
+}
+
 variable "billing_account" {
   type    = string
 }
@@ -31,7 +35,7 @@ variable "zone" {
 
 variable "app_source_dir" {
   type    = string
-  default = "../app"
+  default = "../app"  
 }
 
 variable "gae_location_id" {
@@ -42,15 +46,12 @@ variable "allowedclientsubnet" {
   type    = string
   default = "0.0.0.0/0"
 }
-variable "tlsca" {
+variable "tls_server_ca" {
   type    = string
-  default = "certs/tls-ca.crt"
 }
-variable "tls_crt" {
+variable "tls_server_crt" {
   type    = string
-  default = "certs/tokenservice.crt"
 }
-variable "tls_key" {
+variable "tls_server_key" {
   type    = string
-  default = "certs/tokenservice.key"
 }
