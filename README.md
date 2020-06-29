@@ -96,6 +96,13 @@ Alice and Bob will both need:
 * Permissions to create GCP Projects
 * `gcloud` CLI
 
+Note: Alice and Bob can setup their infrastructure and deploy applications pretty much independently.
+However, Bob will need to know the TokenServer IP and projectID before he deploy the TokenClient
+
+#### Architecture
+
+![images/arch.png](images/arch.png)
+
 ### Start TokenServer Infrastructure and Service (Alice)
 
 As Alice, you will need your
