@@ -6,6 +6,11 @@ This is problematic in some situations where Alice would like Bob's VM to proces
 
 The flow described in this repo flow inverts the access where the data owner (Alice) shares some secret material with permissions to sensitive data but **ONLY** to a isolated system owned by Bob.  The data owner (Alice) will share access _exclusively__ to the VM only after attesting some known binary that Alice is aware of and trusts is running on that VM and that that Bob cannot access the VM via SSH or any other means.
 
+#### Architecture
+
+![images/arch.png](images/arch.png)
+
+
 In prose:
 
 Alice wants to share a file she has on a GCS with a specific VM Bob started.  Alice and Bob do not work in the same company and do not share GCP projects.
@@ -99,10 +104,6 @@ Alice and Bob will both need:
 Note: Alice and Bob can setup their infrastructure and deploy applications pretty much independently.
 However, Bob will need to know the TokenServer IP and projectID before he deploy the TokenClient
 
-#### Architecture
-
-![images/arch.png](images/arch.png)
-
 ### Start TokenServer Infrastructure and Service (Alice)
 
 As Alice, you will need your
@@ -176,7 +177,7 @@ As Bob, you will need your
 *  [Billing Account ID](https://cloud.google.com/billing/docs/how-to/manage-billing-account) 
 
 * OrganizationID
-  `gcloud organzations list`
+  `gcloud organizations list`
   If you do not have an organization, edit `alice/main.tf` and remove the `org_id` variable from `google_project`
  
 The following will startup Bobs infrastructure (GCP project, and allocate IP for tokenClient). The `tc_build` step will also generate the docker image
@@ -465,10 +466,11 @@ TODO: perform locking
 The default protocol included in this repo also performs two TPM based flows:
 
 * Quote/Verify:  this allows the TokenClient to issue an Attestation Key which the TokenServer can save.  THis Key can be used to repeatedly verify PCR values resident on the Token Client
-* Unrestricted Signing Key: Normally, the AK cannot sign any arbitrary data (it is a restricted key).  Instead, the TokenClient can generate a new RSA key on the TPM where the private key is **always** on the tpm. Once thats done, the AK can sign it and return the public part to the TOken Server.  Since the Endorsement Key and Attestation key were now associated together, the new unrestricted key can also be indirectly associated with that specific TOkenClient.  The TokenClient can now sign for any arbitrary data, send it to the TokenServer which can veirfy its authenticity by using the public key previously sent
+* Unrestricted Signing Key: Normally, the AK cannot sign any arbitrary data (it is a restricted key).  Instead, the TokenClient can generate a new RSA key on the TPM where the private key is **always** on the tpm. Once thats done, the AK can sign it and return the public part to the Token Server.  Since the Endorsement Key and Attestation key were now associated together, the new unrestricted key can also be indirectly associated with that specific TokenClient.  The TokenClient can now sign for any arbitrary data, send it to the TokenServer which can verify its authenticity by using the public key previously sent
 
 ![images/quoteverify.png](images/quoteverify.png)
 
+It is possible to use the AK to sign data that is hashed by the TPM. (see [go-tpm-tools/issue/86](https://github.com/google/go-tpm-tools/issues/86)).  This capability will be added into the TokenClient later.
 
 ## Appendix
 
