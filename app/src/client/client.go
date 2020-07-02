@@ -377,6 +377,13 @@ func main() {
 
 				kh := rkey.Handle()
 				defer tpm2.FlushContext(rwc, kh)
+
+				khDigest, khValidation, err := tpm2.Hash(rwc, tpm2.AlgSHA256, data, tpm2.HandleOwner)
+				if err != nil {
+					glog.Errorf("Hash failed unexpectedly: %v", err)
+				}
+
+				glog.V(5).Infof("     TPM based Hash %s", base64.StdEncoding.EncodeToString(khDigest))
 				session, _, err := tpm2.StartAuthSession(
 					rwc,
 					/*tpmkey=*/ tpm2.HandleNull,
@@ -401,7 +408,7 @@ func main() {
 						glog.Errorf("ERROR: PolicyPCR failed: %vn", err)
 						return
 					}
-					signed, err = tpm2.SignWithSession(rwc, session, kh, "", d[:], &tpm2.SigScheme{
+					signed, err = tpm2.SignWithSession(rwc, session, kh, "", d[:], khValidation, &tpm2.SigScheme{
 						Alg:  tpm2.AlgRSASSA,
 						Hash: tpm2.AlgSHA256,
 					})
@@ -410,7 +417,7 @@ func main() {
 						return
 					}
 				} else {
-					signed, err = tpm2.Sign(rwc, kh, "", d[:], &tpm2.SigScheme{
+					signed, err = tpm2.Sign(rwc, kh, "", d[:], khValidation, &tpm2.SigScheme{
 						Alg:  tpm2.AlgRSASSA,
 						Hash: tpm2.AlgSHA256,
 					})
@@ -987,9 +994,87 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 
 	tpm2.FlushContext(rwc, sessLoadHandle)
 
-	glog.V(5).Infof("======= CreateKeyUsingAuthUnrestricted ========")
+	glog.V(5).Infof("======= CreateKeyUsingAuthRestricted ========")
+
+	tPub, err := tpm2.DecodePublic(akPub)
+	if err != nil {
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Error DecodePublic AK %v", tPub)
+	}
+
+	ap, err := tPub.Key()
+	if err != nil {
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("akPub.Key() failed: %s", err)
+	}
+	akBytes, err := x509.MarshalPKIXPublicKey(ap)
+	if err != nil {
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to convert akPub: %v", err)
+	}
+
+	akPubPEM := pem.EncodeToMemory(
+		&pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: akBytes,
+		},
+	)
 
 	sessCreateHandle, _, err := tpm2.StartAuthSession(
+		rwc,
+		tpm2.HandleNull,
+		tpm2.HandleNull,
+		make([]byte, 16),
+		nil,
+		tpm2.SessionPolicy,
+		tpm2.AlgNull,
+		tpm2.AlgSHA256)
+	if err != nil {
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to create StartAuthSession : %v", err)
+	}
+	defer tpm2.FlushContext(rwc, sessCreateHandle)
+
+	if _, err := tpm2.PolicySecret(rwc, tpm2.HandleEndorsement, tpm2.AuthCommand{Session: tpm2.HandlePasswordSession, Attributes: tpm2.AttrContinueSession}, sessCreateHandle, nil, nil, nil, 0); err != nil {
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to create PolicySecret: %v", err)
+	}
+	authCommandCreateAuth := tpm2.AuthCommand{Session: sessCreateHandle, Attributes: tpm2.AttrContinueSession}
+
+	aKdataToSign := []byte("secret")
+	aKdigest, aKvalidation, err := tpm2.Hash(rwc, tpm2.AlgSHA256, aKdataToSign, tpm2.HandleOwner)
+	if err != nil {
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Hash failed unexpectedly: %v", err)
+	}
+
+	glog.V(5).Infof("     AK Issued Hash %s", base64.StdEncoding.EncodeToString(aKdigest))
+	aKsig, err := tpm2.Sign(rwc, aKkeyHandle, emptyPassword, aKdigest, aKvalidation, &tpm2.SigScheme{
+		Alg:  tpm2.AlgRSASSA,
+		Hash: tpm2.AlgSHA256,
+	})
+	if err != nil {
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Sign failed unexpectedly: %v", err)
+	}
+
+	glog.V(5).Infof("     AK Signed Data %s", base64.StdEncoding.EncodeToString(aKsig.RSA.Signature))
+
+	akblock, _ := pem.Decode(akPubPEM)
+	if akblock == nil {
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to decode akPubPEM %v", err)
+	}
+
+	akRsa, err := x509.ParsePKIXPublicKey(akblock.Bytes)
+	if err != nil {
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to create rsa Key from PEM %v", err)
+	}
+	akRsaPub := *akRsa.(*rsa.PublicKey)
+
+	akhsh := crypto.SHA256.New()
+	akhsh.Write(aKdataToSign)
+
+	if err := rsa.VerifyPKCS1v15(&akRsaPub, crypto.SHA256, akhsh.Sum(nil), aKsig.RSA.Signature); err != nil {
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("VerifyPKCS1v15 failed: %v", err)
+	}
+	glog.V(5).Infof("     AK Verified Signature\n")
+
+	glog.V(5).Infof("======= CreateKeyUsingAuthUnrestricted ========")
+
+	sessCreateHandle, _, err = tpm2.StartAuthSession(
 		rwc,
 		tpm2.HandleNull,
 		tpm2.HandleNull,
@@ -1006,7 +1091,7 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 	if _, err := tpm2.PolicySecret(rwc, tpm2.HandleEndorsement, tpm2.AuthCommand{Session: tpm2.HandlePasswordSession, Attributes: tpm2.AttrContinueSession}, sessCreateHandle, nil, nil, nil, 0); err != nil {
 		return []byte(""), []byte(""), []byte(""), fmt.Errorf("ERROR Unable to create PolicySecret: %v", err)
 	}
-	authCommandCreateAuth := tpm2.AuthCommand{Session: sessCreateHandle, Attributes: tpm2.AttrContinueSession}
+	authCommandCreateAuth = tpm2.AuthCommand{Session: sessCreateHandle, Attributes: tpm2.AttrContinueSession}
 
 	ukPriv, ukPub, _, _, _, err := tpm2.CreateKeyUsingAuth(rwc, ekh, pcrSelection23, authCommandCreateAuth, emptyPassword, unrestrictedKeyParams)
 
@@ -1089,11 +1174,14 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 	glog.V(2).Infof("     ukPubPEM: \n%v", string(ukPubPEM))
 
 	dataToSign := []byte("foo")
-	digest, err := tpm2.Hash(rwc, tpm2.AlgSHA256, dataToSign)
+	ukhDigest, ukhValidation, err := tpm2.Hash(rwc, tpm2.AlgSHA256, dataToSign, tpm2.HandleOwner)
 	if err != nil {
-		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Error Generating Hash: %v", err)
+		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Hash failed unexpectedly: %v", err)
 	}
-	sig, err := tpm2.Sign(rwc, ukeyHandle, "", digest[:], &tpm2.SigScheme{
+
+	glog.V(5).Infof("     TPM based Hash for Unrestricted Key %s", base64.StdEncoding.EncodeToString(ukhDigest))
+
+	sig, err := tpm2.Sign(rwc, ukeyHandle, "", ukhDigest[:], ukhValidation, &tpm2.SigScheme{
 		Alg:  tpm2.AlgRSASSA,
 		Hash: tpm2.AlgSHA256,
 	})
@@ -1106,6 +1194,6 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 	if err := rsa.VerifyPKCS1v15(up.(*rsa.PublicKey), crypto.SHA256, hsh.Sum(nil), sig.RSA.Signature); err != nil {
 		return []byte(""), []byte(""), []byte(""), fmt.Errorf("VerifyPKCS1v15 failed: %v", err)
 	}
-
+	glog.V(5).Infof("     Unrestricted Key Signature Verified\n")
 	return ukPubPEM, attestation, csig, nil
 }

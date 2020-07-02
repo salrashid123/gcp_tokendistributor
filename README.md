@@ -466,13 +466,13 @@ TODO: perform locking
 The default protocol included in this repo also performs two TPM based flows:
 
 * Quote/Verify:  this allows the TokenClient to issue an Attestation Key which the TokenServer can save.  THis Key can be used to repeatedly verify PCR values resident on the Token Client
+* Restricted Signing Key (Attestation Key based signing).  Use the Attestation Key to sign some data.  The TPM will only sign data that has been Hashed by the TPM itself.
 * Unrestricted Signing Key: Normally, the AK cannot sign any arbitrary data (it is a restricted key).  Instead, the TokenClient can generate a new RSA key on the TPM where the private key is **always** on the tpm. Once thats done, the AK can sign it and return the public part to the Token Server.  Since the Endorsement Key and Attestation key were now associated together, the new unrestricted key can also be indirectly associated with that specific TokenClient.  The TokenClient can now sign for any arbitrary data, send it to the TokenServer which can verify its authenticity by using the public key previously sent
+
 
 ![images/quoteverify.png](images/quoteverify.png)
 
-It is possible to use the AK to sign data that is hashed by the TPM.
 
-TODO: use AK to sign directly with Ticket [TPM Sign with AK](https://github.com/salrashid123/tpm2/tree/master/sign_with_ak)
 
 ## Appendix
 
