@@ -470,7 +470,9 @@ The default protocol included in this repo also performs two TPM based flows:
 
 ![images/quoteverify.png](images/quoteverify.png)
 
-It is possible to use the AK to sign data that is hashed by the TPM. (see [go-tpm-tools/issue/86](https://github.com/google/go-tpm-tools/issues/86)).  This capability will be added into the TokenClient later.
+It is possible to use the AK to sign data that is hashed by the TPM.
+
+TODO: use AK to sign directly with Ticket [TPM Sign with AK](https://github.com/salrashid123/tpm2/tree/master/sign_with_ak)
 
 ## Appendix
 
