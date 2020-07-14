@@ -21,6 +21,8 @@ Bob creates a GCP `projectB`
 Alice creates creates a VM (`VM-A`) with  `serviceAccountA` and public ip_address `ip-A`
 Bob creates creates a VM (`VM-B`) with `serviceAccountB`.
 
+>> Both VMs Alice and Bob run (especially Bob), can be [Confidential Compute Instances](https://cloud.google.com/blog/products/identity-security/introducing-google-cloud-confidential-computing-with-confidential-vms)
+
 Bob and Alice exchange information offline about `ip-A`, `serviceAccountA` and `serviceAccountB` each party uses
 
 Bob grants Alice and `serviceAccountA` permissions to read GCE startup script and metadata for `VM-A`
