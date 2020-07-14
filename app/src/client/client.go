@@ -303,6 +303,9 @@ func main() {
 
 				glog.V(20).Infof("     Received  toResponse: %s\n", r.InResponseTo)
 
+				//  Yes!!, we got the token back successfully.
+				//  First decode the AES key using tpm2.Import()
+
 				rwc, err = tpm2.OpenTPM(tpmDevice)
 				if err != nil {
 					glog.Errorf("ERROR Unable to openTPM: %v", err)
@@ -354,7 +357,10 @@ func main() {
 				encsha := base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 
 				glog.V(2).Infof("     Unsealed AES Key with hash: %v\n", encsha)
+
 				// ************************************
+
+				//  Now decode and embed the RSA key using tpm2.ImportSigningKey()
 
 				err = proto.Unmarshal(r.SealedRSAKey, blob)
 				if err != nil {
@@ -368,8 +374,14 @@ func main() {
 					return
 				}
 				defer tpm2.FlushContext(rwc, rkey.Handle())
-				glog.V(2).Infof("     Unsealed RSA PublicKey \n")
+				glog.V(2).Infof("     Unsealed RSA PrivateKey \n")
 
+				// Use key to sign some sample data
+				// note, the string we're using to sign is "foobar"
+				// which just happens to be the same string in line ~212
+				// of provisioner.go.   This step doesn't really prove anything
+				// other than the Alice can send that signature to
+				// Bob and bob can see he got same signature for the same string
 				data := []byte("foobar")
 				h := sha256.New()
 				h.Write(data)
@@ -433,6 +445,12 @@ func main() {
 
 				/// ***********************************************************************************************************
 
+				// ok, we've imported the RSA and AES keys.  Now optionally
+				// perform Remote Attestation (i.,e generate and exchange Attestation key)
+				// Then optionally offer the tokenServer a QuoteRequest
+				// Then generate an unrestricted Signing key, sign it with EK and
+				// use that to repeatedly sign arbitrary text that you can use later
+				// You can also use the AK to sign known hash values.
 				if *doAttestation {
 					totalHandles = 0
 					for _, handleType := range handleNames["all"] {
@@ -449,6 +467,7 @@ func main() {
 						}
 					}
 
+					// First create attestation keys
 					akName, ekPub, akPub, err := createKeys()
 					if err != nil {
 						glog.Errorf("ERROR:     Unable to generate EK/AK: %v", err)
@@ -642,6 +661,7 @@ func quote(reqPCR int, secret string) (attestation []byte, signature []byte, ret
 	return attestation, sig.RSA.Signature, nil
 }
 
+// Create Attestation keys
 func createKeys() (n string, ekPub []byte, akPub []byte, retErr error) {
 
 	glog.V(5).Infof("     --> CreateKeys()")
@@ -928,6 +948,12 @@ func activateCredential(uid string, credBlob []byte, encryptedSecret []byte) (n 
 	return string(recoveredCredential1), nil
 }
 
+// Create unrestricted Signing keys.
+// These are keys associated with the EK/AK that can be used to sign any arbitrary bit of data
+// In contrast, the AK can only sign data that has been hash() by the TPM
+// The snippet below just generates the AK bases signed data for reference but doesn't do anything
+// with them.   the function below will just return the unrestricted key, its attestation (cerfiication)
+// and signature back to the Server
 func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, retErr error) {
 
 	glog.V(5).Infof("     --> Start signingKey")
@@ -952,6 +978,8 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 		return []byte(""), []byte(""), []byte(""), fmt.Errorf("ContextLoad failed for ekh: %v", err)
 	}
 	defer tpm2.FlushContext(rwc, ekh)
+
+	// Load the attestation keys we generated in createKeys()
 
 	glog.V(10).Infof("     Read (akPub)")
 	akPub, err := ioutil.ReadFile(akPubFile)
@@ -994,7 +1022,7 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 
 	tpm2.FlushContext(rwc, sessLoadHandle)
 
-	glog.V(5).Infof("======= CreateKeyUsingAuthRestricted ========")
+	glog.V(5).Infof("======= SignwithRestrictedKey ========")
 
 	tPub, err := tpm2.DecodePublic(akPub)
 	if err != nil {
@@ -1036,7 +1064,8 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 	}
 	authCommandCreateAuth := tpm2.AuthCommand{Session: sessCreateHandle, Attributes: tpm2.AttrContinueSession}
 
-	aKdataToSign := []byte("secret")
+	// Use the TPM to hash some data
+	aKdataToSign := []byte("foobar")
 	aKdigest, aKvalidation, err := tpm2.Hash(rwc, tpm2.AlgSHA256, aKdataToSign, tpm2.HandleOwner)
 	if err != nil {
 		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Hash failed unexpectedly: %v", err)
@@ -1053,6 +1082,8 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 
 	glog.V(5).Infof("     AK Signed Data %s", base64.StdEncoding.EncodeToString(aKsig.RSA.Signature))
 
+	// Ok, now we've signed the data using the AK.
+	// Now cross check by verifying that against the public part of the AK:
 	akblock, _ := pem.Decode(akPubPEM)
 	if akblock == nil {
 		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to decode akPubPEM %v", err)
@@ -1072,7 +1103,8 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 	}
 	glog.V(5).Infof("     AK Verified Signature\n")
 
-	glog.V(5).Infof("======= CreateKeyUsingAuthUnrestricted ========")
+	//  Not create an unsrestricted signing key
+	glog.V(5).Infof("======= SignwithUnrestrictedKey ========")
 
 	sessCreateHandle, _, err = tpm2.StartAuthSession(
 		rwc,
@@ -1143,6 +1175,9 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 	glog.V(5).Infof("     ukeyName: %v,", hex.EncodeToString(ukeyName))
 
 	// Certify the Unrestricted key using the AK
+	// This step will generate a form of attestation that the client can send back to the Server
+	// The server (Alice), can use this certification to verify that the AK it has already
+	// through remote attestation is the one that signed the unrestricted key
 	attestation, csig, err := tpm2.Certify(rwc, emptyPassword, emptyPassword, ukeyHandle, aKkeyHandle, nil)
 	if err != nil {
 		return []byte(""), []byte(""), []byte(""), fmt.Errorf("ERROR Load failed: %s", err)
@@ -1173,7 +1208,8 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 	)
 	glog.V(2).Infof("     ukPubPEM: \n%v", string(ukPubPEM))
 
-	dataToSign := []byte("foo")
+	// Genereate a test signature using the unrestricted key
+	dataToSign := []byte("foobar")
 	ukhDigest, ukhValidation, err := tpm2.Hash(rwc, tpm2.AlgSHA256, dataToSign, tpm2.HandleOwner)
 	if err != nil {
 		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Hash failed unexpectedly: %v", err)
@@ -1189,11 +1225,15 @@ func signingKey(reqPCR int) (key []byte, attestation []byte, signature []byte, r
 		return []byte(""), []byte(""), []byte(""), fmt.Errorf("Error Signing with unrestricted key: %v", err)
 	}
 	glog.V(10).Infof("Control Signature data with unrestriced Key:  %s", base64.RawStdEncoding.EncodeToString([]byte(sig.RSA.Signature)))
+
+	// Verify the signature using openssl locally
 	hsh := crypto.SHA256.New()
 	hsh.Write(dataToSign)
 	if err := rsa.VerifyPKCS1v15(up.(*rsa.PublicKey), crypto.SHA256, hsh.Sum(nil), sig.RSA.Signature); err != nil {
 		return []byte(""), []byte(""), []byte(""), fmt.Errorf("VerifyPKCS1v15 failed: %v", err)
 	}
 	glog.V(5).Infof("     Unrestricted Key Signature Verified\n")
+
+	// return the PEM format of the unrestricted key and attestation back.
 	return ukPubPEM, attestation, csig, nil
 }

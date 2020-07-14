@@ -271,7 +271,7 @@ echo $TF_VAR_tc_instance_id
 
 ### Interlude
 
-At this point the TokenClient and Server have started communicating but every request for a new token would fail since Alice hasn't yet vetted the integrity of the TokenServer:
+At this point the TokenClient and Server have started communicating but every request for a new token would fail since Alice hasn't yet vetted the integrity of the `TokenClient`:
 
 You can see this in the logs
 
@@ -287,7 +287,7 @@ So...now
 
 >> **Provide token_client_instance_id to TokenServer Provisioning admin (Alice) so it can be provisioned**
 
-Optionally provide `tc_address` to TokenServer (to apply on-demand firewall or origin checks if NAT isn't used)
+Optionally provide `tc_address` to Alice (incase she wants to also a firewall around TokenServer or origin checks if NAT isn't used)
 
 
 ### Provision TokenClient vm_id (Alice)
@@ -309,9 +309,9 @@ $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_
 
 ```
 
-The output of the provisioning step will prompt you to confirm that the image startup script and metadata looks valid.
+The output of the provisioning step will prompt Alice to confirm that the image startup script and metadata looks valid.
 
-At that point, the image hash value will be saved into Firestore `Kwmp//kyXrJQUCw3tzVu0ydSZrQa1ehLdVRQ9wEm4Jo=`  using the `vm_id=2503055333933721897` in firestore document key.  Every time the TOkenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
+At that point, the image hash value will be saved into Firestore `Kwmp//kyXrJQUCw3tzVu0ydSZrQa1ehLdVRQ9wEm4Jo=`  using the `vm_id=2503055333933721897` in firestore document key.  Every time the TokenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
 
 ```
 2020/06/23 09:47:32 tc-16a39413  us-central1-a  7953211237324536786
@@ -503,6 +503,8 @@ Further enhancements can be to use
     
   * Mount Persistent Disk with LUKS encryption:
     - [https://github.com/salrashid123/gcp_luks_csek_disks](https://github.com/salrashid123/gcp_luks_csek_disks)
+    - [tpm2_software Disk Encryption](https://tpm2-software.github.io/2020/04/13/Disk-Encryption.html)
+    - [WIP: [RFC] Add TPM2 support](https://gitlab.com/cryptsetup/cryptsetup/-/merge_requests/51)
     
 
 

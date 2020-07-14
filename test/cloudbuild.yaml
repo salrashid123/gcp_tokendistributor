@@ -3,7 +3,8 @@ steps:
 - name: gcr.io/cloud-builders/git
   id: terraform_src
   args: ["clone", "https://github.com/GoogleCloudPlatform/cloud-builders-community.git"]
-  waitFor: ['-']  
+  waitFor: ['-'] 
+  
 - name: gcr.io/cloud-builders/gcloud
   id: terraform_install
   args:
@@ -16,7 +17,7 @@ steps:
 
 - name: gcr.io/cloud-builders/git
   id: token_src
-  args: ["clone", "https://source.developers.google.com/p/$PROJECT_ID/r/gcp_tokendistributor"]
+  args: ["clone", "https://github.com/salrashid123/gcp_tokendistributor"]
   waitFor: ['-']
 
 - name: gcr.io/$PROJECT_ID/terraform
@@ -24,7 +25,6 @@ steps:
   dir: gcp_tokendistributor  
   args:
   - init
-  - alice
   waitFor: ['token_src', 'terraform_install']
 
 - name: gcr.io/$PROJECT_ID/terraform
@@ -33,16 +33,15 @@ steps:
   args:
   - apply
   - -auto-approve
-  - --target=module.setup 
-  - alice
+  - --target=module.ts_setup 
   waitFor: ['terraform_init']
-
+  
 - name: gcr.io/$PROJECT_ID/terraform
   id: export_ts_service_account
   dir: gcp_tokendistributor  
   args:
   - output
-  - -state=alice/terraform.tfstate ts_service_account > ts.tfvars
+  - -state=terraform.tfstate ts_service_account > ts.tfvars
   waitFor: ['build_ts']  
 
 - name: gcr.io/$PROJECT_ID/terraform
@@ -50,7 +49,7 @@ steps:
   dir: gcp_tokendistributor  
   args:
   - output
-  - -state=alice/terraform.tfstate ts_address > ts.tfvars
+  - -state=terraform.tfstate ts_address > ts.tfvars
   waitFor: ['build_ts']  
 
 - name: 'ubuntu'
@@ -85,8 +84,7 @@ steps:
   args:
   - destroy
   - -auto-approve
-  - --target=module.setup 
-  - gcp_tokendistributor/alice
+  - --target=module.ts_setup
   waitFor: ['display_tfvar','build_ts']  
 
 # - name: gcr.io/$PROJECT_ID/terraform
@@ -101,6 +99,6 @@ steps:
 
 options:
   env:
-  - "TF_VAR_org_id=112121"
-  - "TF_VAR_billing_account=000C16-9779B5-11111"
+    - "TF_VAR_org_id=112121"
+    - "TF_VAR_billing_account=000C16-9779B5-11111"
 timeout: 1000s
