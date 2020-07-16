@@ -46,9 +46,11 @@ write_files:
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
-runcmd:
+bootcmd:
 - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
 - systemctl mask --now serial-getty@ttyS0.service
+
+runcmd:
 - systemctl daemon-reload
 - systemctl start cloudservice.service
 EOT
@@ -102,9 +104,11 @@ EOT
 #     ExecStop=/usr/bin/docker stop mycloudservice
 #     ExecStopPost=/usr/bin/docker rm mycloudservice
 
-# runcmd:
+# bootcmd:
 # - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
 # - systemctl mask --now serial-getty@ttyS0.service
+
+# runcmd:
 # - systemctl daemon-reload
 # - systemctl start cloudservice.service
 # EOT

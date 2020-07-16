@@ -609,8 +609,8 @@ func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice
 	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 
 	glog.V(5).Infof("     SigningKey %s\n", in.Signingkey)
-	glog.V(5).Infof("     SigningKey Attestation %s\n", in.Attestation)
-	glog.V(5).Infof("     SigningKey Signature %s\n", in.Signature)
+	glog.V(5).Infof("     SigningKey Attestation %s\n", base64.StdEncoding.EncodeToString(in.Attestation))
+	glog.V(5).Infof("     SigningKey Signature %s\n", base64.StdEncoding.EncodeToString(in.Signature))
 	// TODO: use EK to verify Attestation and Signature
 	// https://github.com/salrashid123/tpm2/tree/master/sign_certify_ak
 	ver := true

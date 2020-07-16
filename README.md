@@ -152,9 +152,13 @@ You should see the new project details and IP address allocated/assigned for the
 export TF_VAR_ts_project_id=`terraform output -state=terraform.tfstate ts_project_id`
 export TF_VAR_ts_service_account=`terraform output -state=terraform.tfstate ts_service_account`
 export TF_VAR_ts_address=`terraform output -state=terraform.tfstate ts_address`
+
+echo $TF_VAR_ts_project_id
+echo $TF_VAR_ts_service_account
+echo $TF_VAR_ts_address
 ```
 
-In this case its ofcourse
+In this case its
 
 ```bash
 $ echo $TF_VAR_ts_service_account
@@ -185,7 +189,7 @@ As Bob, you will need your
 The following will startup Bobs infrastructure (GCP project, and allocate IP for tokenClient). The `tc_build` step will also generate the docker image
 for the TokenClient but not deploy it yet
 
-This step can be done independently of Alice at anytime.
+This step can be done independently of Alice at anytime (i.e, concurrently with any of the prior steps taken by Alice)
 
 
 ```bash
@@ -311,9 +315,31 @@ $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_
 
 ```
 
+NOTE, `PCR=0` on COS instances has the default `sha256` startup value of `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`.  You can pick any other PCR or customize it for any other VM you use instead of COS.
+See [Integrity Monitoring](https://cloud.google.com/security/shielded-cloud/shielded-vm#integrity-monitoring)
+
+Using [tpm2_tools](https://github.com/tpm2-software/tpm2-tools) on a GCP VM:
+
+```bash
+$ tpm2_pcrread sha1:0 
+sha1:
+  0 : 0x51C323DE0C0C694F4601CDD02BEB58FF13629F74
+
+$ echo 51C323DE0C0C694F4601CDD02BEB58FF13629F74 | xxd -r -p | base64
+UcMj3gwMaU9GAc3QK+tY/xNin3Q=
+
+$ tpm2_pcrread sha256:0 
+sha256:
+  0 : 0xFCECB56ACC303862B30EB342C4990BEB50B5E0AB89722449C2D9A73F37B019FE
+```
+
+Gives the sha1 PCR value:
+
+![images/pcr0.png](images/pcr0.png)
+
 The output of the provisioning step will prompt Alice to confirm that the image startup script and metadata looks valid.
 
-At that point, the image hash value will be saved into Firestore `Kwmp//kyXrJQUCw3tzVu0ydSZrQa1ehLdVRQ9wEm4Jo=`  using the `vm_id=2503055333933721897` in firestore document key.  Every time the TokenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
+At that point, the image hash value will be saved into Firestore `R0OB1dVupyp/rNcb2/5Bfrx9uKjdjDNAPM9kUS7UiaI=`  using the `vm_id=2503055333933721897` in firestore document key.  Every time the TokenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
 
 ```
 2020/06/23 09:47:32 tc-16a39413  us-central1-a  7953211237324536786
@@ -338,13 +364,15 @@ write_files:
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
-runcmd:
+bootcmd:
 - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
 - systemctl mask --now serial-getty@ttyS0.service
+
+runcmd:
 - systemctl daemon-reload
 - systemctl start cloudservice.service
 
-2020/06/23 09:47:32 ImageStartup Hash: [nwQqn5/Ql/NJu5c68EuO5v8i0ee+4jpUGwOBqkXcX7Y=]
+2020/06/23 09:47:32 ImageStartup Hash: [Kwmp//kyXrJQUCw3tzVu0ydSZrQa1ehLdVRQ9wEm4Jo=]
 2020/06/23 09:47:33 Derived EKPub for Instance:
 2020/06/23 09:47:33 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy8Fz/K9LNhF2Ir0b7uGW
