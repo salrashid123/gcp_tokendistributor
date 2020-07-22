@@ -62,6 +62,8 @@ var (
 	doAttestation             = flag.Bool("doAttestation", false, "Start offer to Make/Activate Credential flow")
 	exchangeSigningKey        = flag.Bool("exchangeSigningKey", false, "Offer RSA Signing Key (requires --doAttestation)")
 	tokenServerServiceAccount = flag.String("tokenServerServiceAccount", "", "ServiceAccount for ALTS TokenService")
+	maxLoop                   = flag.Int("maxLoop", 360, "Number of reattempts to contact the TokenServer")
+	pollWaitSeconds           = flag.Int("pollWaitSeconds", 10, "Number of seconds delay bettween retries")
 	pcr                       = flag.Int("unsealPcr", 0, "pcr value to unseal against")
 	handleNames               = map[string][]tpm2.HandleType{
 		"all":       []tpm2.HandleType{tpm2.HandleTypeLoadedSession, tpm2.HandleTypeSavedSession, tpm2.HandleTypeTransient},
@@ -236,10 +238,12 @@ func main() {
 		return
 	}
 
-	for n := 0; n <= 360; n++ {
+	attempt := 0
+	for attempt < *maxLoop && !isProvisioned {
+		attempt++
+		glog.V(2).Infof("Attempting to contact TokenServer [%d]", attempt)
 		if !isProvisioned {
 			go func() {
-
 				// tok, err := idTokenSource.Token()
 				// if err != nil {
 				// 	log.Fatal(err)
@@ -247,7 +251,6 @@ func main() {
 				// glog.V(2).Infof("IdToken %s", tok)
 
 				var conn *grpc.ClientConn
-
 				conn, err = grpc.Dial(*address,
 					grpc.WithTransportCredentials(ce),
 					grpc.WithPerRPCCredentials(grpcTokenSource{
@@ -604,6 +607,11 @@ func main() {
 			glog.V(5).Infof("     Sleeping..")
 			time.Sleep(10 * time.Second)
 		}
+	}
+
+	if !isProvisioned {
+		glog.Fatalf("Maximum retries exceeded; exiting\n")
+		return
 	}
 
 	glog.V(5).Infof("     >>>>>>>>>>>>>>> System Provisioned <<<<<<<<<<<<<<")

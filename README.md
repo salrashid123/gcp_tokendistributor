@@ -341,6 +341,8 @@ The output of the provisioning step will prompt Alice to confirm that the image 
 
 At that point, the image hash value will be saved into Firestore `R0OB1dVupyp/rNcb2/5Bfrx9uKjdjDNAPM9kUS7UiaI=`  using the `vm_id=2503055333933721897` in firestore document key.  Every time the TokenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
 
+The output also shows the unique `Fingerprint` of the VM `2020/07/22 09:47:32 Image Fingerprint: [yM8bKId-VQA=]`.  Eventually this data should also get saved into Firestore and validated by the TokenServer.
+
 ```
 2020/06/23 09:47:32 tc-16a39413  us-central1-a  7953211237324536786
 2020/06/23 09:47:32 Found  VM instanceID "7953211237324536786"
@@ -373,6 +375,7 @@ runcmd:
 - systemctl start cloudservice.service
 
 2020/06/23 09:47:32 ImageStartup Hash: [Kwmp//kyXrJQUCw3tzVu0ydSZrQa1ehLdVRQ9wEm4Jo=]
+2020/07/22 09:47:32 Image Fingerprint: [yM8bKId-VQA=]
 2020/06/23 09:47:33 Derived EKPub for Instance:
 2020/06/23 09:47:33 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy8Fz/K9LNhF2Ir0b7uGW
@@ -393,7 +396,7 @@ y
 2020/06/23 09:47:36 Document data: "7953211237324536786"
 ```
 
-Note, there is also a terraform module included here to _automatically_ process requests. 
+Note, there is also a terraform module included here to _automatically_ process requests and only designed for use with automated testing (not actual production use!)
 
 To use that, first compile the provisioner
 
@@ -413,10 +416,16 @@ Note, the autoprovisioner approves any and all requests...If you want to use thi
 After provisioning, the full sequence to exchange encrypted keys takes place.  In addition, remoteAttestation (quote/verify) and TPM signing key is transmitted from the client to the server
 
 - TokenServer
-![images/tccomplete.png](images/tccomplete.png)
+
+The TokenServer output shows that it successfully authorized the specific TokenClient and returned given the credentials and which matched with a _live_ lookup of the VMid's metadata.   Since the default script here perform the additional steps of Quote/Verify, you should see the final step of returning the key back (eg `Return ProvideSigningKeyResponse`)
+
+![images/tscomplete.png](images/tscomplete.png)
 
 - TokenClient
-![images/tscomplete.png](images/tscomplete.png)
+
+The TokenClient would have acquired the secret key and then performed the optional quote/verify step.  The final step for the Client would be to save the key material to memory and start an arbitrary worker thread that would use the secrets.
+
+![images/tccomplete.png](images/tccomplete.png)
 
 
 #### Firestore
@@ -493,12 +502,13 @@ TODO: perform locking
 
 #### TPM Quote/Verify and Unrestricted Signing Key
 
-The default protocol included in this repo also performs two TPM based flows:
+The default protocol included in this repo also performs three optional TPM based flows:
 
 * Quote/Verify:  this allows the TokenClient to issue an Attestation Key which the TokenServer can save.  THis Key can be used to repeatedly verify PCR values resident on the Token Client
 * Restricted Signing Key (Attestation Key based signing).  Use the Attestation Key to sign some data.  The TPM will only sign data that has been Hashed by the TPM itself.
 * Unrestricted Signing Key: Normally, the AK cannot sign any arbitrary data (it is a restricted key).  Instead, the TokenClient can generate a new RSA key on the TPM where the private key is **always** on the tpm. Once thats done, the AK can sign it and return the public part to the Token Server.  Since the Endorsement Key and Attestation key were now associated together, the new unrestricted key can also be indirectly associated with that specific TokenClient.  The TokenClient can now sign for any arbitrary data, send it to the TokenServer which can verify its authenticity by using the public key previously sent
 
+These flows are enabled by the `TokenClient` by starting up the client with the `--doAttestation` flag. 
 
 ![images/quoteverify.png](images/quoteverify.png)
 
@@ -506,7 +516,7 @@ The default protocol included in this repo also performs two TPM based flows:
 
 ## Appendix
 
-### Not externalIP
+### No externalIP
   Bob can also start  the VM without an external IP using the `--no-network` flag but it makes this tutorial much more complicated to 'invoke' Bob's VM to fetch secrets...I just left it out.
 
 ## Enhancements
