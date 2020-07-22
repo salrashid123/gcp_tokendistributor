@@ -139,17 +139,107 @@ func main() {
 	flag.Parse()
 	var wg sync.WaitGroup
 
-	if !isProvisioned {
-		for n := 0; n <= 60; n++ {
-			go func() {
-				ctx := context.Background()
+	var tlsConfig tls.Config
+	var ce credentials.TransportCredentials
 
-				//idTokenSource, err := idtoken.NewTokenSource(ctx, *tsAudience, idtoken.WithCredentialsFile(*serviceAccount))
-				idTokenSource, err := idtoken.NewTokenSource(ctx, *tsAudience)
-				if err != nil {
-					glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
-					return
-				}
+	if *useALTS {
+		glog.V(2).Infof("     Using ALTS")
+		ce = alts.NewClientCreds(&alts.ClientOptions{
+			TargetServiceAccounts: []string{*tokenServerServiceAccount},
+		})
+	} else {
+		glog.V(2).Infof("     Using mTLS")
+		rootCAs := x509.NewCertPool()
+		var clientCerts tls.Certificate
+
+		if *useSecrets {
+
+			glog.V(10).Infof("     Getting mTLS certs from Secrets Manager")
+
+			ctx := context.Background()
+
+			client, err := secretmanager.NewClient(ctx)
+			if err != nil {
+				glog.Fatalf("Error creating Secrets Client")
+			}
+
+			tlsCACert_name := fmt.Sprintf("%s/versions/latest", *tlsCertChain)
+			tlsCACert_req := &secretmanagerpb.AccessSecretVersionRequest{
+				Name: tlsCACert_name,
+			}
+
+			tlsCACert_result, err := client.AccessSecretVersion(ctx, tlsCACert_req)
+			if err != nil {
+				glog.Fatalf("failed to access  tlsCertChain secret version: %v", err)
+			}
+			pem := tlsCACert_result.Payload.Data
+			if !rootCAs.AppendCertsFromPEM(pem) {
+				glog.Fatalf("ERROR no root CA certs parsed from file ")
+			}
+
+			tlsCert_name := fmt.Sprintf("%s/versions/latest", *tlsClientCert)
+			tlsCert_req := &secretmanagerpb.AccessSecretVersionRequest{
+				Name: tlsCert_name,
+			}
+
+			tlsCert_result, err := client.AccessSecretVersion(ctx, tlsCert_req)
+			if err != nil {
+				glog.Fatalf("Error: failed to access tlsCert secret version: %v", err)
+			}
+			certPem := tlsCert_result.Payload.Data
+
+			tlsKey_name := fmt.Sprintf("%s/versions/latest", *tlsClientKey)
+			tlsKey_req := &secretmanagerpb.AccessSecretVersionRequest{
+				Name: tlsKey_name,
+			}
+
+			tlsKey_result, err := client.AccessSecretVersion(ctx, tlsKey_req)
+			if err != nil {
+				glog.Fatalf("Error: failed to access tlsKey secret version: %v", err)
+			}
+			keyPem := tlsKey_result.Payload.Data
+
+			clientCerts, err = tls.X509KeyPair(certPem, keyPem)
+			if err != nil {
+				glog.Fatalf("Error: could not load TLS Certificate chain: %s", err)
+			}
+
+		} else {
+			var err error
+			clientCerts, err = tls.LoadX509KeyPair(
+				*tlsClientCert,
+				*tlsClientKey,
+			)
+			pem, err := ioutil.ReadFile(*tlsCertChain)
+			if err != nil {
+				glog.Fatalf("ERROR failed to load root CA certificates  error=%v", err)
+			}
+			if !rootCAs.AppendCertsFromPEM(pem) {
+				glog.Fatalf("ERROR no root CA certs parsed from file ")
+			}
+		}
+		tlsConfig = tls.Config{
+			ServerName:   *sniServerName,
+			ClientAuth:   tls.RequireAndVerifyClientCert,
+			Certificates: []tls.Certificate{clientCerts},
+			RootCAs:      rootCAs,
+		}
+		ce = credentials.NewTLS(&tlsConfig)
+	}
+
+	ctx := context.Background()
+
+	//idTokenSource, err := idtoken.NewTokenSource(ctx, *tsAudience, idtoken.WithCredentialsFile(*serviceAccount))
+	idTokenSource, err := idtoken.NewTokenSource(ctx, *tsAudience)
+	if err != nil {
+		glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
+		return
+	}
+
+	for n := 0; n <= 360; n++ {
+		if !isProvisioned {
+			go func() {
+
 				// tok, err := idTokenSource.Token()
 				// if err != nil {
 				// 	log.Fatal(err)
@@ -157,93 +247,6 @@ func main() {
 				// glog.V(2).Infof("IdToken %s", tok)
 
 				var conn *grpc.ClientConn
-
-				var tlsConfig tls.Config
-				var ce credentials.TransportCredentials
-
-				if *useALTS {
-					glog.V(2).Infof("     Using ALTS")
-					ce = alts.NewClientCreds(&alts.ClientOptions{
-						TargetServiceAccounts: []string{*tokenServerServiceAccount},
-					})
-				} else {
-					glog.V(2).Infof("     Using mTLS")
-					rootCAs := x509.NewCertPool()
-					var clientCerts tls.Certificate
-
-					if *useSecrets {
-
-						glog.V(10).Infof("     Getting mTLS certs from Secrets Manager")
-
-						ctx := context.Background()
-
-						client, err := secretmanager.NewClient(ctx)
-						if err != nil {
-							glog.Fatalf("Error creating Secrets Client")
-						}
-
-						tlsCACert_name := fmt.Sprintf("%s/versions/latest", *tlsCertChain)
-						tlsCACert_req := &secretmanagerpb.AccessSecretVersionRequest{
-							Name: tlsCACert_name,
-						}
-
-						tlsCACert_result, err := client.AccessSecretVersion(ctx, tlsCACert_req)
-						if err != nil {
-							glog.Fatalf("failed to access  tlsCertChain secret version: %v", err)
-						}
-						pem := tlsCACert_result.Payload.Data
-						if !rootCAs.AppendCertsFromPEM(pem) {
-							glog.Fatalf("ERROR no root CA certs parsed from file ")
-						}
-
-						tlsCert_name := fmt.Sprintf("%s/versions/latest", *tlsClientCert)
-						tlsCert_req := &secretmanagerpb.AccessSecretVersionRequest{
-							Name: tlsCert_name,
-						}
-
-						tlsCert_result, err := client.AccessSecretVersion(ctx, tlsCert_req)
-						if err != nil {
-							glog.Fatalf("Error: failed to access tlsCert secret version: %v", err)
-						}
-						certPem := tlsCert_result.Payload.Data
-
-						tlsKey_name := fmt.Sprintf("%s/versions/latest", *tlsClientKey)
-						tlsKey_req := &secretmanagerpb.AccessSecretVersionRequest{
-							Name: tlsKey_name,
-						}
-
-						tlsKey_result, err := client.AccessSecretVersion(ctx, tlsKey_req)
-						if err != nil {
-							glog.Fatalf("Error: failed to access tlsKey secret version: %v", err)
-						}
-						keyPem := tlsKey_result.Payload.Data
-
-						clientCerts, err = tls.X509KeyPair(certPem, keyPem)
-						if err != nil {
-							glog.Fatalf("Error: could not load TLS Certificate chain: %s", err)
-						}
-
-					} else {
-						clientCerts, err = tls.LoadX509KeyPair(
-							*tlsClientCert,
-							*tlsClientKey,
-						)
-						pem, err := ioutil.ReadFile(*tlsCertChain)
-						if err != nil {
-							glog.Fatalf("ERROR failed to load root CA certificates  error=%v", err)
-						}
-						if !rootCAs.AppendCertsFromPEM(pem) {
-							glog.Fatalf("ERROR no root CA certs parsed from file ")
-						}
-					}
-					tlsConfig = tls.Config{
-						ServerName:   *sniServerName,
-						ClientAuth:   tls.RequireAndVerifyClientCert,
-						Certificates: []tls.Certificate{clientCerts},
-						RootCAs:      rootCAs,
-					}
-					ce = credentials.NewTLS(&tlsConfig)
-				}
 
 				conn, err = grpc.Dial(*address,
 					grpc.WithTransportCredentials(ce),
@@ -376,7 +379,32 @@ func main() {
 				defer tpm2.FlushContext(rwc, rkey.Handle())
 				glog.V(2).Infof("     Unsealed RSA PrivateKey \n")
 
-				// Use key to sign some sample data
+				// START: the following section simply saves and loads
+				//  the RSA keyHandle just incase you need to save it to
+				//  somewhere locally (only within memory, for example)
+				//  "ContextSave returns an encrypted version of the session,
+				//   object or sequence context for storage outside of the TPM"
+				//  (for use in another routine)
+				// https://godoc.org/github.com/google/go-tpm/tpm2#ContextSave
+				glog.V(2).Infof("     Saving ImportedRSAKey Handle")
+				keyHandle := rkey.Handle()
+				keyBytes, err := tpm2.ContextSave(rwc, keyHandle)
+				if err != nil {
+					glog.Errorf("ContextSave failed for keyHandle: %v", err)
+					return
+				}
+				tpm2.FlushContext(rwc, keyHandle)
+				rkey.Close()
+
+				glog.V(2).Infof("     Loading RSAKey Handle")
+				kh, err := tpm2.ContextLoad(rwc, keyBytes)
+				if err != nil {
+					glog.Errorf("ContextLoad failed for kh: %v", err)
+					return
+				}
+				// End Sample Save/Load
+
+				// ok, now use key to sign some sample data
 				// note, the string we're using to sign is "foobar"
 				// which just happens to be the same string in line ~212
 				// of provisioner.go.   This step doesn't really prove anything
@@ -387,12 +415,12 @@ func main() {
 				h.Write(data)
 				d := h.Sum(nil)
 
-				kh := rkey.Handle()
 				defer tpm2.FlushContext(rwc, kh)
 
 				khDigest, khValidation, err := tpm2.Hash(rwc, tpm2.AlgSHA256, data, tpm2.HandleOwner)
 				if err != nil {
 					glog.Errorf("Hash failed unexpectedly: %v", err)
+					return
 				}
 
 				glog.V(5).Infof("     TPM based Hash %s", base64.StdEncoding.EncodeToString(khDigest))
@@ -407,7 +435,7 @@ func main() {
 					/*authHash=*/ tpm2.AlgSHA256)
 				defer tpm2.FlushContext(rwc, session)
 				if err != nil {
-					glog.V(2).Infof("Error: StartAuthSession failed: %v\n", err)
+					glog.Errorf("Error: StartAuthSession failed: %v\n", err)
 					return
 				}
 
@@ -457,10 +485,11 @@ func main() {
 						handles, err := tpm2tools.Handles(rwc, handleType)
 						if err != nil {
 							glog.Errorf("ERROR getting handles: %v", err)
+							return
 						}
 						for _, handle := range handles {
 							if err = tpm2.FlushContext(rwc, handle); err != nil {
-								glog.Fatalf("flushing handle 0x%x: %v", handle, err)
+								glog.Errorf("flushing handle 0x%x: %v", handle, err)
 							}
 							glog.V(20).Infof("Handle 0x%x flushed\n", handle)
 							totalHandles++
@@ -543,6 +572,7 @@ func main() {
 					pqesp, err := v.ProvideQuote(ctx, pqr)
 					if err != nil {
 						glog.Errorf("ERROR Could not provideQuote: %v", err)
+						return
 					}
 					glog.V(5).Infof("     Provided Quote verified: %t", pqesp.Verified)
 
@@ -551,6 +581,7 @@ func main() {
 						key, att, attsig, err := signingKey(*pcr)
 						if err != nil {
 							glog.Errorf("ERROR Could not signingKey: %v", err)
+							return
 						}
 						glog.V(2).Infof("     Returning SigningKey")
 
@@ -563,15 +594,18 @@ func main() {
 						pskresp, err := v.ProvideSigningKey(ctx, pskreq)
 						if err != nil {
 							glog.Errorf("ERROR Could not ProvideSigningKey: %v", err)
+							return
 						}
 						glog.V(2).Infof("     SigningKey Response %v", pskresp.Verified)
 					}
 				}
+				isProvisioned = true
 			}()
 			glog.V(5).Infof("     Sleeping..")
-			time.Sleep(60 * time.Second)
+			time.Sleep(10 * time.Second)
 		}
 	}
+
 	glog.V(5).Infof("     >>>>>>>>>>>>>>> System Provisioned <<<<<<<<<<<<<<")
 	wg.Add(1)
 	go worker(1, &wg)
@@ -582,6 +616,7 @@ func worker(id int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	glog.V(2).Infof("     Worker %d starting\n", id)
 	// just sleep for an hour
+	// we already have the remote secrets from TPMServer in memory, do something with it here
 	time.Sleep(3600 * time.Second)
 	fmt.Printf("     Worker %d done\n", id)
 }

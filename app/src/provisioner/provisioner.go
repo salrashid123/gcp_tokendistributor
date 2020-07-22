@@ -167,6 +167,7 @@ func main() {
 		}
 	}
 	log.Printf("ImageStartup Hash: [%s]\n", initScriptHash)
+	log.Printf("Image Fingerprint: [%s]\n", cresp.Fingerprint)
 
 	mresp, err := computeService.Instances.GetShieldedInstanceIdentity(*clientProjectId, *clientVMZone, *clientVMId).Do()
 	if err != nil {
