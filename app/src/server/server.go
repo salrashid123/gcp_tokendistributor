@@ -74,6 +74,7 @@ type ServiceEntry struct {
 	ClientZone         string    `firestore:"client_zone"`
 	ServiceAccountName string    `firestore:"service_account_name"`
 	InitScriptHash     string    `firestore:"init_script_hash"`
+	ImageFingerprint   string    `firestore:"image_fingerprint"`
 	SealedRSAKey       []byte    `firestore:"rsa_key,omitempty"`
 	SealedAESKey       []byte    `firestore:"aes_key,omitempty"`
 	PCR                int64     `firestore:"pcr"`
@@ -270,6 +271,11 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 		glog.Errorf("   *********** NOTE: initscript is empty (non-COS VM or never set)...")
 		// optionally just continue here if debugging
 		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script is empty"))
+	}
+
+	if cresp.Fingerprint != c.ImageFingerprint {
+		glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
+		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
 	}
 
 	respID, err := uuid.NewUUID()

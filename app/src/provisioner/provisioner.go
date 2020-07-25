@@ -35,6 +35,7 @@ type ServiceEntry struct {
 	ClientZone         string    `firestore:"client_zone"`
 	ServiceAccountName string    `firestore:"service_account_name"`
 	InitScriptHash     string    `firestore:"init_script_hash"`
+	ImageFingerprint   string    `firestore:"image_fingerprint"`
 	SealedRSAKey       []byte    `firestore:"rsa_key,omitempty"`
 	SealedAESKey       []byte    `firestore:"aes_key,omitempty"`
 	PCR                int64     `firestore:"pcr"`
@@ -258,6 +259,7 @@ func main() {
 		Done:               false,
 		ServiceAccountName: cresp.ServiceAccounts[0].Email,
 		InitScriptHash:     initScriptHash,
+		ImageFingerprint:   cresp.Fingerprint,
 		SealedRSAKey:       sealedRSA,
 		SealedAESKey:       sealedAES,
 		ProvidedAt:         time.Now(),
