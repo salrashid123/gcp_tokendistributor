@@ -540,6 +540,12 @@ Further enhancements can be to use
     the data that Alice has on the GCS bucket can be wrapped with an AES key on top of what Google Provides.
     Even if anyone got hold of the secret file, it would be encrypted anyway.  Bob can only decrypt it if he gets the AES key.
     You can go further with this and distribute keys that are infact part of [Shamirs Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
+
+  * Encrypt PubSub message payload with key wrapping
+    Alice can also encrypt pubsub message data with her encryption key and send that to the TokenServer.
+    Alice could then post encrypted messages to a topic the TokenServer subscribes to.  The messages in transit and as far as Google or anyone is concerned, is
+    encrypted at the application layer.  The TokenServer is the only system that can decrypt the message.  For more information, see
+    [Message Payload Encryption in Google Cloud PubSub (Part 1: Shared Secret)](https://github.com/salrashid123/gcp_pubsub_message_encryption/tree/master/1_symmetric)
     
   * Mount Persistent Disk with LUKS encryption:
     - [https://github.com/salrashid123/gcp_luks_csek_disks](https://github.com/salrashid123/gcp_luks_csek_disks)
