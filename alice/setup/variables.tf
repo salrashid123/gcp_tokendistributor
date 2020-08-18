@@ -1,4 +1,7 @@
-variable "project_name" {
+variable "ts_project_name" {
+  type    = string
+}
+variable "ts_project_id" {
   type    = string
 }
 variable "billing_account" {

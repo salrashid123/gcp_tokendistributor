@@ -1,7 +1,11 @@
 
-variable "project_name" {
+variable "ts_project_name" {
   type    = string
   default = "tokenserver"
+}
+variable "ts_project_id" {
+  type    = string
+  default = "ts-random"
 }
 variable "billing_account" {
   type    = string

@@ -1,9 +1,9 @@
 
-variable "project_name" {
+variable "ts_project_name" {
   type    = string
   default = "tokenserver"
 }
-variable "project_id" {
+variable "ts_project_id" {
   type    = string
 }
 

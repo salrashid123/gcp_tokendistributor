@@ -5,11 +5,12 @@ resource "random_id" "id" {
 }
 
 resource "google_project" "project" {
-  name            = var.project_name
-  project_id      = random_id.id.hex
+  name            = var.tc_project_name
+  project_id =  var.tc_project_id == "tc-random" ? random_id.id.hex : var.tc_project_id
   billing_account = var.billing_account
   org_id          = var.org_id
-  auto_create_network = false
+  auto_create_network = true
+  labels = {}  
 }
 
 resource "google_project_service" "service" {

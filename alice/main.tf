@@ -6,7 +6,8 @@ provider "null" {}
 module "setup" {
   source = "./setup"
   region = var.region
-  project_name = var.project_name
+  ts_project_name = var.ts_project_name
+  ts_project_id = var.ts_project_id  
   billing_account = var.billing_account
   org_id = var.org_id
   allowedclientsubnet = var.allowedclientsubnet

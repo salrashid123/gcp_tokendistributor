@@ -5,11 +5,13 @@ resource "random_id" "id" {
 }
 
 resource "google_project" "project" {
-  name            = var.project_name
-  project_id      = random_id.id.hex
+  name            = var.ts_project_name
+  #project_id      = random_id.id.hex
+  project_id =  var.ts_project_id == "ts-random" ? random_id.id.hex : var.ts_project_id
   billing_account = var.billing_account
   org_id          = var.org_id
-  auto_create_network = false
+  auto_create_network = true
+  labels = {}  
 }
 
 resource "google_project_service" "service" {
@@ -27,7 +29,7 @@ resource "google_project_service" "service" {
     "appengine.googleapis.com"
   ])
   service            = each.key
-  project            = google_project.project.project_id
+  project = google_project.project.project_id
   disable_on_destroy = false
   disable_dependent_services = false
 }

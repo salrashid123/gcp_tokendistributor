@@ -3,7 +3,8 @@
 module "ts_setup" {
   source = "./alice/setup"
   region = var.region
-  project_name = var.project_name
+  ts_project_name = var.ts_project_name
+  ts_project_id = var.ts_project_id  
   billing_account = var.billing_account
   org_id = var.org_id
   allowedclientsubnet = var.allowedclientsubnet
@@ -36,7 +37,8 @@ module "ts_deploy" {
 module "tc_setup" {
   source = "./bob/setup"
   region = var.region
-  project_name = var.tc_project_name
+  tc_project_name = var.tc_project_name
+  tc_project_id = var.tc_project_id  
   billing_account = var.billing_account
   org_id = var.org_id
   tls_client_ca = var.tls_client_ca

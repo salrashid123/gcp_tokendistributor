@@ -1,7 +1,10 @@
 
-variable "project_name" {
+variable "tc_project_name" {
   type    = string
   default = "tokenclient"
+}
+variable "tc_project_id" {
+  type    = string
 }
 variable "billing_account" {
   type    = string

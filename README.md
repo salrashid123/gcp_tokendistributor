@@ -146,6 +146,8 @@ You should see the new project details and IP address allocated/assigned for the
     ts_service_account = tokenserver@ts-de7f98d5.iam.gserviceaccount.com
 ```
 
+Note: if you would rather use an existing project for either the Client or Server, see the section in the Appendix.
+
 **Provide Bob the values of `ts_address` and `ts_service_account` variables anytime later**
 
 ```bash
@@ -553,6 +555,63 @@ Further enhancements can be to use
     - [WIP: [RFC] Add TPM2 support](https://gitlab.com/cryptsetup/cryptsetup/-/merge_requests/51)
     
 
+## Using preexisting projects
+
+You can bootstrap this system using your own existing project
+
+
+
+### Server
+
+```bash
+## Export the name and projectiD for the TokenServer
+
+## For example
+export TF_VAR_ts_project_id=ts-286804
+export TF_VAR_ts_project_name=tokenserver
+
+
+## Enable apis
+gcloud services enable  \
+   compute.googleapis.com \
+   storage-api.googleapis.com storage-component.googleapis.com secretmanager.googleapis.com \
+    containerregistry.googleapis.com cloudbuild.googleapis.com firestore.googleapis.com \
+    logging.googleapis.com monitoring.googleapis.com containerregistry.googleapis.com \
+    appengine.googleapis.com --project ${TF_VAR_ts_project_id}
+
+# Acquire the existing project state into terraform:
+terraform import module.ts_setup.google_project.project ${TF_VAR_ts_project_id}
+
+terraform show
+
+## apply the config as shown in the steps above, eg resume from:
+#  terraform apply --target=module.ts_setup
+```
+
+### Client
+
+```bash
+# Export the name and projectiD for the TokenClient
+
+## For example
+export TF_VAR_tc_project_id=tc-286804
+export TF_VAR_tc_project_name=tokenclient
+
+# enable apis
+gcloud services enable compute.googleapis.com \
+  storage-api.googleapis.com storage-component.googleapis.com \
+  secretmanager.googleapis.com containerregistry.googleapis.com cloudbuild.googleapis.com \
+  logging.googleapis.com monitoring.googleapis.com \
+  containerregistry.googleapis.com --project ${TF_VAR_tc_project_id}
+
+# acquire TF State
+terraform import module.tc_setup.google_project.project ${TF_VAR_tc_project_id}
+
+## apply the config as shown in the steps above, eg resume from:
+#  terraform apply --target=module.tc_setup
+```
+> Please note that if you execute a `terraform destroy` after setting the terraform state with your existing project, the existing project you now
+included will be destroyed as well (i.e., don't run `terraform destory --target=module.tc_setup`)
 
 ## Automated Testing
 
