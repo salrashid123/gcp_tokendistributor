@@ -77,6 +77,7 @@ type ServiceEntry struct {
 	ImageFingerprint   string    `firestore:"image_fingerprint"`
 	SealedRSAKey       []byte    `firestore:"rsa_key,omitempty"`
 	SealedAESKey       []byte    `firestore:"aes_key,omitempty"`
+	RawKey             []byte    `firestore:"raw_key,omitempty"`
 	PCR                int64     `firestore:"pcr"`
 	PCRValue           string    `firestore:"pcr_value,omitempty"`
 	GCSObjectReference string    `firestore:"gcs_object,omitempty"`
@@ -104,6 +105,7 @@ var (
 	tsAudience              = flag.String("tsAudience", "", "Audience value for the TokenService")
 	useSecrets              = flag.Bool("useSecrets", false, "Use Google Secrets Manager for TLS Keys")
 	useALTS                 = flag.Bool("useALTS", false, "Use Application Layer Transport Security")
+	useTPM                  = flag.Bool("useTPM", false, "Use TPM to seal data")
 	firestoreProjectId      = flag.String("firestoreProjectId", "", "firestoreProjectId where the sealed data is stored")
 	firestoreCollectionName = flag.String("firestoreCollectionName", "", "firestoreCollectionName where the sealedData is Stored")
 
@@ -252,6 +254,10 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 	}
 
 	cresp, err := computeService.Instances.Get(c.ClientProject, c.ClientZone, instanceID).Do()
+	if err != nil {
+		glog.Errorf("ERROR:  Could not find instanceID Using GCE API %s", instanceID)
+		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("InstanceID not Found using GCE API %v", err))
+	}
 	glog.V(2).Infof("     Found  VM instanceID %#v\n", strconv.FormatUint(cresp.Id, 10))
 	glog.V(2).Infof("     Found  VM ServiceAccount %#v\n", cresp.ServiceAccounts[0].Email)
 	var initScriptHash string
@@ -267,17 +273,18 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 		glog.Errorf("   -------->  Error Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash)
 		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash))
 	}
-	if c.InitScriptHash == "" {
-		glog.Errorf("   *********** NOTE: initscript is empty (non-COS VM or never set)...")
-		// optionally just continue here if debugging
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script is empty"))
-	}
+	/*	// comment to debug without checking GCE metadata
+		if c.InitScriptHash == "" {
+			glog.Errorf("   *********** NOTE: initscript is empty (non-COS VM or never set)...")
+			// optionally just continue here if debugging
+			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script is empty"))
+		}
 
-	if cresp.Fingerprint != c.ImageFingerprint {
-		glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
-	}
-
+		if cresp.Fingerprint != c.ImageFingerprint {
+			glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
+			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
+		}
+	*/
 	respID, err := uuid.NewUUID()
 	if err != nil {
 		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.Internal, "Unable to create UUID?!")
@@ -300,6 +307,7 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 		InResponseTo: in.RequestId,
 		SealedAESKey: c.SealedAESKey,
 		SealedRSAKey: c.SealedRSAKey,
+		RawKey:       c.RawKey,
 		Pcr:          c.PCR,
 	}, nil
 }
@@ -424,15 +432,17 @@ func main() {
 	tokenservice.RegisterVerifierServer(s, &verifierserver{})
 	healthpb.RegisterHealthServer(s, &healthServer{})
 
-	rwc, err = tpm2.OpenTPM(tpmDevice)
-	if err != nil {
-		glog.Fatalf("can't open TPM %q: %v", tpmDevice, err)
-	}
-	defer func() {
-		if err := rwc.Close(); err != nil {
-			glog.Fatalf("can't close TPM %q: %v", tpmDevice, err)
+	if *useTPM {
+		rwc, err = tpm2.OpenTPM(tpmDevice)
+		if err != nil {
+			glog.Fatalf("can't open TPM %q: %v", tpmDevice, err)
 		}
-	}()
+		defer func() {
+			if err := rwc.Close(); err != nil {
+				glog.Fatalf("can't close TPM %q: %v", tpmDevice, err)
+			}
+		}()
+	}
 	var gracefulStop = make(chan os.Signal)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
@@ -457,6 +467,10 @@ func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.Ma
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
 	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 
+	if *useTPM == false {
+		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
+		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
+	}
 	newCtx := context.Background()
 
 	computService, err := compute.NewService(newCtx)
@@ -533,6 +547,10 @@ func (s *verifierserver) ActivateCredential(ctx context.Context, in *tokenservic
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
 	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 
+	if *useTPM == false {
+		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
+		return &tokenservice.ActivateCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
+	}
 	verified := false
 	var id string
 	id = idToken.Google.ComputeEngine.InstanceID
@@ -561,6 +579,10 @@ func (s *verifierserver) OfferQuote(ctx context.Context, in *tokenservice.OfferQ
 
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
 	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
+	if *useTPM == false {
+		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
+		return &tokenservice.OfferQuoteResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
+	}
 
 	nonce := uuid.New().String()
 	var id string
@@ -582,6 +604,10 @@ func (s *verifierserver) ProvideQuote(ctx context.Context, in *tokenservice.Prov
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
 	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 
+	if *useTPM == false {
+		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
+		return &tokenservice.ProvideQuoteResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
+	}
 	ver := false
 	var id string
 
@@ -614,6 +640,11 @@ func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
 	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 
+	if *useTPM == false {
+		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
+		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
+	}
+
 	glog.V(5).Infof("     SigningKey %s\n", in.Signingkey)
 	glog.V(5).Infof("     SigningKey Attestation %s\n", base64.StdEncoding.EncodeToString(in.Attestation))
 	glog.V(5).Infof("     SigningKey Signature %s\n", base64.StdEncoding.EncodeToString(in.Signature))
@@ -630,6 +661,11 @@ func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice
 
 func verifyQuote(uid string, nonce string, attestation []byte, sigBytes []byte) (retErr error) {
 	glog.V(2).Infof("     --> Starting verifyQuote()")
+
+	if *useTPM == false {
+		glog.Errorf("    TPM Usage not enabled, exiting")
+		return fmt.Errorf("TPM Operation not supported")
+	}
 
 	nn := registry[uid]
 	akPub := nn.AkPub
@@ -691,6 +727,11 @@ func makeCredential(sec string, ekPubBytes []byte, akPubBytes []byte) (credBlob 
 
 	glog.V(2).Infof("     --> Starting makeCredential()")
 	glog.V(10).Infof("     Read (ekPub) from request")
+
+	if *useTPM == false {
+		glog.Errorf("    TPM Usage not enabled, exiting")
+		return []byte(""), []byte(""), fmt.Errorf("TPM Operation not supported")
+	}
 
 	ekPub, err := tpm2.DecodePublic(ekPubBytes)
 	if err != nil {

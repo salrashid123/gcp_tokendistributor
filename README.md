@@ -41,7 +41,7 @@ Validates that `VM-B` has been deprivileged (no ssh access)
 
 Validates the docker image running on `VM-B` is known image hash and trusted by Alice) 
 
-Provisioning Server creates `RSAKey-A`, `AESKey-A`.   RSAKeyA maybe a GCP ServiceAccount Key.
+Provisioning Server creates `RSAKey-A`, `AESKey-A` or an arbitrary _unsealed_ secret (`RawKey-A`).   RSAKeyA maybe a GCP ServiceAccount Key.
 
 Provisioning Server uses `VM-A`'s TPM based data to seal RSA and AES key.
 
@@ -131,6 +131,14 @@ export TF_VAR_billing_account=000C16-9779B5-12345
 terraform init  
 
 terraform apply --target=module.ts_setup -auto-approve
+```
+
+If you see an API Error message about GCE APIs not being enabled, simply rerun the `ts_setup` script
+
+>> "Error: Error creating Network: googleapi: Error 403: Compute Engine API has not been used in project .."
+
+Once the project and APIs have been enabled, run
+
 terraform apply --target=module.ts_build -auto-approve
 ```
 
@@ -145,6 +153,7 @@ You should see the new project details and IP address allocated/assigned for the
     ts_project_number = 973084368812
     ts_service_account = tokenserver@ts-de7f98d5.iam.gserviceaccount.com
 ```
+
 
 Note: if you would rather use an existing project for either the Client or Server, see the section in the Appendix.
 
@@ -313,8 +322,20 @@ echo $TF_VAR_tc_instance_id
 echo $TF_VAR_ts_project_id
 
 $ cd app/
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
 
+## To generate an RSA and AES Key automatically (eg, just to test the system):
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --useTPM
+
+## To use an existing AES and RSA or RawKey file
+
+python -c 'import base64; import os;\
+           print(base64.encodestring(os.urandom(32)))'  > /tmp/sym_keyfile.key
+
+echo "somerawkey" > /tmp/raw_keyfile.txt
+
+$ openssl genrsa -out /tmp/rsakey.pem 2048
+
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --rsaKeyFile=/tmp/rsakey.pem --aesKeyFile=/tmp/sym_keyfile.key --rawKeyFile=/tmp/raw_keyfile.txt --useTPM
 ```
 
 NOTE, `PCR=0` on COS instances has the default `sha256` startup value of `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`.  You can pick any other PCR or customize it for any other VM you use instead of COS.
@@ -452,11 +473,8 @@ If mTLS is uses, the issue of key distribution and security of the TLS keys beco
 
 Provisioning application contained in the default deploy does **NOT** generate and and return a GCP ServiceAccount as the raw RSA material
 
-Supporting GCP ServiceAccounts is still a TODO:
+You can easily embed a JSON GCP Service account as the RawKey value.  Note, the RawKey is **NOT** sealed via the TPM
 
-tasks involved in doing that:
-
-a. Modify the TokenResponse proto When TokenClient receives the to include the KeyID serviceAccountName 
 
 ```proto
 message TokenResponse {
@@ -464,10 +482,9 @@ message TokenResponse {
   string inResponseTo = 2;
   bytes sealedRSAKey = 3;
   bytes sealedAESKey = 4;
-  int64 pcr = 5;
-  string resourceReference = 6;
-  string serviceAccountKeyId = 7;
-  string serviceAccountEmail = 8;
+  bytes rawKey = 5;             // embed the GCP Service account here
+  int64 pcr = 6;
+  string resourceReference = 7;
 }
 ```
 
@@ -480,19 +497,22 @@ e. TokenClient will embed the `sealedRSAKey` to the TPM and use that to generate
 - [oauth2.TPMTokenSource](https://github.com/salrashid123/oauth2#usage-tpmtokensource)
 
 
-#### (enhancement) Transmitting short term token
+#### Using RawKey for short term tokens
 
 TokenServer does not *have to* return rsa or aes keys and involve a tpm at all.  If Alice and Bob agree, the TokenServer can simply return a short term `access_token` directly to the TokenClient.   The Client can use that raw, non-refreshable token to access a GCP resource
 
 The server can also issue a [downscoped Token](https://github.com/salrashid123/downscoped_token)
 
-To support this, the TokenResponse proto would include just the token and maybe its expiration time
+To support this, use the `RawKey` parameter in the `TokenResponse`
 ```proto
 message TokenResponse {
   string responseID = 1;
   string inResponseTo = 2;
-  string access_token = 3;
-  int64  expire_at = 4;
+  bytes sealedRSAKey = 3;
+  bytes sealedAESKey = 4;
+  bytes rawKey = 5;           // use this field for arbitrary secrets
+  int64 pcr = 6;
+  string resourceReference = 7;
 }
 ```
 
@@ -623,3 +643,43 @@ TODO:
 - see `test/cloudbuild.yaml`
 
 
+
+### Token Distributor without TPMs 
+
+You can also deploy the tokenserver and client such that the RSA and AES keys are **NOT** sealed to each TokenClients TPM.  To use TPM-less flow, you will need to edit
+
+TokenServer `alice/deploy/main.tf`
+
+omit `--use-TPM` flag
+
+```bash
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --v=20 -alsologtostderr
+```
+
+TokenClient `bob/deploy/main.tf`
+
+omit the `--useTPM` flag
+
+```bash
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/${var.project_id}/tokenclient@${var.image_hash} --address ${var.ts_address}:50051 --servername ${var.sni_servername} --tsAudience ${var.ts_audience} --useSecrets --tlsClientCert projects/${var.project_number}/secrets/tls_crt --tlsClientKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca --v=20 -alsologtostderr
+```
+
+Then when running the `Provisioner`:
+
+Exclude the `--useTPM` flag, eg:
+
+```
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id
+```
+
+A) Deploy Token Client
+```
+virtualenv env --python=/usr/bin/python3.7
+source env/bin/activate
+pip install grpcio-tools  protobuf proto-plus google.api.core
+
+cd app/
+cp src/tokenservice/tokenservice.proto .
+python -m grpc_tools.protoc --proto_path=.  -I . --python_out=.  --grpc_python_out=. tokenservice.proto
+
+```

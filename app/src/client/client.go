@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/tls"
@@ -59,6 +60,7 @@ var (
 	sniServerName             = flag.String("servername", "tokenservice.esodemoapp2.com", "SNIServer Name assocaited with the server")
 	serviceAccount            = flag.String("serviceAccount", "/home/srashid/gcp_misc/certs/mineral-minutia-820-e9a7c8665867.json", "Path to the service account JSOn file")
 	useALTS                   = flag.Bool("useALTS", false, "Use ALTS")
+	useTPM                    = flag.Bool("useTPM", false, "Use TPM to unseal data")
 	doAttestation             = flag.Bool("doAttestation", false, "Start offer to Make/Activate Credential flow")
 	exchangeSigningKey        = flag.Bool("exchangeSigningKey", false, "Offer RSA Signing Key (requires --doAttestation)")
 	tokenServerServiceAccount = flag.String("tokenServerServiceAccount", "", "ServiceAccount for ALTS TokenService")
@@ -310,169 +312,187 @@ func main() {
 				glog.V(20).Infof("     Received  toResponse: %s\n", r.InResponseTo)
 
 				//  Yes!!, we got the token back successfully.
-				//  First decode the AES key using tpm2.Import()
-
-				rwc, err = tpm2.OpenTPM(tpmDevice)
-				if err != nil {
-					glog.Errorf("ERROR Unable to openTPM: %v", err)
-					return
-				}
-				defer func() {
-					if err := rwc.Close(); err != nil {
-						glog.Fatalf("ERROR Can't close TPM %v", err)
-					}
-				}()
-
-				totalHandles := 0
-				for _, handleType := range handleNames["all"] {
-					handles, err := tpm2tools.Handles(rwc, handleType)
+				//  First decode the AES key using tpm2.Import() or..not if you don't use the TPM
+				var akey []byte
+				var sig string
+				if *useTPM == true {
+					rwc, err = tpm2.OpenTPM(tpmDevice)
 					if err != nil {
-						glog.V(20).Infof("Getting TPM handles: %v", err)
+						glog.Errorf("ERROR Unable to openTPM: %v", err)
 						return
 					}
-					for _, handle := range handles {
-						if err = tpm2.FlushContext(rwc, handle); err != nil {
-							glog.Errorf("flushing handle 0x%x: %v", handle, err)
+					defer func() {
+						if err := rwc.Close(); err != nil {
+							glog.Fatalf("ERROR Can't close TPM %v", err)
 						}
-						glog.V(20).Infof("Handle 0x%x flushed\n", handle)
-						totalHandles++
-					}
-				}
-				ek, err := tpm2tools.EndorsementKeyRSA(rwc)
-				defer ek.Close()
-				if err != nil {
-					glog.Errorf("ERROR:   Unable to load EK from TPM: %v\n", err)
-					return
-				}
-				defer tpm2.FlushContext(rwc, ek.Handle())
-				blob := &tpmpb.ImportBlob{}
+					}()
 
-				err = proto.Unmarshal(r.SealedAESKey, blob)
-				if err != nil {
-					glog.Errorf("Unmarshalling error: %v\n", err)
-					return
+					totalHandles := 0
+					for _, handleType := range handleNames["all"] {
+						handles, err := tpm2tools.Handles(rwc, handleType)
+						if err != nil {
+							glog.V(20).Infof("Getting TPM handles: %v", err)
+							return
+						}
+						for _, handle := range handles {
+							if err = tpm2.FlushContext(rwc, handle); err != nil {
+								glog.Errorf("flushing handle 0x%x: %v", handle, err)
+							}
+							glog.V(20).Infof("Handle 0x%x flushed\n", handle)
+							totalHandles++
+						}
+					}
+					ek, err := tpm2tools.EndorsementKeyRSA(rwc)
+					defer ek.Close()
+					if err != nil {
+						glog.Errorf("ERROR:   Unable to load EK from TPM: %v\n", err)
+						return
+					}
+					defer tpm2.FlushContext(rwc, ek.Handle())
+					blob := &tpmpb.ImportBlob{}
+
+					err = proto.Unmarshal(r.SealedAESKey, blob)
+					if err != nil {
+						glog.Errorf("Unmarshalling error: %v\n", err)
+						return
+					}
+					akey, err = ek.Import(blob)
+					if err != nil {
+						glog.Errorf("ERROR Unable to Import sealed AES data: %v\n", err)
+						return
+					}
+					err = proto.Unmarshal(r.SealedRSAKey, blob)
+					if err != nil {
+						glog.Errorf("unmarshaling error: %v\n ", err)
+						return
+					}
+					rkey, err := ek.ImportSigningKey(blob)
+
+					if err != nil {
+						glog.Errorf("Error ImportSigningKey:  %v\n", err)
+						return
+					}
+					defer tpm2.FlushContext(rwc, rkey.Handle())
+					glog.V(2).Infof("     Unsealed RSA PrivateKey \n")
+
+					// START: the following section simply saves and loads
+					//  the RSA keyHandle just incase you need to save it to
+					//  somewhere locally (only within memory, for example)
+					//  "ContextSave returns an encrypted version of the session,
+					//   object or sequence context for storage outside of the TPM"
+					//  (for use in another routine)
+					// https://godoc.org/github.com/google/go-tpm/tpm2#ContextSave
+					glog.V(2).Infof("     Saving ImportedRSAKey Handle")
+					keyHandle := rkey.Handle()
+					keyBytes, err := tpm2.ContextSave(rwc, keyHandle)
+					if err != nil {
+						glog.Errorf("ContextSave failed for keyHandle: %v", err)
+						return
+					}
+					tpm2.FlushContext(rwc, keyHandle)
+					rkey.Close()
+
+					glog.V(2).Infof("     Loading RSAKey Handle")
+					kh, err := tpm2.ContextLoad(rwc, keyBytes)
+					if err != nil {
+						glog.Errorf("ContextLoad failed for kh: %v", err)
+						return
+					}
+					// End Sample Save/Load
+
+					// ok, now use key to sign some sample data
+					// note, the string we're using to sign is "foobar"
+					// which just happens to be the same string in line ~212
+					// of provisioner.go.   This step doesn't really prove anything
+					// other than the Alice can send that signature to
+					// Bob and bob can see he got same signature for the same string
+					data := []byte("foobar")
+					h := sha256.New()
+					h.Write(data)
+					d := h.Sum(nil)
+
+					defer tpm2.FlushContext(rwc, kh)
+
+					khDigest, khValidation, err := tpm2.Hash(rwc, tpm2.AlgSHA256, data, tpm2.HandleOwner)
+					if err != nil {
+						glog.Errorf("Hash failed unexpectedly: %v", err)
+						return
+					}
+
+					glog.V(5).Infof("     TPM based Hash %s", base64.StdEncoding.EncodeToString(khDigest))
+					session, _, err := tpm2.StartAuthSession(
+						rwc,
+						/*tpmkey=*/ tpm2.HandleNull,
+						/*bindkey=*/ tpm2.HandleNull,
+						/*nonceCaller=*/ make([]byte, 32),
+						/*encryptedSalt=*/ nil,
+						/*sessionType=*/ tpm2.SessionPolicy,
+						/*symmetric=*/ tpm2.AlgNull,
+						/*authHash=*/ tpm2.AlgSHA256)
+					defer tpm2.FlushContext(rwc, session)
+					if err != nil {
+						glog.Errorf("Error: StartAuthSession failed: %v\n", err)
+						return
+					}
+
+					var signed *tpm2.Signature
+
+					bindPCRValue := int(r.Pcr)
+
+					if bindPCRValue >= 0 && bindPCRValue <= 23 {
+						if err = tpm2.PolicyPCR(rwc, session, nil, tpm2.PCRSelection{tpm2.AlgSHA256, []int{bindPCRValue}}); err != nil {
+							glog.Errorf("ERROR: PolicyPCR failed: %vn", err)
+							return
+						}
+						signed, err = tpm2.SignWithSession(rwc, session, kh, "", d[:], khValidation, &tpm2.SigScheme{
+							Alg:  tpm2.AlgRSASSA,
+							Hash: tpm2.AlgSHA256,
+						})
+						if err != nil {
+							glog.Errorf("ERROR:  Unable to SignWithSession with TPM: %v\n", err)
+							return
+						}
+					} else {
+						signed, err = tpm2.Sign(rwc, kh, "", d[:], khValidation, &tpm2.SigScheme{
+							Alg:  tpm2.AlgRSASSA,
+							Hash: tpm2.AlgSHA256,
+						})
+						if err != nil {
+							glog.Errorf("ERROR: Unable to Sign with TPM: %v\n", err)
+							return
+						}
+					}
+					sig = base64.StdEncoding.EncodeToString(signed.RSA.Signature)
+
+				} else {
+					akey = r.SealedAESKey
+
+					block, _ := pem.Decode(r.SealedRSAKey)
+					priv, _ := x509.ParsePKCS1PrivateKey(block.Bytes)
+					data := []byte("foobar")
+					h := sha256.New()
+					h.Write(data)
+					d := h.Sum(nil)
+
+					sigBytes, err := rsa.SignPKCS1v15(rand.Reader, priv, crypto.SHA256, d)
+					if err != nil {
+						glog.Errorf("Unable to sign RSA %v\n", err)
+						return
+					}
+					sig = base64.StdEncoding.EncodeToString(sigBytes)
 				}
-				akey, err := ek.Import(blob)
-				if err != nil {
-					glog.Errorf("ERROR Unable to Import sealed data: %v\n", err)
-					return
-				}
+
+				rawKey := r.RawKey
+				glog.V(20).Infof("     Received  RawKey: %s\n", string(rawKey))
 
 				hasher := sha256.New()
 				hasher.Write([]byte(akey))
 				encsha := base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 
 				glog.V(2).Infof("     Unsealed AES Key with hash: %v\n", encsha)
+				glog.V(2).Infof("Signed control data %v", sig)
 
 				// ************************************
-
-				//  Now decode and embed the RSA key using tpm2.ImportSigningKey()
-
-				err = proto.Unmarshal(r.SealedRSAKey, blob)
-				if err != nil {
-					glog.Errorf("unmarshaling error: %v\n ", err)
-					return
-				}
-				rkey, err := ek.ImportSigningKey(blob)
-
-				if err != nil {
-					glog.Errorf("Error ImportSigningKey:  %v\n", err)
-					return
-				}
-				defer tpm2.FlushContext(rwc, rkey.Handle())
-				glog.V(2).Infof("     Unsealed RSA PrivateKey \n")
-
-				// START: the following section simply saves and loads
-				//  the RSA keyHandle just incase you need to save it to
-				//  somewhere locally (only within memory, for example)
-				//  "ContextSave returns an encrypted version of the session,
-				//   object or sequence context for storage outside of the TPM"
-				//  (for use in another routine)
-				// https://godoc.org/github.com/google/go-tpm/tpm2#ContextSave
-				glog.V(2).Infof("     Saving ImportedRSAKey Handle")
-				keyHandle := rkey.Handle()
-				keyBytes, err := tpm2.ContextSave(rwc, keyHandle)
-				if err != nil {
-					glog.Errorf("ContextSave failed for keyHandle: %v", err)
-					return
-				}
-				tpm2.FlushContext(rwc, keyHandle)
-				rkey.Close()
-
-				glog.V(2).Infof("     Loading RSAKey Handle")
-				kh, err := tpm2.ContextLoad(rwc, keyBytes)
-				if err != nil {
-					glog.Errorf("ContextLoad failed for kh: %v", err)
-					return
-				}
-				// End Sample Save/Load
-
-				// ok, now use key to sign some sample data
-				// note, the string we're using to sign is "foobar"
-				// which just happens to be the same string in line ~212
-				// of provisioner.go.   This step doesn't really prove anything
-				// other than the Alice can send that signature to
-				// Bob and bob can see he got same signature for the same string
-				data := []byte("foobar")
-				h := sha256.New()
-				h.Write(data)
-				d := h.Sum(nil)
-
-				defer tpm2.FlushContext(rwc, kh)
-
-				khDigest, khValidation, err := tpm2.Hash(rwc, tpm2.AlgSHA256, data, tpm2.HandleOwner)
-				if err != nil {
-					glog.Errorf("Hash failed unexpectedly: %v", err)
-					return
-				}
-
-				glog.V(5).Infof("     TPM based Hash %s", base64.StdEncoding.EncodeToString(khDigest))
-				session, _, err := tpm2.StartAuthSession(
-					rwc,
-					/*tpmkey=*/ tpm2.HandleNull,
-					/*bindkey=*/ tpm2.HandleNull,
-					/*nonceCaller=*/ make([]byte, 32),
-					/*encryptedSalt=*/ nil,
-					/*sessionType=*/ tpm2.SessionPolicy,
-					/*symmetric=*/ tpm2.AlgNull,
-					/*authHash=*/ tpm2.AlgSHA256)
-				defer tpm2.FlushContext(rwc, session)
-				if err != nil {
-					glog.Errorf("Error: StartAuthSession failed: %v\n", err)
-					return
-				}
-
-				var signed *tpm2.Signature
-
-				bindPCRValue := int(r.Pcr)
-
-				if bindPCRValue >= 0 && bindPCRValue <= 23 {
-					if err = tpm2.PolicyPCR(rwc, session, nil, tpm2.PCRSelection{tpm2.AlgSHA256, []int{bindPCRValue}}); err != nil {
-						glog.Errorf("ERROR: PolicyPCR failed: %vn", err)
-						return
-					}
-					signed, err = tpm2.SignWithSession(rwc, session, kh, "", d[:], khValidation, &tpm2.SigScheme{
-						Alg:  tpm2.AlgRSASSA,
-						Hash: tpm2.AlgSHA256,
-					})
-					if err != nil {
-						glog.Errorf("ERROR:  Unable to SignWithSession with TPM: %v\n", err)
-						return
-					}
-				} else {
-					signed, err = tpm2.Sign(rwc, kh, "", d[:], khValidation, &tpm2.SigScheme{
-						Alg:  tpm2.AlgRSASSA,
-						Hash: tpm2.AlgSHA256,
-					})
-					if err != nil {
-						glog.Errorf("ERROR: Unable to Sign with TPM: %v\n", err)
-						return
-					}
-				}
-
-				sig := base64.StdEncoding.EncodeToString(signed.RSA.Signature)
-
-				glog.V(2).Infof("Signed control data %v", sig)
 
 				/// ***********************************************************************************************************
 
@@ -482,8 +502,8 @@ func main() {
 				// Then generate an unrestricted Signing key, sign it with EK and
 				// use that to repeatedly sign arbitrary text that you can use later
 				// You can also use the AK to sign known hash values.
-				if *doAttestation {
-					totalHandles = 0
+				if *doAttestation && *useTPM {
+					totalHandles := 0
 					for _, handleType := range handleNames["all"] {
 						handles, err := tpm2tools.Handles(rwc, handleType)
 						if err != nil {

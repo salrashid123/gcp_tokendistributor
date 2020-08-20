@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
@@ -38,6 +39,7 @@ type ServiceEntry struct {
 	ImageFingerprint   string    `firestore:"image_fingerprint"`
 	SealedRSAKey       []byte    `firestore:"rsa_key,omitempty"`
 	SealedAESKey       []byte    `firestore:"aes_key,omitempty"`
+	RawKey             []byte    `firestore:"raw_key,omitempty"`
 	PCR                int64     `firestore:"pcr"`
 	PCRValue           string    `firestore:"pcr_value,omitempty"`
 	GCSObjectReference string    `firestore:"gcs_object,omitempty"`
@@ -58,6 +60,10 @@ var (
 	clientVMZone    = flag.String("clientVMZone", "", "clientVMZone for VM")
 	clientVMId      = flag.String("clientVMId", "", "clientVMId for VM")
 	autoAccept      = flag.Bool("autoAccept", false, "autoAccept configuration")
+	useTPM          = flag.Bool("useTPM", false, "Use TPM to seal data")
+	rsaKeyFile      = flag.String("rsaKeyFile", "", "RSAKey Filename")
+	aesKeyFile      = flag.String("aesKeyFile", "", "AESKey FIlename")
+	rawKeyFile      = flag.String("rawKeyFile", "", "RawKey FIlename")
 	pcrMap          = map[uint32][]byte{}
 )
 
@@ -199,16 +205,30 @@ func main() {
 	// For testing, just generate an RSA key
 	// In production, use API to generate a key:
 	// https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-go
-	log.Printf("Generating RSA Key")
-	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
 
-	privPEM := pem.EncodeToMemory(
-		&pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(priv),
-		},
-	)
+	var privPEM, key []byte
+	var priv *rsa.PrivateKey
+	if *rsaKeyFile == "" {
+		log.Printf("Generating RSA Key")
+		priv, _ = rsa.GenerateKey(rand.Reader, 2048)
 
+		privPEM = pem.EncodeToMemory(
+			&pem.Block{
+				Type:  "RSA PRIVATE KEY",
+				Bytes: x509.MarshalPKCS1PrivateKey(priv),
+			},
+		)
+	} else {
+		log.Printf("Using Existing RSA Key")
+		privPEM, err = ioutil.ReadFile(*rsaKeyFile)
+		if err != nil {
+			log.Fatalf("Unable to Read RSAKeyFile %v\n", err)
+		}
+
+		block, _ := pem.Decode(privPEM)
+		priv, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
+
+	}
 	//log.Printf("RSAKey %s", privPEM)
 
 	data := []byte("foobar")
@@ -222,15 +242,29 @@ func main() {
 	}
 	log.Printf("Sample control Signed data: %s", base64.RawStdEncoding.EncodeToString(signed))
 
-	sealedRSA, err := createSigningKeyImportBlob(mresp.EncryptionKey.EkPub, string(privPEM))
-	if err != nil {
-		log.Fatalf("Unable to createSigningKeyImportBlob %v", err)
+	var sealedAES, sealedRSA []byte
+
+	if *useTPM {
+		sealedRSA, err = createSigningKeyImportBlob(mresp.EncryptionKey.EkPub, string(privPEM))
+		if err != nil {
+			log.Fatalf("Unable to createSigningKeyImportBlob %v", err)
+		}
+	} else {
+		sealedRSA = privPEM
 	}
 
-	log.Printf("Generating AES Key")
-	key := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, key); err != nil {
-		log.Fatalf("RNG failure")
+	if *aesKeyFile == "" {
+		log.Printf("Generating AES Key")
+		key = make([]byte, 32)
+		if _, err := io.ReadFull(rand.Reader, key); err != nil {
+			log.Fatalf("RNG failure")
+		}
+	} else {
+		log.Printf("Using Existing AES Key")
+		key, err = ioutil.ReadFile(*aesKeyFile)
+		if err != nil {
+			log.Fatalf("Unable to Read AESKeyFile %v\n", err)
+		}
 	}
 
 	hasher := sha256.New()
@@ -239,14 +273,26 @@ func main() {
 
 	log.Printf("Sealed AES Key with hash: %v\n", encsha)
 
+	var rawKey []byte
+	if *rawKeyFile != "" {
+		log.Printf("Adding Raw Key")
+		rawKey, err = ioutil.ReadFile(*rawKeyFile)
+		if err != nil {
+			log.Fatalf("Unable to Read RawKeyFile %v\n", err)
+		}
+	}
+
 	//log.Printf("AES KEY %s", base64.RawStdEncoding.EncodeToString(key))
 
-	sealedAES, err := createImportBlob(mresp.EncryptionKey.EkPub, string(key))
-	if err != nil {
-		log.Fatalf("Unable to find createImportBlob %v", err)
+	if *useTPM {
+		sealedAES, err = createImportBlob(mresp.EncryptionKey.EkPub, string(key))
+		if err != nil {
+			log.Fatalf("Unable to find createImportBlob %v", err)
+		}
+		//log.Printf("Sealed RSABlob: %s", base64.RawStdEncoding.EncodeToString(sealedRSA))
+	} else {
+		sealedAES = key
 	}
-	//log.Printf("Sealed RSABlob: %s", base64.RawStdEncoding.EncodeToString(sealedRSA))
-
 	client, err := firestore.NewClient(ctx, *fireStoreProjectId)
 	if err != nil {
 		log.Fatal(err)
@@ -262,6 +308,7 @@ func main() {
 		ImageFingerprint:   cresp.Fingerprint,
 		SealedRSAKey:       sealedRSA,
 		SealedAESKey:       sealedAES,
+		RawKey:             rawKey,
 		ProvidedAt:         time.Now(),
 		PCR:                0,
 		PCRValue:           *sealToPCRValue,

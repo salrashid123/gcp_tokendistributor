@@ -26,8 +26,9 @@ message TokenResponse {
   string inResponseTo = 2;
   bytes sealedRSAKey = 3;
   bytes sealedAESKey = 4;
-  int64 pcr = 5;
-  string resourceReference = 6;
+  bytes rawKey = 5;  
+  int64 pcr = 6;
+  string resourceReference = 7;
 }
 
 message MakeCredentialRequest {
