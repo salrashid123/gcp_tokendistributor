@@ -1,0 +1,26 @@
+#cloud-config
+
+write_files:
+- path: /etc/systemd/system/cloudservice.service
+  permissions: 0644
+  owner: root
+  content: |
+    [Unit]
+    Description=Start a simple docker container
+    Wants=gcr-online.target
+    After=gcr-online.target
+
+    [Service]
+    Environment="HOME=/home/cloudservice"
+    ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice $ts_image_hash --grpcport 0.0.0.0:50051 --tsAudience $ts_audience --useSecrets --tlsCert projects/$ts_project_number/secrets/tls_crt --tlsKey projects/$ts_project_number/secrets/tls_key --tlsCertChain projects/$ts_project_number/secrets/tls-ca  --firestoreProjectId $ts_project_id --firestoreCollectionName $ts_collection_id  --v=20 -alsologtostderr
+    ExecStop=/usr/bin/docker stop mycloudservice
+    ExecStopPost=/usr/bin/docker rm mycloudservice
+
+#bootcmd:
+#- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+#- systemctl mask --now serial-getty@ttyS0.service
+
+runcmd:
+- systemctl daemon-reload
+- systemctl start cloudservice.service

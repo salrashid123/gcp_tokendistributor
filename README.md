@@ -96,6 +96,8 @@ This repo will configure the full TokenService infrastructure and Service:
 
   *It is expected customers will customize the client and server to suite their needs.*
 
+If you do not want to use terraform, the `gcloud_setup/` folder contains command sequences in gcloud.
+
 Alice and Bob will both need:
 
 * [terraform](terraform.io)
