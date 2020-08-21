@@ -1,26 +1,26 @@
 #cloud-config
 
 write_files:
-  - path: /etc/systemd/system/cloudservice.service
-    permissions: 0644
-    owner: root
-    content: |
-      [Unit]
-      Description=Start a simple docker container
-      Wants=gcr-online.target
-      After=gcr-online.target
+- path: /etc/systemd/system/cloudservice.service
+  permissions: 0644
+  owner: root
+  content: |
+    [Unit]
+    Description=Start a simple docker container
+    Wants=gcr-online.target
+    After=gcr-online.target
+
+    [Service]
+    Environment="HOME=/home/cloudservice"
+    ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --v=20 -alsologtostderr
+    ExecStop=/usr/bin/docker stop mycloudservice
+    ExecStopPost=/usr/bin/docker rm mycloudservice
   
-      [Service]
-      Environment="HOME=/home/cloudservice"
-      ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-      ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --v=20 -alsologtostderr
-      ExecStop=/usr/bin/docker stop mycloudservice
-      ExecStopPost=/usr/bin/docker rm mycloudservice
+# bootcmd:
+# - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+# - systemctl mask --now serial-getty@ttyS0.service
   
-  # bootcmd:
-  # - iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
-  # - systemctl mask --now serial-getty@ttyS0.service
-  
-  runcmd:
-  - systemctl daemon-reload
-  - systemctl start cloudservice.service
+runcmd:
+- systemctl daemon-reload
+- systemctl start cloudservice.service

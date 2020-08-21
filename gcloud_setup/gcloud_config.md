@@ -14,6 +14,8 @@ export ts_project_id=ts-$random_id
 export ts_sni=tokenservice.esodemoapp2.com
 
 ## Setup
+git clone https://github.com/salrashid123/gcp_tokendistributor.git
+cd gcp_tokendistributor/
 
 gcloud projects create $ts_project_id --name $ts_project_name
 
@@ -119,25 +121,13 @@ docker pull gcr.io/$ts_project_id/tokenserver
 
 ### Deploy
 
+cd gcloud_setup/
+
 export ts_image_hash=`docker inspect --format='{{index .RepoDigests 0}}' gcr.io/$ts_project_id/tokenserver`
 
 envsubst < "ts-cloud-config.yaml.tmpl" > "ts-cloud-config.yaml"
 
-gcloud beta compute  instances create \
-  tokenserver  \
-  --zone=$zone --machine-type=f1-micro  \
-  --network=tsnetwork \
-  --subnet=tssubnet   \
-  --address $tsIP \
-  --tags tokenserver \
-  --service-account $ts_service_account_email \
-  --scopes=cloud-platform,userinfo-email \
-  --image-family cos-stable \
-  --image-project cos-cloud \
-  --metadata google-logging-enabled=true,google-monitoring-enabled=true \
-  --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring  \
-  --metadata-from-file user-data=ts-cloud-config.yaml \
-  --project $ts_project_id 
+gcloud beta compute  instances create   tokenserver    --zone=$zone --machine-type=f1-micro    --network=tsnetwork   --subnet=tssubnet     --address $tsIP   --tags tokenserver   --service-account $ts_service_account_email   --scopes=cloud-platform,userinfo-email   --image cos-stable-81-12871-119-0   --image-project cos-cloud   --metadata google-logging-enabled=true   --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring    --metadata-from-file user-data=ts-cloud-config.yaml   --project $ts_project_id
 ```
 
 ```bash
@@ -164,6 +154,9 @@ export ts_audience=https://tokenservice
 echo $ts_service_account_email
 echo $tsIP
 echo $ts_provisioner_email
+
+git clone https://github.com/salrashid123/gcp_tokendistributor.git
+cd gcp_tokendistributor/
 
 
 gcloud projects create $tc_project_id --name $tc_project_name
@@ -266,23 +259,11 @@ docker pull gcr.io/$tc_project_id/tokenclient
 export tc_image_hash=`docker inspect --format='{{index .RepoDigests 0}}' gcr.io/$tc_project_id/tokenclient`
 echo $tc_image_hash
 
+cd gcloud_setup/
 envsubst < "tc-cloud-config.yaml.tmpl" > "tc-cloud-config.yaml"
 
-gcloud beta compute  instances create \
-  tokenclient  \
-  --zone=$zone --machine-type=f1-micro  \
-  --network=tcnetwork \
-  --subnet=tcsubnet   \
-  --address $tcIP \
-  --tags tokenclient \
-  --service-account $tc_service_account_email \
-  --scopes=cloud-platform,userinfo-email \
-  --image-family cos-stable \
-  --image-project cos-cloud \
-  --metadata google-logging-enabled=true,google-monitoring-enabled=true \
-  --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring  \
-  --metadata-from-file user-data=tc-cloud-config.yaml \
-  --project $tc_project_id 
+
+gcloud beta compute  instances create   tokenclient    --zone=$zone --machine-type=f1-micro    --network=tcnetwork   --subnet=tcsubnet     --address $tcIP   --tags tokenclient   --service-account $tc_service_account_email   --scopes=cloud-platform,userinfo-email   --image cos-stable-81-12871-119-0   --image-project cos-cloud   --metadata google-logging-enabled=true   --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring    --metadata-from-file user-data=tc-cloud-config.yaml   --project $tc_project_id
 
 
 gcloud compute instances add-iam-policy-binding  tokenclient 	 \
