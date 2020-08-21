@@ -127,7 +127,17 @@ export ts_image_hash=`docker inspect --format='{{index .RepoDigests 0}}' gcr.io/
 
 envsubst < "ts-cloud-config.yaml.tmpl" > "ts-cloud-config.yaml"
 
-gcloud beta compute  instances create   tokenserver    --zone=$zone --machine-type=f1-micro    --network=tsnetwork   --subnet=tssubnet     --address $tsIP   --tags tokenserver   --service-account $ts_service_account_email   --scopes=cloud-platform,userinfo-email   --image cos-stable-81-12871-119-0   --image-project cos-cloud   --metadata google-logging-enabled=true   --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring    --metadata-from-file user-data=ts-cloud-config.yaml   --project $ts_project_id
+gcloud beta compute  instances create   tokenserver   \
+ --zone=$zone --machine-type=f1-micro  \
+ --network=tsnetwork   --subnet=tssubnet  \
+ --address $tsIP   --tags tokenserver \
+ --service-account $ts_service_account_email \
+ --scopes=cloud-platform,userinfo-email \
+ --image cos-stable-81-12871-119-0   --image-project cos-cloud \
+ --metadata google-logging-enabled=true  \
+ --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring \
+ --metadata-from-file user-data=ts-cloud-config.yaml  \
+ --project $ts_project_id
 ```
 
 ```bash
@@ -263,7 +273,15 @@ cd gcloud_setup/
 envsubst < "tc-cloud-config.yaml.tmpl" > "tc-cloud-config.yaml"
 
 
-gcloud beta compute  instances create   tokenclient    --zone=$zone --machine-type=f1-micro    --network=tcnetwork   --subnet=tcsubnet     --address $tcIP   --tags tokenclient   --service-account $tc_service_account_email   --scopes=cloud-platform,userinfo-email   --image cos-stable-81-12871-119-0   --image-project cos-cloud   --metadata google-logging-enabled=true   --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring    --metadata-from-file user-data=tc-cloud-config.yaml   --project $tc_project_id
+gcloud beta compute  instances create   tokenclient   \
+ --zone=$zone --machine-type=f1-micro    --network=tcnetwork  \
+ --subnet=tcsubnet     --address $tcIP   --tags tokenclient  \
+ --service-account $tc_service_account_email \
+ --scopes=cloud-platform,userinfo-email   --image cos-stable-81-12871-119-0  \
+ --image-project cos-cloud   --metadata google-logging-enabled=true  \
+ --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring  \
+ --metadata-from-file user-data=tc-cloud-config.yaml \
+ --project $tc_project_id
 
 
 gcloud compute instances add-iam-policy-binding  tokenclient 	 \
@@ -291,3 +309,42 @@ echo $tc_project_id
 cd app/
 go run src/provisioner/provisioner.go --fireStoreProjectId $ts_project_id --firestoreCollectionName foo     --clientProjectId $tc_project_id --clientVMZone us-central1-a --clientVMId $tc_instanceID 
 ```
+
+
+---
+
+
+#### Using TPM
+The sequence above deploys the tokenserver and client without using the TPM.  If you wan to use the TPM 
+
+edit 
+
+- `ts-cloud-config.yaml.tmpl`:
+
+```bash
+## TokenServer
+  ### WithoutTPM
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --v=20 -alsologtostderr
+  #### With TPM
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --useTPM --doAttestation --exchangeSigningKey --v=20 -alsologtostderr    
+```
+
+- `tc-cloud-config.yaml.tmpl`:
+
+```bash
+## TokenClient
+  ### WithoutTPM
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --v=20 -alsologtostderr
+  ### With TPM
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --useTPM --doAttestation --exchangeSigningKey --v=20 -alsologtostderr    
+```
+
+
+During provisioning:
+
+```bash
+go run src/provisioner/provisioner.go --fireStoreProjectId $ts_project_id --firestoreCollectionName foo     --clientProjectId $tc_project_id --clientVMZone us-central1-a --clientVMId $tc_instanceID \
+--sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --useTPM
+
+```
+

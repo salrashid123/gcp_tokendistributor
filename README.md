@@ -673,15 +673,3 @@ Exclude the `--useTPM` flag, eg:
 ```
 $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id
 ```
-
-A) Deploy Token Client
-```
-virtualenv env --python=/usr/bin/python3.7
-source env/bin/activate
-pip install grpcio-tools  protobuf proto-plus google.api.core
-
-cd app/
-cp src/tokenservice/tokenservice.proto .
-python -m grpc_tools.protoc --proto_path=.  -I . --python_out=.  --grpc_python_out=. tokenservice.proto
-
-```

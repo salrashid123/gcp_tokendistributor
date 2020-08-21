@@ -13,7 +13,7 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --v=20 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --useTPM --doAttestation --exchangeSigningKey --v=20 -alsologtostderr    
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
   
