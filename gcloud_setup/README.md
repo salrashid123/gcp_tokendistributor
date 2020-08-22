@@ -6,8 +6,9 @@ The following sequence uses gcloud CLI for the same steps as terraform
 ### TokenServer
 
 ```bash
-export org_id=111211221
-export billing_account=000C16-9779B5-s234
+export org_id=your_org_id
+export billing_account=your_billing_id
+
 export ts_project_name=tokenserver
 export random_id=`head /dev/urandom | tr -dc a-z0-9 | head -c 4 ; echo ''`
 export ts_project_id=ts-$random_id
@@ -151,8 +152,9 @@ echo $tsIP
 ```bash
 ## Setup
 
-export org_id=67320456654
-export billing_account=000C16-9779B5-45564
+export org_id=your_org_id
+export billing_account=your_billing_id
+
 export tc_project_name=tokenclient
 export random_id=`head /dev/urandom | tr -dc a-z0-9 | head -c 4 ; echo ''`
 export tc_project_id=tc-$random_id

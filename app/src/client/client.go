@@ -51,7 +51,7 @@ type grpcTokenSource struct {
 }
 
 var (
-	address                   = flag.String("address", "tokenservice.esodemoapp2.com:50051", "host:port of gRPC server")
+	address                   = flag.String("address", "", "host:port of gRPC server")
 	tsAudience                = flag.String("tsAudience", "https://tokenservice", "Audience for the token")
 	tlsCertChain              = flag.String("tlsCertChain", "", "root CA Certificate for TLS")
 	tlsClientCert             = flag.String("tlsClientCert", "", "ClientCertificate Cert for TLS")

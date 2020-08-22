@@ -109,7 +109,8 @@ var (
 	useSecrets              = flag.Bool("useSecrets", false, "Use Google Secrets Manager for TLS Keys")
 	useALTS                 = flag.Bool("useALTS", false, "Use Application Layer Transport Security")
 	useTPM                  = flag.Bool("useTPM", false, "Use TPM to seal data")
-	validatePeerIP          = flag.Bool("validatePeerIP", false, "Validate each TokenClients Certificate Serial Number and origin IP")
+	validatePeerIP          = flag.Bool("validatePeerIP", false, "Validate each TokenClients origin IP")
+	validatePeerSN          = flag.Bool("validatePeerSN", false, "Validate each TokenClients Certificate Serial Number")
 	firestoreProjectId      = flag.String("firestoreProjectId", "", "firestoreProjectId where the sealed data is stored")
 	firestoreCollectionName = flag.String("firestoreCollectionName", "", "firestoreCollectionName where the sealedData is Stored")
 
@@ -184,6 +185,9 @@ func verifyGoogleIDToken(ctx context.Context, aud string, rawToken string) (gcpI
 		glog.Errorf("     OIDC doc has Audience [%s]   Issuer [%s] and SubjectEmail [%s]", claims.Audience, claims.StandardClaims.Issuer, claims.Email)
 		return *claims, nil
 	}
+	// TODO: optionally use  claims.StandardClaims, issuedAt.  If issuedAt +  2seconds is passed,
+	//       return an error even if expiresAt is valid.
+	//       https://github.com/dgrijalva/jwt-go/blob/master/claims.go#L18
 	return gcpIdentityDoc{}, errors.New("Error parsing JWT Claims")
 }
 
@@ -249,8 +253,8 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 	var c ServiceEntry
 	dsnap.DataTo(&c)
 
-	if !*useALTS && *validatePeerIP {
-		glog.V(2).Infof("     Validating TLS Client cert Peer IP and SerialNumber")
+	if !*useALTS {
+		glog.V(2).Infof("     TLS Client cert Peer IP and SerialNumber")
 		peer, ok := peer.FromContext(ctx)
 		if ok {
 			tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
@@ -261,11 +265,18 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 				glog.Errorf("ERROR:  Could not Remote IP %s", instanceID)
 				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Could not Remote IP   %v", err))
 			}
-			if c.PeerAddress != peerIPPort || sn.String() != c.PeerSerialNumber {
-				glog.Errorf("ERROR:  Invalid Client Certificate or Peer address: %s", peer.Addr.String())
-				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Invalid Client Certificate or Peer address  %v", peer.Addr.String()))
+			if *validatePeerIP && (c.PeerAddress != peerIPPort) {
+				glog.Errorf("ERROR:  Unregistered  Peer address: %s", peer.Addr.String())
+				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Unregistered  Peer address  %v", peer.Addr.String()))
 			}
-			glog.V(2).Infof("     Client Peer Address [%v] - Subject[%v] - SerialNumber [%v]\n", peer.Addr.String(), v, sn)
+			if *validatePeerSN && (sn.String() != c.PeerSerialNumber) {
+				glog.Errorf("ERROR:  Unregistered  Client Certificate SN: %s", sn.String())
+				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Unregistered  Peer address  %v", sn.String()))
+			}
+			glog.V(2).Infof("     Client Peer Address [%v] - Subject[%v] - SerialNumber [%v] Validated\n", peer.Addr.String(), v, sn)
+		} else {
+			glog.Errorf("ERROR:  Could not extract peerInfo from TLS")
+			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, "ERROR:  Could not extract peerInfo from TLS")
 		}
 	}
 	glog.V(2).Infof("     Looking up InstanceID using GCE APIs for instanceID %s", instanceID)

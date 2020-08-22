@@ -96,6 +96,9 @@ This repo will configure the full TokenService infrastructure and Service:
 
   *It is expected customers will customize the client and server to suite their needs.*
 
+
+For simplicity, the default terraform steps does _NOT_ use the TPM.  To seal the data to a TPM, add the flags detailed in the section below.
+
 If you do not want to use terraform, the `gcloud_setup/` folder contains command sequences in gcloud.
 
 Alice and Bob will both need:
@@ -166,9 +169,11 @@ export TF_VAR_ts_project_id=`terraform output -state=terraform.tfstate ts_projec
 export TF_VAR_ts_service_account=`terraform output -state=terraform.tfstate ts_service_account`
 export TF_VAR_ts_address=`terraform output -state=terraform.tfstate ts_address`
 
-echo $TF_VAR_ts_project_id
-echo $TF_VAR_ts_service_account
-echo $TF_VAR_ts_address
+echo
+echo "Provide the following to Bob"
+echo export TF_VAR_ts_project_id=$TF_VAR_ts_project_id
+echo export TF_VAR_ts_service_account=$TF_VAR_ts_service_account
+echo export TF_VAR_ts_address=$TF_VAR_ts_address
 ```
 
 In this case its
@@ -188,6 +193,23 @@ Deploy the TokenService with defaults.  The command below will deploy an _unconf
 ```
 terraform apply --target=module.ts_deploy -auto-approve
 ```
+
+The terraform script `alice/deploy/main.tf` uses the default options described below.  Modify the startup commands appropriately and redeploy the Server as needed.
+
+| Option | Description |
+|:------------|-------------|
+| **`-grpcport`** | host:port for the grpcServer(s) listener (default `:50051`|
+| **`-useALTS`** | Use ALTS instead of mTLS. |
+| **`-useSecrets`** | Use GCP Secret Manager for mTLS Certificates  |
+| **`-tlsCert`** | TLS Certificate file for mTLS; specify either file or Secret Manager Path (valid if `useALTS` is not set) |
+| **`-tlsKey`** | TLS CertiKeyficate file for mTLS; specify either file or Secret Manager Path (valid if `useALTS` is not set) |
+| **`-tlsCertChain`** | TLS Certificate Chain file for mTLS; specify either file or Secret Manager Path (valid if `useALTS` is not set) |
+| **`-tsAudience`** | The audience value for the tokenServer (default: `"https://tokenserver"`) |
+| **`-useTPM`** | Use the TPM to unseal secrets.  Enables attestation and quoteverify flows (default: `false`) |
+| **`-validatePeerIP`** | Extract the PeerIP address for the TokenClient from the TLS Session and compare with provisioned value. |
+| **`-validatePeerSN`** | Extract the SSL Serial Number and compare to provisioned value |
+| **`-firestoreProjectId`** | ProjectID where the FireStore database is hosted. |
+| **`-firestoreCollectionName`** | Name of the collection where provisioned values are saved (default: `foo`) |
 
 ### Start TokenClient Infrastructure (Bob)
 
@@ -212,6 +234,13 @@ export TF_VAR_billing_account=22121-9779B5-30076F
 terraform init
 
 terraform apply --target=module.tc_setup -auto-approve
+```
+
+If you see an API Error message about GCE APIs not being enabled, simply rerun the `tc_setup` script
+
+>> "Error: Error creating Network: googleapi: Error 403: Compute Engine API has not been used in project .."
+
+```bash
 terraform apply --target=module.tc_build -auto-approve
 ```
 
@@ -263,6 +292,28 @@ terraform apply --target=module.tc_deploy \
  -auto-approve
 ```
 
+The terraform script `bob/deploy/main.tf` uses the default options described below.  Modify the startup commands appropriately and redeploy the Client VM as needed.
+
+| Option | Description |
+|:------------|-------------|
+| **`-address`** | host:port for the TokenServer |
+| **`-useALTS`** | Use ALTS instead of mTLS. |
+| **`-tsAudience`** | Audience value to assign when generating and `id_token`.  Must match what the TokenServer expects (default: `"https://tokenservice"`) |
+| **`-useSecrets`** | Use GCP Secret Manager for mTLS Certificates  |
+| **`-tlsClientCert`** | TLS Certificate file for mTLS; specify either file or Secret Manager Path (valid if `useALTS` is not set) |
+| **`-tlsClientKey`** | TLS CertiKeyficate file for mTLS; specify either file or Secret Manager Path (valid if `useALTS` is not set) |
+| **`-tlsCertChain`** | TLS Certificate Chain file for mTLS; specify either file or Secret Manager Path (valid if `useALTS` is not set) |
+| **`-useTPM`** | Use the TPM to unseal secrets.  Enables attestation and quoteverify flows (default: `false`) |
+| **`-sniServerName`** | SNI ServerName for the TLS connection (default: `tokenservice.esodemoapp2.com`; valid only for mTLS) |
+| **`-serviceAccount`** | Path to GCP ServiceAccount JSON file to use to authenticate to authenticate to FireStore and GCE API (default: not used) |
+| **`-firestoreProjectId`** | ProjectID where the FireStore database is hosted. |
+| **`-doAttestation`** | Offer TokenServer the option to _request_ remoteAttestation using TPM (valid only if `useTPM` is set) |
+| **`-exchangeSigningKey`** | Offer TokenServer an unrestricted TPM based Siging key. (valid only if `useTPM` is set) |
+| **`-tokenServerServiceAccount`** | Service Account for the TokenServer (valid only if `useALTS` is set) |
+| **`-maxLoop`** | Number of attempts the TokenClient will make to acquire a token (default: `360`) |
+| **`-pollWaitSeconds`** | Number of seconds to wait between attempts (default: `10s`)|
+| **`-pcr`** | PCR value to unseal against |
+
 You should see an output like:
 
 ```bash
@@ -283,9 +334,11 @@ export TF_VAR_tc_project_id=`terraform output -state=terraform.tfstate tc_projec
 export TF_VAR_tc_instance_id=`terraform output -state=terraform.tfstate tc_instance_id`
 export TF_VAR_tc_address=`terraform output -state=terraform.tfstate tc_address`
 
-echo $TF_VAR_tc_project_id
-echo $TF_VAR_tc_instance_id
-echo $TF_VAR_tc_address
+echo
+echo "Provide the following to Alice"
+echo export TF_VAR_tc_project_id=$TF_VAR_tc_project_id
+echo export TF_VAR_tc_instance_id=$TF_VAR_tc_instance_id
+echo export TF_VAR_tc_address=$TF_VAR_tc_address
 ```
 
 ** Provide these values to Alice for provisioning**
@@ -331,7 +384,7 @@ echo $TF_VAR_ts_project_id
 $ cd app/
 
 ## To generate an RSA and AES Key automatically (eg, just to test the system):
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --useTPM
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
 
 ## To use an existing AES and RSA or RawKey file
 
@@ -340,9 +393,9 @@ python -c 'import base64; import os;\
 
 echo "somerawkey" > /tmp/raw_keyfile.txt
 
-$ openssl genrsa -out /tmp/rsakey.pem 2048
+openssl genrsa -out /tmp/rsakey.pem 2048
 
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --rsaKeyFile=/tmp/rsakey.pem --aesKeyFile=/tmp/sym_keyfile.key --rawKeyFile=/tmp/raw_keyfile.txt --useTPM
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --rsaKeyFile=/tmp/rsakey.pem --aesKeyFile=/tmp/sym_keyfile.key --rawKeyFile=/tmp/raw_keyfile.txt
 ```
 
 NOTE, `PCR=0` on COS instances has the default `sha256` startup value of `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`.  You can pick any other PCR or customize it for any other VM you use instead of COS.
@@ -366,6 +419,22 @@ sha256:
 Gives the sha1 PCR value:
 
 ![images/pcr0.png](images/pcr0.png)
+
+| Option | Description |
+|:------------|-------------|
+| **`-fireStoreProjectId`** | ProjectID for Firestore |
+| **`-firestoreCollectionName`** | Firestore CollectionID (default: `foo`) |
+| **`-useTPM`** | Use the TPM to unseal secrets.  Enables attestation and quoteverify flows (default: `false`) |
+| **`-sealToPCR`** | PCR to seal RSA and AES keys to  |
+| **`-sealToPCRValue`** | PCR to seal RSA and AES keys to |
+| **`-clientProjectId`** | ProjectID for the TokenClient to lookup GCE VM specifications  |
+| **`-clientVMZone`** | Zone where the TokenClient Runs |
+| **`-clientVMId`** | Unique vm_id for the TokenClient |
+| **`-rsaKeyFile`** | RSA private key to read and seal to PCR  (sealed to PCR if `--useTPM` is set) |
+| **`-aesKeyFile`** | Symmetric key to read and provide to the TokenClient (sealed to PCR if `--useTPM` is set) |
+| **`-rawKeyFile`** | Arbitrary data to save to send to TokenClient (note, this is _unencrypted_ in Firestore) |
+| **`-peerAddress`** | Expected IP address of the TokenClient |
+| **`-peerSerialNumber`** | Expected mTLS Serial number sent by TokenClient |
 
 The output of the provisioning step will prompt Alice to confirm that the image startup script and metadata looks valid.
 
@@ -476,6 +545,103 @@ the `main.tf` files for both Alice and Bob have the cloud-init configuration for
 
 If mTLS is uses, the issue of key distribution and security of the TLS keys becomes an issue.  The TLS aspect here is used for confidentiality mostly since API requests are always authenticated (using bob's oidc token) and the raw RSA/AES keys that do get transmitted are encrypted such that it can only get decrypted by the TokenClient's vTPM.
 
+
+To use ALTS, configure the following startup options
+
+- `alice/deploy/main.tf`
+```
+    ExecStart=/usr/bin/docker run --rm -u 0  -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useALTS --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --v=20 -alsologtostderr    
+```
+
+- `bob/deploy/main.tf`
+```
+    ExecStart=/usr/bin/docker run --rm -u 0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useALTS --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --v=20 -alsologtostderr    
+```
+
+
+and during Provisioning:
+
+```bash
+go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id
+```
+
+#### With TPM or without
+
+You can also deploy the tokenserver and client such that the RSA and AES keys are **NOT** sealed to each TokenClients TPM.  To use TPM-less flow, you will need to edit
+
+
+- Without TPM
+
+TokenServer `alice/deploy/main.tf`
+
+omit `--use-TPM` flag
+
+```bash
+    ExecStart=/usr/bin/docker run --rm -u 0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --v=20 -alsologtostderr
+```
+
+TokenClient `bob/deploy/main.tf`
+
+omit the `--useTPM` flag
+
+```bash
+    ExecStart=/usr/bin/docker run --rm -u 0 --name=mycloudservice gcr.io/${var.project_id}/tokenclient@${var.image_hash} --address ${var.ts_address}:50051 --servername ${var.sni_servername} --tsAudience ${var.ts_audience} --useSecrets --tlsClientCert projects/${var.project_number}/secrets/tls_crt --tlsClientKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca --v=25 -alsologtostderr
+```
+
+Then when running the `Provisioner`:
+
+Exclude the `--useTPM` flag, eg:
+
+```
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id  \
+  --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id \
+  --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id \
+  --peerAddress $TF_VAR_tc_address
+```
+
+- With TPM
+
+TokenServer `alice/deploy/main.tf`
+
+```bash
+  ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --useTPM --v=20 -alsologtostderr
+```
+
+TokenClient `bob/deploy/main.tf`
+
+```bash
+  ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/${var.project_id}/tokenclient@${var.image_hash} --address ${var.ts_address}:50051 --servername ${var.sni_servername} --tsAudience ${var.ts_audience} --useSecrets --tlsClientCert projects/${var.project_number}/secrets/tls_crt --tlsClientKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca --useTPM --doAttestation --exchangeSigningKey --v=20 -alsologtostderr
+```
+
+Then when running the `Provisioner`:
+
+```
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id \
+  --firestoreCollectionName foo \
+  --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a \
+  --clientVMId $TF_VAR_tc_instance_id --useTPM --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+```
+
+#### (tofix) Concurrent access to TPM
+
+TokenClient and TokenServer access the local TPM for various operations.  This device on GCP is at `/dev/tpm0` and cannot be accessed concurrently by various processes.  
+
+TODO: perform locking 
+
+#### TPM Quote/Verify and Unrestricted Signing Key
+
+The default protocol included in this repo also performs three optional TPM based flows:
+
+* Quote/Verify:  this allows the TokenClient to issue an Attestation Key which the TokenServer can save.  THis Key can be used to repeatedly verify PCR values resident on the Token Client
+* Restricted Signing Key (Attestation Key based signing).  Use the Attestation Key to sign some data.  The TPM will only sign data that has been Hashed by the TPM itself.
+* Unrestricted Signing Key: Normally, the AK cannot sign any arbitrary data (it is a restricted key).  Instead, the TokenClient can generate a new RSA key on the TPM where the private key is **always** on the tpm. Once thats done, the AK can sign it and return the public part to the Token Server.  Since the Endorsement Key and Attestation key were now associated together, the new unrestricted key can also be indirectly associated with that specific TokenClient.  The TokenClient can now sign for any arbitrary data, send it to the TokenServer which can verify its authenticity by using the public key previously sent
+
+These flows are enabled by the `TokenClient` by starting up the client with the `--doAttestation` flag. 
+
+![images/quoteverify.png](images/quoteverify.png)
+
+
+
 #### (enhancement) Generating GCP Service account
 
 Provisioning application contained in the default deploy does **NOT** generate and and return a GCP ServiceAccount as the raw RSA material
@@ -523,26 +689,6 @@ message TokenResponse {
 }
 ```
 
-#### (tofix) Concurrent access to TPM
-
-TokenClient and TokenServer access the local TPM for various operations.  This device on GCP is at `/dev/tpm0` and cannot be accessed concurrently by various processes.  
-
-TODO: perform locking 
-
-#### TPM Quote/Verify and Unrestricted Signing Key
-
-The default protocol included in this repo also performs three optional TPM based flows:
-
-* Quote/Verify:  this allows the TokenClient to issue an Attestation Key which the TokenServer can save.  THis Key can be used to repeatedly verify PCR values resident on the Token Client
-* Restricted Signing Key (Attestation Key based signing).  Use the Attestation Key to sign some data.  The TPM will only sign data that has been Hashed by the TPM itself.
-* Unrestricted Signing Key: Normally, the AK cannot sign any arbitrary data (it is a restricted key).  Instead, the TokenClient can generate a new RSA key on the TPM where the private key is **always** on the tpm. Once thats done, the AK can sign it and return the public part to the Token Server.  Since the Endorsement Key and Attestation key were now associated together, the new unrestricted key can also be indirectly associated with that specific TokenClient.  The TokenClient can now sign for any arbitrary data, send it to the TokenServer which can verify its authenticity by using the public key previously sent
-
-These flows are enabled by the `TokenClient` by starting up the client with the `--doAttestation` flag. 
-
-![images/quoteverify.png](images/quoteverify.png)
-
-
-
 ## Appendix
 
 ### No externalIP
@@ -584,61 +730,7 @@ Further enhancements can be to use
 
 ## Using preexisting projects
 
-You can bootstrap this system using your own existing project
-
-
-
-### Server
-
-```bash
-## Export the name and projectiD for the TokenServer
-
-## For example
-export TF_VAR_ts_project_id=ts-286804
-export TF_VAR_ts_project_name=tokenserver
-
-
-## Enable apis
-gcloud services enable  \
-   compute.googleapis.com \
-   storage-api.googleapis.com storage-component.googleapis.com secretmanager.googleapis.com \
-    containerregistry.googleapis.com cloudbuild.googleapis.com firestore.googleapis.com \
-    logging.googleapis.com monitoring.googleapis.com containerregistry.googleapis.com \
-    appengine.googleapis.com --project ${TF_VAR_ts_project_id}
-
-# Acquire the existing project state into terraform:
-terraform import module.ts_setup.google_project.project ${TF_VAR_ts_project_id}
-
-terraform show
-
-## apply the config as shown in the steps above, eg resume from:
-#  terraform apply --target=module.ts_setup
-```
-
-### Client
-
-```bash
-# Export the name and projectiD for the TokenClient
-
-## For example
-export TF_VAR_tc_project_id=tc-286804
-export TF_VAR_tc_project_name=tokenclient
-
-# enable apis
-gcloud services enable compute.googleapis.com \
-  storage-api.googleapis.com storage-component.googleapis.com \
-  secretmanager.googleapis.com containerregistry.googleapis.com cloudbuild.googleapis.com \
-  logging.googleapis.com monitoring.googleapis.com \
-  containerregistry.googleapis.com --project ${TF_VAR_tc_project_id}
-
-# acquire TF State
-terraform import module.tc_setup.google_project.project ${TF_VAR_tc_project_id}
-
-## apply the config as shown in the steps above, eg resume from:
-#  terraform apply --target=module.tc_setup
-```
-> Please note that if you execute a `terraform destroy` after setting the terraform state with your existing project, the existing project you now
-included will be destroyed as well (i.e., don't run `terraform destory --target=module.tc_setup`)
+You can bootstrap this system using your own existing project, see the steps detaled in the `gcloud_steps/` folder
 
 ## Automated Testing
 
@@ -649,35 +741,6 @@ TODO:
 
 - see `test/cloudbuild.yaml`
 
-
-
-### Token Distributor without TPMs 
-
-You can also deploy the tokenserver and client such that the RSA and AES keys are **NOT** sealed to each TokenClients TPM.  To use TPM-less flow, you will need to edit
-
-TokenServer `alice/deploy/main.tf`
-
-omit `--use-TPM` flag
-
-```bash
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --v=20 -alsologtostderr
-```
-
-TokenClient `bob/deploy/main.tf`
-
-omit the `--useTPM` flag
-
-```bash
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/${var.project_id}/tokenclient@${var.image_hash} --address ${var.ts_address}:50051 --servername ${var.sni_servername} --tsAudience ${var.ts_audience} --useSecrets --tlsClientCert projects/${var.project_number}/secrets/tls_crt --tlsClientKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca --v=20 -alsologtostderr
-```
-
-Then when running the `Provisioner`:
-
-Exclude the `--useTPM` flag, eg:
-
-```
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --peerAddress $TF_VAR_tc_address --peerSerialNumber=5
-```
 
 #### Binding TokenClient Origin IP and Certificate
 
@@ -697,9 +760,10 @@ ertificate:
 The TokenServer will also check the IP address of where this request originated.
 What that means is the TokenServer will verify the IP address it got matches the expect IP address set during provisioning
 
-To use this check, add in the `--validatePeerIP` flag to the startup Arg for TokenServer:
+To use this check, add in the `--validatePeerIP --validatePeerSN` flag to the startup Arg for TokenServer:
 ```golang
-	validatePeerIP          = flag.Bool("validatePeerIP", false, "Validate each TokenClients Certificate Serial Number and origin IP")	
+	validatePeerIP          = flag.Bool("validatePeerIP", false, "Validate each TokenClients origin IP")
+	validatePeerSN          = flag.Bool("validatePeerSN", false, "Validate each TokenClients Certificate Serial Number")
 ```
 
 Then during Provisioning, you must submit the argument for the `peerSerialNumber` at least and an override value (optional)
@@ -712,4 +776,20 @@ The net effect is the firestore `ServiceEntry` now has an entry for these values
 ```golang
 	PeerAddress        string    `firestore:"peer_address"`
 	PeerSerialNumber   string    `firestore:"peer_serial_number"`
+```
+
+TokenServer `alice/deploy/main.tf`
+
+
+```bash
+    ExecStart=/usr/bin/docker run --rm -u 0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --validatePeerIP --validatePeerSN --v=20 -alsologtostderr
+```
+
+And during provisioning, specify the address for the TokenClient and the certificate serial number:
+
+```bash
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id  \
+  --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id \
+  --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id \
+  --peerAddress $TF_VAR_tc_address --peerSerialNumber=5
 ```
