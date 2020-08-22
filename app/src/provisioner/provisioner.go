@@ -44,6 +44,8 @@ type ServiceEntry struct {
 	PCRValue           string    `firestore:"pcr_value,omitempty"`
 	GCSObjectReference string    `firestore:"gcs_object,omitempty"`
 	ProvidedAt         time.Time `firestore:"provided_at"`
+	PeerAddress        string    `firestore:"peer_address"`
+	PeerSerialNumber   string    `firestore:"peer_serial_number"`
 }
 
 const (
@@ -64,7 +66,10 @@ var (
 	rsaKeyFile      = flag.String("rsaKeyFile", "", "RSAKey Filename")
 	aesKeyFile      = flag.String("aesKeyFile", "", "AESKey FIlename")
 	rawKeyFile      = flag.String("rawKeyFile", "", "RawKey FIlename")
-	pcrMap          = map[uint32][]byte{}
+	peerAddress     = flag.String("peerAddress", "", "Token Client IP address")
+	// SerialNumber=5 happens to be the value inside `bob/certs/tokenclient.crt`
+	peerSerialNumber = flag.String("peerSerialNumber", "5", "Client Certificate Serial Number Serial Number: 5 (0x5) ")
+	pcrMap           = map[uint32][]byte{}
 )
 
 func createSigningKeyImportBlob(ekPubPEM string, rsaKeyPEM string) (sealedOutput []byte, retErr error) {
@@ -176,6 +181,19 @@ func main() {
 	log.Printf("ImageStartup Hash: [%s]\n", initScriptHash)
 	log.Printf("Image Fingerprint: [%s]\n", cresp.Fingerprint)
 
+	// This is an optional check which binds the ServiceEntry to an IP address for a given VM
+	// If a NAT is used, you need to specify that as teh --peerAddress= value instead
+	nis := cresp.NetworkInterfaces
+	for _, ni := range nis {
+		for _, ac := range ni.AccessConfigs {
+			if ac.Type == "ONE_TO_ONE_NAT" {
+				log.Printf("Found VM External IP %s\n", ac.NatIP)
+				if *peerAddress == "" {
+					*peerAddress = ac.NatIP
+				}
+			}
+		}
+	}
 	mresp, err := computeService.Instances.GetShieldedInstanceIdentity(*clientProjectId, *clientVMZone, *clientVMId).Do()
 	if err != nil {
 		log.Fatalf("Unable to find  Instance %v", err)
@@ -312,6 +330,8 @@ func main() {
 		ProvidedAt:         time.Now(),
 		PCR:                0,
 		PCRValue:           *sealToPCRValue,
+		PeerAddress:        *peerAddress,
+		PeerSerialNumber:   *peerSerialNumber,
 	}
 
 	resp, err := client.Collection(*firestoreCollectionName).Doc(*clientVMId).Set(ctx, e)

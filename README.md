@@ -281,9 +281,11 @@ Note the `tc_instance_id` and `tc_project_id`.
 ```bash
 export TF_VAR_tc_project_id=`terraform output -state=terraform.tfstate tc_project_id`
 export TF_VAR_tc_instance_id=`terraform output -state=terraform.tfstate tc_instance_id`
+export TF_VAR_tc_address=`terraform output -state=terraform.tfstate tc_address`
 
 echo $TF_VAR_tc_project_id
 echo $TF_VAR_tc_instance_id
+echo $TF_VAR_tc_address
 ```
 
 ** Provide these values to Alice for provisioning**
@@ -317,10 +319,13 @@ As Alice,
 ```bash
 export TF_VAR_tc_project_id=`<value given by Bob>`
 export TF_VAR_tc_instance_id=`<value given by Bob>`
+export TF_VAR_tc_address=`<value given by Bob>`
 export TF_VAR_ts_project_id=`terraform output -state=terraform.tfstate ts_project_id`
+
 
 echo $TF_VAR_tc_project_id
 echo $TF_VAR_tc_instance_id
+echo $TF_VAR_tc_address
 echo $TF_VAR_ts_project_id
 
 $ cd app/
@@ -671,5 +676,40 @@ Then when running the `Provisioner`:
 Exclude the `--useTPM` flag, eg:
 
 ```
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --peerAddress $TF_VAR_tc_address --peerSerialNumber=5
+```
+
+#### Binding TokenClient Origin IP and Certificate
+
+You can also bind a given TokenClient's IP address to the `ServiceEntry` during provisioning.
+
+What this means is even if a TokenClient connects to the TokenServer over mTLS using a valid certificate, the tokenserver will extract the provided SerialNumber that was provided by the TokenClient
+In the default certificate in this repo, the SerialNumber is just `5`
+
+```
+openssl x509 -in bob/certs/tokenclient.crt -noout -text
+ertificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 5 (0x5)
+```
+
+The TokenServer will also check the IP address of where this request originated.
+What that means is the TokenServer will verify the IP address it got matches the expect IP address set during provisioning
+
+To use this check, add in the `--validatePeerIP` flag to the startup Arg for TokenServer:
+```golang
+	validatePeerIP          = flag.Bool("validatePeerIP", false, "Validate each TokenClients Certificate Serial Number and origin IP")	
+```
+
+Then during Provisioning, you must submit the argument for the `peerSerialNumber` at least and an override value (optional)
+```bash
+--peerAddress $TF_VAR_tc_address --peerSerialNumber=5
+```
+
+The net effect is the firestore `ServiceEntry` now has an entry for these values
+
+```golang
+	PeerAddress        string    `firestore:"peer_address"`
+	PeerSerialNumber   string    `firestore:"peer_serial_number"`
 ```

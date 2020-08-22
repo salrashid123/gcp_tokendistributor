@@ -46,6 +46,7 @@ import (
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -82,6 +83,8 @@ type ServiceEntry struct {
 	PCRValue           string    `firestore:"pcr_value,omitempty"`
 	GCSObjectReference string    `firestore:"gcs_object,omitempty"`
 	ProvidedAt         time.Time `firestore:"provided_at"`
+	PeerAddress        string    `firestore:"peer_address"`
+	PeerSerialNumber   string    `firestore:"peer_serial_number"`
 }
 
 type contextKey string
@@ -106,6 +109,7 @@ var (
 	useSecrets              = flag.Bool("useSecrets", false, "Use Google Secrets Manager for TLS Keys")
 	useALTS                 = flag.Bool("useALTS", false, "Use Application Layer Transport Security")
 	useTPM                  = flag.Bool("useTPM", false, "Use TPM to seal data")
+	validatePeerIP          = flag.Bool("validatePeerIP", false, "Validate each TokenClients Certificate Serial Number and origin IP")
 	firestoreProjectId      = flag.String("firestoreProjectId", "", "firestoreProjectId where the sealed data is stored")
 	firestoreCollectionName = flag.String("firestoreCollectionName", "", "firestoreCollectionName where the sealedData is Stored")
 
@@ -245,6 +249,25 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 	var c ServiceEntry
 	dsnap.DataTo(&c)
 
+	if !*useALTS && *validatePeerIP {
+		glog.V(2).Infof("     Validating TLS Client cert Peer IP and SerialNumber")
+		peer, ok := peer.FromContext(ctx)
+		if ok {
+			tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
+			v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
+			sn := tlsInfo.State.VerifiedChains[0][0].SerialNumber
+			peerIPPort, _, err := net.SplitHostPort(peer.Addr.String())
+			if err != nil {
+				glog.Errorf("ERROR:  Could not Remote IP %s", instanceID)
+				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Could not Remote IP   %v", err))
+			}
+			if c.PeerAddress != peerIPPort || sn.String() != c.PeerSerialNumber {
+				glog.Errorf("ERROR:  Invalid Client Certificate or Peer address: %s", peer.Addr.String())
+				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Invalid Client Certificate or Peer address  %v", peer.Addr.String()))
+			}
+			glog.V(2).Infof("     Client Peer Address [%v] - Subject[%v] - SerialNumber [%v]\n", peer.Addr.String(), v, sn)
+		}
+	}
 	glog.V(2).Infof("     Looking up InstanceID using GCE APIs for instanceID %s", instanceID)
 
 	computeService, err := compute.NewService(ctx)
