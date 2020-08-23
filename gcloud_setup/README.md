@@ -142,8 +142,10 @@ gcloud beta compute  instances create   tokenserver   \
 ```
 
 ```bash
-echo $ts_service_account_email
-echo $tsIP
+echo
+echo "Provide these values to TokenClient"
+echo export ts_service_account_email=$ts_service_account_email
+echo export tsIP=$tsIP
 ```
 
 ### TokenClient
@@ -162,6 +164,7 @@ export ts_sni=tokenservice.esodemoapp2.com
 export ts_audience=https://tokenservice
 
 ## Make sure these env vars from Alice are set
+## ts_provisioner_email is the email address of the user/service account that will run the provisioner
 
 echo $ts_service_account_email
 echo $tsIP
@@ -233,8 +236,6 @@ gcloud compute routers create router \
     --network tcnetwork \
     --region $region --project $tc_project_id
 
-
-
 gcloud compute routers nats create nat-all --router=router --region=$region --nat-external-ip-pool=natip  --nat-custom-subnet-ip-ranges=tcsubnet --project $tc_project_id
 
 gcloud beta secrets create tls_crt --replication-policy=automatic   --data-file=bob/certs/tokenclient.crt --project $tc_project_id 
@@ -296,8 +297,8 @@ export tc_instanceID=`gcloud compute instances describe tokenclient --format='va
 
 # Provide Alice the following
 
-echo $tc_instanceID
-echo $tc_project_id
+echo export tc_instanceID=$tc_instanceID
+echo export tc_project_id=$tc_project_id
 ```
 
 ### Provision

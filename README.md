@@ -144,6 +144,7 @@ If you see an API Error message about GCE APIs not being enabled, simply rerun t
 
 Once the project and APIs have been enabled, run
 
+```
 terraform apply --target=module.ts_build -auto-approve
 ```
 
@@ -270,6 +271,8 @@ Make sure the env vars are set (`TF_VAR_project_id` would be the the TokenClient
 
 >> this step is really important <<<
 
+`TF_VAR_ts_provisioner` is the email/serviceAccount that will run the provisioning application.  This is needed so that Bob can allow the provisioning application to read the GCE metadata.
+
 ```bash
 export TF_VAR_ts_service_account=<value given by Alice>
 export TF_VAR_ts_address=<value given by Alice>
@@ -384,7 +387,7 @@ echo $TF_VAR_ts_project_id
 $ cd app/
 
 ## To generate an RSA and AES Key automatically (eg, just to test the system):
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id 
 
 ## To use an existing AES and RSA or RawKey file
 
@@ -395,7 +398,16 @@ echo "somerawkey" > /tmp/raw_keyfile.txt
 
 openssl genrsa -out /tmp/rsakey.pem 2048
 
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --rsaKeyFile=/tmp/rsakey.pem --aesKeyFile=/tmp/sym_keyfile.key --rawKeyFile=/tmp/raw_keyfile.txt
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id  --rsaKeyFile=/tmp/rsakey.pem --aesKeyFile=/tmp/sym_keyfile.key --rawKeyFile=/tmp/raw_keyfile.txt
+```
+
+
+As mentioned, the default startup and provisioning script does **NOT** use a TPM for simplicity.  TO use a TPM, you ust start the TokenServer, TokenClient and provision each component with the fags and configuratins for a TPM
+
+For example, to seal data during the provisioning step, specify the `--useTPM` flag and the PCRs to use:
+
+```
+--useTPM --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
 ```
 
 NOTE, `PCR=0` on COS instances has the default `sha256` startup value of `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`.  You can pick any other PCR or customize it for any other VM you use instead of COS.
@@ -642,7 +654,7 @@ These flows are enabled by the `TokenClient` by starting up the client with the 
 
 
 
-#### (enhancement) Generating GCP Service account
+##### (enhancement) Generating GCP Service account
 
 Provisioning application contained in the default deploy does **NOT** generate and and return a GCP ServiceAccount as the raw RSA material
 
@@ -670,7 +682,7 @@ e. TokenClient will embed the `sealedRSAKey` to the TPM and use that to generate
 - [oauth2.TPMTokenSource](https://github.com/salrashid123/oauth2#usage-tpmtokensource)
 
 
-#### Using RawKey for short term tokens
+##### Using RawKey for short term tokens
 
 TokenServer does not *have to* return rsa or aes keys and involve a tpm at all.  If Alice and Bob agree, the TokenServer can simply return a short term `access_token` directly to the TokenClient.   The Client can use that raw, non-refreshable token to access a GCP resource
 
@@ -688,59 +700,6 @@ message TokenResponse {
   string resourceReference = 7;
 }
 ```
-
-## Appendix
-
-### No externalIP
-  Bob can also start  the VM without an external IP using the `--no-network` flag but it makes this tutorial much more complicated to 'invoke' Bob's VM to fetch secrets...I just left it out.
-
-## Enhancements
-
-Further enhancements can be to use 
-* [VPC-SC](https://cloud.google.com/vpc-service-controls):  This will ensure only requests originating from whitelisted projects and origin IPs are allowed API access to Alices GCS objects.  However, cross-orginzation VPC-SC isn't something i think is possible at the mment.  If Bob sets up a NAT egress endpoint, Alice can define a VPC prerimeter to include that egress
-* [Organizational Policy](https://cloud.google.com/resource-manager/docs/organization-policy/org-policy-constraints): Bob's orgianzation can have restrictions on the type of VM and specifications Bob can start (eg, ShieldedVM, OSLogin).  
-
-* `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see [this repo](https://github.com/salrashid123/restricted_security_gce)
-
-* [IAM Conditions](https://cloud.google.com/iam/docs/conditions-overview):  You can enable IAM conditions on any of the GCP resources in question. Since Alice and Bob are using GCP, you can place a condition on when the TokenService or on the GCS bucket or on Alice's ability to view the VM or logging metadata.
-
-* [OS Config Agent](https://cloud.google.com/compute/docs/manage-os):  You can also install the OS config agent on the VM.  This agent will report specifications of the packages installed on the VM.  However, this agent can also be configured to [update packages](https://cloud.google.com/compute/docs/os-config-management) by the VM's admin by updating its metadata from outside the VM.  If you do not want Bob to dynamically update a packages on the VM, do not enable this feature.
-
-## EndToEnd Encryption
-  
-  The reason the protocol shows both AES and RSA keys is you an use both to achieve end-to-end encryption.
-  
-  For example, 
-  * Encrypt the GCS file with AES key:
-    the data that Alice has on the GCS bucket can be wrapped with an AES key on top of what Google Provides.
-    Even if anyone got hold of the secret file, it would be encrypted anyway.  Bob can only decrypt it if he gets the AES key.
-    You can go further with this and distribute keys that are infact part of [Shamirs Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
-
-  * Encrypt PubSub message payload with key wrapping
-    Alice can also encrypt pubsub message data with her encryption key and send that to the TokenServer.
-    Alice could then post encrypted messages to a topic the TokenServer subscribes to.  The messages in transit and as far as Google or anyone is concerned, is
-    encrypted at the application layer.  The TokenServer is the only system that can decrypt the message.  For more information, see
-    [Message Payload Encryption in Google Cloud PubSub (Part 1: Shared Secret)](https://github.com/salrashid123/gcp_pubsub_message_encryption/tree/master/1_symmetric)
-    
-  * Mount Persistent Disk with LUKS encryption:
-    - [https://github.com/salrashid123/gcp_luks_csek_disks](https://github.com/salrashid123/gcp_luks_csek_disks)
-    - [tpm2_software Disk Encryption](https://tpm2-software.github.io/2020/04/13/Disk-Encryption.html)
-    - [WIP: [RFC] Add TPM2 support](https://gitlab.com/cryptsetup/cryptsetup/-/merge_requests/51)
-    
-
-## Using preexisting projects
-
-You can bootstrap this system using your own existing project, see the steps detaled in the `gcloud_steps/` folder
-
-## Automated Testing
-
-TODO:
-
-- Allow cloud build "project creator" and "billing admin IAM rights
-  `project_number@cloudbuild.gserviceaccount.com`
-
-- see `test/cloudbuild.yaml`
-
 
 #### Binding TokenClient Origin IP and Certificate
 
@@ -793,3 +752,57 @@ $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_
   --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id \
   --peerAddress $TF_VAR_tc_address --peerSerialNumber=5
 ```
+
+### Appendix
+
+#### No externalIP
+  Bob can also start  the VM without an external IP using the `--no-network` flag but it makes this tutorial much more complicated to 'invoke' Bob's VM to fetch secrets...I just left it out.
+
+#### Enhancements
+
+Further enhancements can be to use 
+* [VPC-SC](https://cloud.google.com/vpc-service-controls):  This will ensure only requests originating from whitelisted projects and origin IPs are allowed API access to Alices GCS objects.  However, cross-orginzation VPC-SC isn't something i think is possible at the mment.  If Bob sets up a NAT egress endpoint, Alice can define a VPC prerimeter to include that egress
+* [Organizational Policy](https://cloud.google.com/resource-manager/docs/organization-policy/org-policy-constraints): Bob's orgianzation can have restrictions on the type of VM and specifications Bob can start (eg, ShieldedVM, OSLogin).  
+
+* `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see [this repo](https://github.com/salrashid123/restricted_security_gce)
+
+* [IAM Conditions](https://cloud.google.com/iam/docs/conditions-overview):  You can enable IAM conditions on any of the GCP resources in question. Since Alice and Bob are using GCP, you can place a condition on when the TokenService or on the GCS bucket or on Alice's ability to view the VM or logging metadata.
+
+* [OS Config Agent](https://cloud.google.com/compute/docs/manage-os):  You can also install the OS config agent on the VM.  This agent will report specifications of the packages installed on the VM.  However, this agent can also be configured to [update packages](https://cloud.google.com/compute/docs/os-config-management) by the VM's admin by updating its metadata from outside the VM.  If you do not want Bob to dynamically update a packages on the VM, do not enable this feature.
+
+#### EndToEnd Encryption
+  
+  The reason the protocol shows both AES and RSA keys is you an use both to achieve end-to-end encryption.
+  
+  For example, 
+  * Encrypt the GCS file with AES key:
+    the data that Alice has on the GCS bucket can be wrapped with an AES key on top of what Google Provides.
+    Even if anyone got hold of the secret file, it would be encrypted anyway.  Bob can only decrypt it if he gets the AES key.
+    You can go further with this and distribute keys that are infact part of [Shamirs Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
+
+  * Encrypt PubSub message payload with key wrapping
+    Alice can also encrypt pubsub message data with her encryption key and send that to the TokenServer.
+    Alice could then post encrypted messages to a topic the TokenServer subscribes to.  The messages in transit and as far as Google or anyone is concerned, is
+    encrypted at the application layer.  The TokenServer is the only system that can decrypt the message.  For more information, see
+    [Message Payload Encryption in Google Cloud PubSub (Part 1: Shared Secret)](https://github.com/salrashid123/gcp_pubsub_message_encryption/tree/master/1_symmetric)
+    
+  * Mount Persistent Disk with LUKS encryption:
+    - [https://github.com/salrashid123/gcp_luks_csek_disks](https://github.com/salrashid123/gcp_luks_csek_disks)
+    - [tpm2_software Disk Encryption](https://tpm2-software.github.io/2020/04/13/Disk-Encryption.html)
+    - [WIP: [RFC] Add TPM2 support](https://gitlab.com/cryptsetup/cryptsetup/-/merge_requests/51)
+    
+
+#### Using preexisting projects
+
+You can bootstrap this system using your own existing project, see the steps detaled in the `gcloud_steps/` folder
+
+#### Automated Testing
+
+TODO:
+
+- Allow cloud build "project creator" and "billing admin IAM rights
+  `project_number@cloudbuild.gserviceaccount.com`
+
+- see `test/cloudbuild.yaml`
+
+
