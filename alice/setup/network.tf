@@ -26,6 +26,7 @@ resource "google_compute_address" "tsip" {
 resource "google_compute_network" "tsnetwork" {
   name = "tsnetwork"
   project = google_project.project.project_id
+  depends_on = [google_project_service.service]
 }
 
 resource "google_compute_subnetwork" "tssubnet" {

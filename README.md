@@ -136,15 +136,7 @@ export TF_VAR_billing_account=000C16-9779B5-12345
 terraform init  
 
 terraform apply --target=module.ts_setup -auto-approve
-```
 
-If you see an API Error message about GCE APIs not being enabled, simply rerun the `ts_setup` script
-
->> "Error: Error creating Network: googleapi: Error 403: Compute Engine API has not been used in project .."
-
-Once the project and APIs have been enabled, run
-
-```
 terraform apply --target=module.ts_build -auto-approve
 ```
 
@@ -235,13 +227,7 @@ export TF_VAR_billing_account=22121-9779B5-30076F
 terraform init
 
 terraform apply --target=module.tc_setup -auto-approve
-```
 
-If you see an API Error message about GCE APIs not being enabled, simply rerun the `tc_setup` script
-
->> "Error: Error creating Network: googleapi: Error 403: Compute Engine API has not been used in project .."
-
-```bash
 terraform apply --target=module.tc_build -auto-approve
 ```
 
