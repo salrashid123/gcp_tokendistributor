@@ -113,14 +113,14 @@ var (
 	validatePeerSN          = flag.Bool("validatePeerSN", false, "Validate each TokenClients Certificate Serial Number")
 	firestoreProjectId      = flag.String("firestoreProjectId", "", "firestoreProjectId where the sealed data is stored")
 	firestoreCollectionName = flag.String("firestoreCollectionName", "", "firestoreCollectionName where the sealedData is Stored")
-
-	expectedPCRValue = flag.String("expectedPCRValue", "fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe", "expectedPCRValue")
-	pcr              = flag.Int("pcr", 0, "PCR Value to use")
-	registry         = make(map[string]tokenservice.MakeCredentialRequest)
-	nonces           = make(map[string]string)
-	jwtSet           *jwk.Set
-	hs               *health.Server
-	rwc              io.ReadWriteCloser
+	jwtIssuedAtJitter       = flag.Int("jwtIssuedAtJitter", 4, "Validate the IssuedAt timestamp.  If issuedAt+jwtIssueAtJitter > now(), then reject")
+	expectedPCRValue        = flag.String("expectedPCRValue", "fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe", "expectedPCRValue")
+	pcr                     = flag.Int("pcr", 0, "PCR Value to use")
+	registry                = make(map[string]tokenservice.MakeCredentialRequest)
+	nonces                  = make(map[string]string)
+	jwtSet                  *jwk.Set
+	hs                      *health.Server
+	rwc                     io.ReadWriteCloser
 
 	handleNames = map[string][]tpm2.HandleType{
 		"all":       []tpm2.HandleType{tpm2.HandleTypeLoadedSession, tpm2.HandleTypeSavedSession, tpm2.HandleTypeTransient},
@@ -221,6 +221,14 @@ func authUnaryInterceptor(
 				return nil, grpc.Errorf(codes.Unauthenticated, "ALTS ServiceAccount does not match provided OIDC Token Email")
 			}
 		}
+
+		issuedTime := time.Unix(doc.IssuedAt, 0)
+		now := time.Now()
+		if issuedTime.Add(time.Duration(*jwtIssuedAtJitter) * time.Second).After(now) {
+			glog.Errorf("   IssuedAt Identity document timestamp too old")
+			return nil, grpc.Errorf(codes.Unauthenticated, "IssuedAt Identity document timestamp too old")
+		}
+
 		newCtx := context.WithValue(ctx, contextKey("idtoken"), doc)
 		newCtx = context.WithValue(newCtx, contextKey("subject"), doc.Subject)
 		newCtx = context.WithValue(newCtx, contextKey("email"), doc.Email)

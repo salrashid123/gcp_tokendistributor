@@ -203,6 +203,9 @@ The terraform script `alice/deploy/main.tf` uses the default options described b
 | **`-validatePeerSN`** | Extract the SSL Serial Number and compare to provisioned value |
 | **`-firestoreProjectId`** | ProjectID where the FireStore database is hosted. |
 | **`-firestoreCollectionName`** | Name of the collection where provisioned values are saved (default: `foo`) |
+| **`-jwtIssuedAtJitter`** | Validate the IssuedAt timestamp.  If issuedAt+jwtIssueAtJitter > now(), then reject (default: `5`) |
+
+
 
 ### Start TokenClient Infrastructure (Bob)
 
@@ -493,20 +496,13 @@ y
 2020/06/23 09:47:36 Document data: "7953211237324536786"
 ```
 
-Note, there is also a terraform module included here to _automatically_ process requests and only designed for use with automated testing (not actual production use!)
+Note that Alice not trusts the entire TokenClient vm Image hash which itself includes a docker image hash 
+(`gcr.io/tc-16a39413/tokenclient@sha256:661f10eeaf66af697a1d463ad6db2467b2ef990277cf85b0d40a53b239391704`).  
+It is expected that this image was generated elsewhere such that both Alice and Bob would know the precise and source code that it includes.  
+Docker based images will not generate deterministic builds but you can use `Bazel` as described in [Building deterministic Docker images with Bazel](https://blog.bazel.build/2015/07/28/docker_build.html) and as an example:
 
-To use that, first compile the provisioner
 
-```bash
-cd app/
-go build -o provisioner src/provisioner/provisioner.go
-```
-
-then invoke it
-```
-terraform apply --target=module.ts_provisioner -auto-approve
-```
-Note, the autoprovisioner approves any and all requests...If you want to use this in real life, you must bake in logic to the approval process in the provisioner to check for signals (eg a "golden" image hash, sourceIP, project, tec)
+- [go with bazel with grpc with container](https://github.com/salrashid123/go-grpc-bazel-docker))
 
 #### After Provisioning
 

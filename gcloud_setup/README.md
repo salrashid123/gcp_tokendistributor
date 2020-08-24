@@ -6,9 +6,13 @@ The following sequence uses gcloud CLI for the same steps as terraform
 ### TokenServer
 
 ```bash
+# First setup some env vars
 export org_id=your_org_id
 export billing_account=your_billing_id
 
+## the following will create a project for the 'tokenserver' from scratch.
+##  if you have your own project you can set the value of `ts_project_id` and proceed and skip the line
+##  where a new project is setup
 export ts_project_name=tokenserver
 export random_id=`head /dev/urandom | tr -dc a-z0-9 | head -c 4 ; echo ''`
 export ts_project_id=ts-$random_id
@@ -26,6 +30,9 @@ gcloud beta billing projects link $ts_project_id \
    --billing-account=$billing_account
 
 
+## Enable some APIs.
+### The only reason firestore is enabled is for a "save" location for the encryption as set by the provisioner
+### The only reason GCP Secrets engine is used is to save/load the TLS certificates
 export ts_project_number=`gcloud projects describe $ts_project_id --format="value(projectNumber)"`
 export region=us-central1
 export zone=$region-a
@@ -46,38 +53,52 @@ gcloud services enable --project $ts_project_id compute.googleapis.com \
     monitoring.googleapis.com \
     appengine.googleapis.com
 
+## This is the service account the token server will run as.
+## If this code is run outside of GCP, you will need to download a JSON certificate file
+## and bootstrap application default credentials before running the tokenserver
 gcloud iam service-accounts create tokenserver \
  --display-name "Service Account for TokenServer" \
  --project $ts_project_id
 
+## allow the tokenserver to write to logs
 gcloud projects add-iam-policy-binding $ts_project_id --member="serviceAccount:$ts_service_account_email" \
   --role="roles/logging.logWriter"
 
+## to read from Firestore
 gcloud projects add-iam-policy-binding $ts_project_id --member="serviceAccount:$ts_service_account_email" \
   --role="roles/datastore.viewer"
 
+## to write to metrics/stackdriver
 gcloud projects add-iam-policy-binding $ts_project_id --member="serviceAccount:$ts_service_account_email" \
   --role="roles/monitoring.metricWriter"
 
+## the following steps enables google container registry
+##  You don't have to use GCR (you can use any registry or for that matter, just run the TOkenServer directly on a VM)
 gcloud auth configure-docker
 
 curl -s -H "Authorization: Bearer `gcloud auth application-default print-access-token`" "https://gcr.io/v2/token?service=gcr.io&scope=repository:$ts_project_id/my-repo:push,pull"
 
 gsutil iam ch serviceAccount:$ts_service_account_email:objectViewer gs://artifacts.$ts_project_id.appspot.com
 
+## The following enables Firestore (you need appengine enabled for firestore)
 gcloud app create --project $ts_project_id --region $firestoreRegion
 
 curl --request PATCH   "https://appengine.googleapis.com/v1beta/apps/$ts_project_id?updateMask=databaseType"       --header "Authorization: Bearer `gcloud auth application-default print-access-token`"       --header 'Accept: application/json'      --header 'Content-Type: application/json'      --data '{"databaseType":"CLOUD_FIRESTORE"}'
 
-
+## Create an isolated network.
+##  you can use the default network here but i didn't want the default firewall and route rules
 gcloud compute networks create tsnetwork --project $ts_project_id
 
 gcloud compute networks subnets create tssubnet --network=tsnetwork --range="10.0.0.0/16" --region=$region --project $ts_project_id
 
+## Allow inbound connections from outside to the tokenserver's port
+##  Note, i allowed all internet access ($allowedclientsubnet).  In reality, you probably just need the IP range any token client will connect from
 gcloud compute  firewall-rules create allow-inbound-token-requests --allow=tcp:50051 --network=tsnetwork  --source-ranges=$allowedclientsubnet  --target-tags=tokenserver --project $ts_project_id
 
+## Create a NAT IP address for egress traffic from the tokenserver to internet.  This isn't used in the default configuration
 gcloud compute addresses create natip --region=$region --project $ts_project_id
 
+## This is the IP address for the tokenserver
 gcloud compute addresses create tsip --region=$region --project $ts_project_id
 
 export natIP=`gcloud compute addresses describe natip --region=$region  --project $ts_project_id --format='value(address)'`
@@ -87,10 +108,10 @@ gcloud compute routers create router \
     --network tsnetwork \
     --region $region --project $ts_project_id
 
-
 gcloud compute routers nats create nat-all --router=router --region=$region --nat-external-ip-pool=natip  --nat-custom-subnet-ip-ranges=tssubnet --project $ts_project_id
 
 
+## Use GCP secrets manager to create the TLS CA file, the public key and private key (server side public and private key)
 gcloud beta secrets create tls-ca --replication-policy=automatic   --data-file=alice/certs/tls-ca.crt --project $ts_project_id 
 
 gcloud beta secrets add-iam-policy-binding tls-ca \
@@ -116,18 +137,24 @@ gcloud beta secrets add-iam-policy-binding tls_key \
 
 ## Build
 
+## We are using cloud build here to make the image.
+## You can use any container system to generate this (docker, bazel, etc)
 gcloud builds submit --config app/cloudbuild-ts.yaml --project $ts_project_id app/
 
+## Upload the image to the GCR owned by the tokenserver.
+## THis image repo can be anywehre (within the tokenserver proejct or even on dockerhub)
 docker pull gcr.io/$ts_project_id/tokenserver
 
 ### Deploy
 
 cd gcloud_setup/
 
+## Get the image hash for the tokenserver
 export ts_image_hash=`docker inspect --format='{{index .RepoDigests 0}}' gcr.io/$ts_project_id/tokenserver`
 
 envsubst < "ts-cloud-config.yaml.tmpl" > "ts-cloud-config.yaml"
 
+## Create the VM Image
 gcloud beta compute  instances create   tokenserver   \
  --zone=$zone --machine-type=f1-micro  \
  --network=tsnetwork   --subnet=tssubnet  \
@@ -173,7 +200,7 @@ echo $ts_provisioner_email
 git clone https://github.com/salrashid123/gcp_tokendistributor.git
 cd gcp_tokendistributor/
 
-
+## You can skip this step and simply set the env var if you alredy have a project
 gcloud projects create $tc_project_id --name $tc_project_name
 
 gcloud config set project $tc_project_id
@@ -188,7 +215,7 @@ export zone=$region-a
 export ts_audience=https://tokenservice
 export tc_service_account_email=tokenclient@$tc_project_id.iam.gserviceaccount.com
 
-
+## Enable some services
 gcloud services enable --project $tc_project_id \
     compute.googleapis.com \
     storage-api.googleapis.com \
@@ -200,6 +227,9 @@ gcloud services enable --project $tc_project_id \
     monitoring.googleapis.com \
     containerregistry.googleapis.com
 
+## This is the service account the token client will run as.
+## The token server will expect an OpenID Connect (instance identity document) that is from this service account
+## and from a vm_id that we will later create
 
 gcloud iam service-accounts create tokenclient \
  --display-name "Service Account for Tokenclient" \
@@ -213,16 +243,24 @@ gcloud projects add-iam-policy-binding $tc_project_id --member="serviceAccount:$
 gcloud projects add-iam-policy-binding $tc_project_id --member="serviceAccount:$tc_service_account_email" \
   --role="roles/logging.logWriter"
 
+## Create container registry
 gcloud auth configure-docker
 
 curl -s -H "Authorization: Bearer `gcloud auth application-default print-access-token`" "https://gcr.io/v2/token?service=gcr.io&scope=repository:$tc_project_id/my-repo:push,pull"
 
 gsutil iam ch serviceAccount:$tc_service_account_email:objectViewer gs://artifacts.$tc_project_id.appspot.com
 
+
+## Create an isolated network (non default network)
+
 gcloud compute networks create tcnetwork --project $tc_project_id
 
 gcloud compute networks subnets create tcsubnet --network=tcnetwork --range="10.0.0.0/16" --region=$region --project $tc_project_id
 
+
+## Create two static ip addresses.  
+### NATIP: if you configure the tokenclient to *not* have an external IP address, all outbound traffic will use the NAT Gateway
+### TCIP:  this is the IP address the tokenserver will see requests come from if NAT isn't used
 gcloud compute addresses create natip --region=$region --project $tc_project_id
 gcloud compute addresses create tcip --region=$region --project $tc_project_id
 
@@ -238,6 +276,13 @@ gcloud compute routers create router \
 
 gcloud compute routers nats create nat-all --router=router --region=$region --nat-external-ip-pool=natip  --nat-custom-subnet-ip-ranges=tcsubnet --project $tc_project_id
 
+
+## Create secrets to hold the TLS public/private keys
+## These PEM file keys are given to the token client's admin by any other process.
+## I just happen to be using GCP Secret Manager here on the same project as the tokenclient but there's nothing to 
+### prevent these serets being held in a project owned by the TokenServer.  In this flow, the tokenservers admin
+### creates all the MTLS keys but only saves teh tokenclient's ones in their GCP Secrets manager project.
+### The tokenserver's admin will have to grant tc_service_account_email permissions to read the TLS certs (tokenclient.crt, tokenclient.key, tls-ca.crt)
 gcloud beta secrets create tls_crt --replication-policy=automatic   --data-file=bob/certs/tokenclient.crt --project $tc_project_id 
 
 gcloud beta secrets add-iam-policy-binding tls_crt \
@@ -263,6 +308,7 @@ gcloud beta secrets add-iam-policy-binding tls-ca \
 
 ## Build
 
+### build using container builder and push to gcr
 gcloud builds submit --config app/cloudbuild-tc.yaml --project $tc_project_id app/
 
 docker pull gcr.io/$tc_project_id/tokenclient
@@ -285,6 +331,10 @@ gcloud beta compute  instances create   tokenclient   \
  --metadata-from-file user-data=tc-cloud-config.yaml \
  --project $tc_project_id
 
+
+## The following setps run by the tokenclient will authorize the provisioner user/service account and the service account that
+## runs as the tokenserver access to READ the metadata for the TokenClients VM.
+### This step is necessary to verify that the tokenclient has SSH disabled, running a known image, etc
 
 gcloud compute instances add-iam-policy-binding  tokenclient 	 \
    --member=serviceAccount:$ts_service_account_email  --role roles/compute.viewer   --project $tc_project_id 
