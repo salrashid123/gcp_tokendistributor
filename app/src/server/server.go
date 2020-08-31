@@ -224,7 +224,7 @@ func authUnaryInterceptor(
 
 		issuedTime := time.Unix(doc.IssuedAt, 0)
 		now := time.Now()
-		if issuedTime.Add(time.Duration(*jwtIssuedAtJitter) * time.Second).After(now) {
+		if issuedTime.Add(time.Duration(*jwtIssuedAtJitter) * time.Second).Before(now) {
 			glog.Errorf("   IssuedAt Identity document timestamp too old")
 			return nil, grpc.Errorf(codes.Unauthenticated, "IssuedAt Identity document timestamp too old")
 		}

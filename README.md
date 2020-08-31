@@ -548,8 +548,8 @@ To use ALTS, configure the following startup options
 ```
 
 - `bob/deploy/main.tf`
-```
-    ExecStart=/usr/bin/docker run --rm -u 0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useALTS --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --v=20 -alsologtostderr    
+```  
+    ExecStart=/usr/bin/docker run --rm -u 0 --name=mycloudservice gcr.io/${var.project_id}/tokenclient@${var.image_hash} --address ${var.ts_address}:50051 --servername ${var.sni_servername} --tsAudience ${var.ts_audience} --useSecrets --useALTS --v=20 -alsologtostderr
 ```
 
 
