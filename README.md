@@ -504,6 +504,8 @@ Docker based images will not generate deterministic builds but you can use `Baze
 
 - [go with bazel with grpc with container](https://github.com/salrashid123/go-grpc-bazel-docker))
 
+You can find more information about how to build the TokenClient and TokenServer in the appendix.
+
 #### After Provisioning
 
 After provisioning, the full sequence to exchange encrypted keys takes place.  In addition, remoteAttestation (quote/verify) and TPM signing key is transmitted from the client to the server
@@ -634,7 +636,68 @@ These flows are enabled by the `TokenClient` by starting up the client with the 
 
 ![images/quoteverify.png](images/quoteverify.png)
 
+#### Deterministic Builds using Bazel
 
+You can build the TokenClient and Server images using Bazel 
+
+- Edit `app/src/client/BUILD.bazel` and specify the gcr reposity projectID you will use.  For the TokenClient:
+
+```bazel
+container_image(
+    name = "tokenclient",
+    base = "@alpine_linux_amd64//image",
+    entrypoint = ["/client"],
+    files = [":client"], 
+     repository = "gcr.io/yourproject/tokenclient"
+)
+```
+
+Make a similar chagne to ``app/src/server/BUILD.bazel``
+
+
+Then build and generate the images using bazel:
+
+
+```bash
+cd app/
+
+bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 src/client:tokenclient
+bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 src/client:tokenclient
+
+bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 src/server:tokenserver
+bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 src/server:tokenserver
+```
+
+The images will be
+
+```bash
+$ docker images
+REPOSITORY                                  TAG                    IMAGE ID            CREATED             SIZE
+
+gcr.io/yourproject/tokenclient/src/client   tokenclient            833121004941        50 years ago        20.7MB
+gcr.io/yourproject/tokenserver/src/server   tokenserver            c98ed1bc6e27        50 years ago        30.5MB
+```
+
+These images will have a consistent image hash no matter where they are built.
+
+Also note that the generated `tokenservice.pb.go` files were pregenerated.  This is to avoid conflicts due to GCP secretsmanager library which automatically
+uses pregenerated library set.  See [Use pre-generated .pb.go files](https://github.com/bazelbuild/rules_go/blob/master/proto/core.rst#option-2-use-pre-generated-pbgo-files).
+
+To recompile, comment out the `replace` steps in `app/go.mod`:
+
+```golang
+require (
+	// tokenservice v0.0.0
+)
+// replace tokenservice => ./src/tokenservice
+```
+
+then import, compile, build with bazel
+
+```bash
+bazel run :gazelle -- update-repos -from_file=go.mod -build_file_proto_mode=disable_global
+/usr/local/bin/protoc -I ./src/tokenservice --include_imports --include_source_info --descriptor_set_out=src/tokenservice/tokenservice.proto.pb  --go_out=plugins=grpc:.src/tokenservice/ src/tokenservice/tokenservice.proto
+```
 
 ##### (enhancement) Generating GCP Service account
 

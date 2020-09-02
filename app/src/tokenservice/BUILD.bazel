@@ -1,0 +1,43 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
+# proto_library(
+#     name = "tokenservice_proto",
+#     srcs = ["tokenservice.proto"],
+#     visibility = ["//visibility:public"],
+# )
+
+# go_proto_library(
+#     name = "tokenservice_go_proto",
+#     compiler = "@io_bazel_rules_go//proto:go_grpc",
+#     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+#     importpath = "tokenservice",
+#     proto = ":tokenservice_proto",
+#     visibility = ["//visibility:public"],
+# )
+
+# go_library(
+#     name = "go_default_library",
+#     embed = [":tokenservice_go_proto"],
+#     importpath = "tokenservice",
+#     visibility = ["//visibility:public"],
+# )
+
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "tokenservice.pb.go",
+    ],
+    importpath = "tokenservice",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",                
+        "@org_golang_x_net//context:go_default_library",         
+    ],
+)
