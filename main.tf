@@ -82,8 +82,7 @@ module "ts_provisioner" {
   source = "./app"
   collection_id = var.collection_id
   zone = var.zone
-  bind_pcr = var.bind_pcr
-  bind_pcr_value = var.bind_pcr_value
+
   ts_project_id = module.ts_setup.ts_project_id
 
   tc_project_id = var.tc_project_id  

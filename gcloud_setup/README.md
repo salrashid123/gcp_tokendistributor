@@ -353,55 +353,40 @@ echo export tc_project_id=$tc_project_id
 
 ### Provision
 
+Create a file called `secrets.json`.  THis will contain the raw/unencrypted data that will be saved into firestore and returned back to the client.
+
+The format of this file is a list of `Secrets` as defined by the tokenservice.proto file:
+
+eg
+```json
+[
+    {
+        "name": "secret1",
+        "type": "GCP Bearer",
+        "data": "Zm9vb2Jhcg=="
+    },
+    {
+        "name": "secret2",
+        "type": "GCP Bearer2",
+        "data": "Zm9vb2Jhcg=="
+    }
+]
+```
+
 ```bash
 # as Alice
 echo $tc_instanceID
 echo $tc_project_id
 
 cd app/
-go run src/provisioner/provisioner.go --fireStoreProjectId $ts_project_id --firestoreCollectionName foo     --clientProjectId $tc_project_id --clientVMZone us-central1-a --clientVMId $tc_instanceID 
+go run src/provisioner/provisioner.go \
+  --fireStoreProjectId $ts_project_id \
+  --firestoreCollectionName foo     --clientProjectId $tc_project_id --clientVMZone us-central1-a \
+  --clientVMId $tc_instanceID \
+  --secretsFile=secrets.json
 ```
 
 ---
-
-#### Using TPM
-
-The sequence above deploys the tokenserver and client without using the TPM.  If you wan to use the TPM, choose an image/image-family that includes/uses a TPM. For example 
-
-```
---image cos-stable-81-12871-119-0 --image-project cos-cloud  --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring
-```
-
-edit 
-
-- `ts-cloud-config.yaml.tmpl`:
-
-```bash
-## TokenServer
-  ### WithoutTPM
-    ExecStart=/usr/bin/docker run --rm -u 0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --v=20 -alsologtostderr
-  #### With TPM
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --useTPM --doAttestation --exchangeSigningKey --v=20 -alsologtostderr    
-```
-
-- `tc-cloud-config.yaml.tmpl`:
-
-```bash
-## TokenClient
-  ### WithoutTPM
-    ExecStart=/usr/bin/docker run --rm -u 0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --v=20 -alsologtostderr
-  ### With TPM
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice $tc_image_hash --address $tsIP:50051 --servername $ts_sni --tsAudience $ts_audience --useSecrets --tlsClientCert projects/$tc_project_number/secrets/tls_crt --tlsClientKey projects/$tc_project_number/secrets/tls_key --tlsCertChain projects/$tc_project_number/secrets/tls-ca --useTPM --doAttestation --exchangeSigningKey --v=20 -alsologtostderr    
-```
-
-
-During provisioning:
-
-```bash
-go run src/provisioner/provisioner.go --fireStoreProjectId $ts_project_id --firestoreCollectionName foo     --clientProjectId $tc_project_id --clientVMZone us-central1-a --clientVMId $tc_instanceID \
---sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --useTPM
-
-```
 
 ### Run TokenServer/TokenClient directly
 
@@ -453,5 +438,5 @@ gcloud compute  firewall-rules create allow-ssh --allow=tcp:22 --network=tcnetwo
  Install go, run (remember to replace the IP address below that points to the TokenServer as well as the GCP ProjectNumber where the TLScertificates are saved)
 
 ```bash
-go run src/client/client.go  --address 34.67.171.121:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenservice --useSecrets --tlsClientCert projects/149534119989/secrets/tls_crt --tlsClientKey projects/149534119989/secrets/tls_key --tlsCertChain projects/149534119989/secrets/tls-ca --v=20 -alsologtostderr
+go run src/client/client.go  --address 34.67.171.121:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenservice --useMTLS --useSecrets --tlsClientCert projects/149534119989/secrets/tls_crt --tlsClientKey projects/149534119989/secrets/tls_key --tlsCertChain projects/149534119989/secrets/tls-ca --v=20 -alsologtostderr
  ```

@@ -13,13 +13,13 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm -u 0  -p 50051:50051 --name=mycloudservice $ts_image_hash --grpcport 0.0.0.0:50051 --tsAudience $ts_audience --useSecrets --tlsCert projects/$ts_project_number/secrets/tls_crt --tlsKey projects/$ts_project_number/secrets/tls_key --tlsCertChain projects/$ts_project_number/secrets/tls-ca  --firestoreProjectId $ts_project_id --firestoreCollectionName $ts_collection_id --v=20 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0  -p 50051:50051 --name=mycloudservice $ts_image_hash --grpcport 0.0.0.0:50051 --tsAudience $ts_audience --useMTLS --useSecrets --tlsCert projects/$ts_project_number/secrets/tls_crt --tlsKey projects/$ts_project_number/secrets/tls_key --tlsCertChain projects/$ts_project_number/secrets/tls-ca  --firestoreProjectId $ts_project_id --firestoreCollectionName $ts_collection_id --v=20 -alsologtostderr
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
-#bootcmd:
-#- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
-#- systemctl mask --now serial-getty@ttyS0.service
+bootcmd:
+- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+- systemctl mask --now serial-getty@ttyS0.service
 
 runcmd:
 - systemctl daemon-reload

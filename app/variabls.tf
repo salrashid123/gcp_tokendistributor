@@ -14,10 +14,9 @@ variable "zone" {
 variable "collection_id" {
   type    = string
 }
-variable "bind_pcr" {
+variable "ts_secrets_file" {
   type    = string
+  default = "/tmp/secrets.json"
 }
-variable "bind_pcr_value" {
-  type    = string
-}
+
 

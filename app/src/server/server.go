@@ -2,18 +2,13 @@ package main
 
 import (
 	"context"
-	"crypto"
-	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/hex"
-	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 
 	"net"
@@ -27,12 +22,11 @@ import (
 
 	"github.com/golang/glog"
 
-	"math/rand"
 	"os"
 
 	"cloud.google.com/go/firestore"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/google/go-tpm/tpm2"
+
 	"github.com/lestrrat/go-jwx/jwk"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
@@ -42,7 +36,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/alts"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
@@ -67,6 +60,11 @@ type gcpIdentityDoc struct {
 	jwt.StandardClaims
 }
 
+type Secret struct {
+	Name string `firestore:"name"`
+	Type string `firestore:"type"`
+	Data string `firestore:"data"`
+}
 type ServiceEntry struct {
 	Description        string    `firestore:"description,omitempty"`
 	Done               bool      `firestore:"done"`
@@ -76,12 +74,8 @@ type ServiceEntry struct {
 	ServiceAccountName string    `firestore:"service_account_name"`
 	InitScriptHash     string    `firestore:"init_script_hash"`
 	ImageFingerprint   string    `firestore:"image_fingerprint"`
-	SealedRSAKey       []byte    `firestore:"rsa_key,omitempty"`
-	SealedAESKey       []byte    `firestore:"aes_key,omitempty"`
-	RawKey             []byte    `firestore:"raw_key,omitempty"`
-	PCR                int64     `firestore:"pcr"`
-	PCRValue           string    `firestore:"pcr_value,omitempty"`
 	GCSObjectReference string    `firestore:"gcs_object,omitempty"`
+	Secrets            []Secret  `firestore:"secrets,omitempty"`
 	ProvidedAt         time.Time `firestore:"provided_at"`
 	PeerAddress        string    `firestore:"peer_address"`
 	PeerSerialNumber   string    `firestore:"peer_serial_number"`
@@ -96,53 +90,25 @@ type healthServer struct {
 }
 
 const (
-	jwksURL   = "https://www.googleapis.com/oauth2/v3/certs"
-	tpmDevice = "/dev/tpm0"
+	jwksURL = "https://www.googleapis.com/oauth2/v3/certs"
 )
 
 var (
-	grpcport                = flag.String("grpcport", ":50051", "grpcport")
-	tlsCert                 = flag.String("tlsCert", "tokenservice.crt", "TLS Certificate")
-	tlsKey                  = flag.String("tlsKey", "tokenservice.key", "TLS Key")
-	tlsCertChain            = flag.String("tlsCertChain", "tls-ca-chain.pem", "TLS CA Chain")
-	tsAudience              = flag.String("tsAudience", "", "Audience value for the TokenService")
-	useSecrets              = flag.Bool("useSecrets", false, "Use Google Secrets Manager for TLS Keys")
-	useALTS                 = flag.Bool("useALTS", false, "Use Application Layer Transport Security")
-	useTPM                  = flag.Bool("useTPM", false, "Use TPM to seal data")
+	grpcport     = flag.String("grpcport", ":50051", "grpcport")
+	tlsCert      = flag.String("tlsCert", "tokenservice.crt", "TLS Certificate")
+	tlsKey       = flag.String("tlsKey", "tokenservice.key", "TLS Key")
+	tlsCertChain = flag.String("tlsCertChain", "tls-ca-chain.pem", "TLS CA Chain")
+	tsAudience   = flag.String("tsAudience", "", "Audience value for the TokenService")
+	useSecrets   = flag.Bool("useSecrets", false, "Use Google Secrets Manager for TLS Keys")
+	useMTLS      = flag.Bool("useMTLS", false, "Use mTLS")
+
 	validatePeerIP          = flag.Bool("validatePeerIP", false, "Validate each TokenClients origin IP")
 	validatePeerSN          = flag.Bool("validatePeerSN", false, "Validate each TokenClients Certificate Serial Number")
 	firestoreProjectId      = flag.String("firestoreProjectId", "", "firestoreProjectId where the sealed data is stored")
 	firestoreCollectionName = flag.String("firestoreCollectionName", "", "firestoreCollectionName where the sealedData is Stored")
 	jwtIssuedAtJitter       = flag.Int("jwtIssuedAtJitter", 4, "Validate the IssuedAt timestamp.  If issuedAt+jwtIssueAtJitter > now(), then reject")
-	expectedPCRValue        = flag.String("expectedPCRValue", "fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe", "expectedPCRValue")
-	pcr                     = flag.Int("pcr", 0, "PCR Value to use")
-	registry                = make(map[string]tokenservice.MakeCredentialRequest)
-	nonces                  = make(map[string]string)
 	jwtSet                  *jwk.Set
 	hs                      *health.Server
-	rwc                     io.ReadWriteCloser
-
-	handleNames = map[string][]tpm2.HandleType{
-		"all":       []tpm2.HandleType{tpm2.HandleTypeLoadedSession, tpm2.HandleTypeSavedSession, tpm2.HandleTypeTransient},
-		"loaded":    []tpm2.HandleType{tpm2.HandleTypeLoadedSession},
-		"saved":     []tpm2.HandleType{tpm2.HandleTypeSavedSession},
-		"transient": []tpm2.HandleType{tpm2.HandleTypeTransient},
-	}
-
-	defaultKeyParams = tpm2.Public{
-		Type:    tpm2.AlgRSA,
-		NameAlg: tpm2.AlgSHA256,
-		Attributes: tpm2.FlagFixedTPM | tpm2.FlagFixedParent | tpm2.FlagSensitiveDataOrigin |
-			tpm2.FlagUserWithAuth | tpm2.FlagRestricted | tpm2.FlagSign,
-		AuthPolicy: []byte{},
-		RSAParameters: &tpm2.RSAParams{
-			Sign: &tpm2.SigScheme{
-				Alg:  tpm2.AlgRSASSA,
-				Hash: tpm2.AlgSHA256,
-			},
-			KeyBits: 2048,
-		},
-	}
 )
 
 func (s *healthServer) Check(ctx context.Context, in *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
@@ -208,23 +174,9 @@ func authUnaryInterceptor(
 			return nil, grpc.Errorf(codes.Unauthenticated, "authentication required")
 		}
 
-		if *useALTS {
-			ai, err := alts.AuthInfoFromContext(ctx)
-			if err != nil {
-				glog.Errorf("   Unable to cross check with ALTS Peer Service Account")
-				return nil, grpc.Errorf(codes.Unauthenticated, "Unable to cross check with ALTS Peer Service Account")
-			}
-			glog.V(2).Infof("     AuthInfo PeerServiceAccount: %v", ai.PeerServiceAccount())
-			glog.V(2).Infof("     AuthInfo LocalServiceAccount: %v", ai.LocalServiceAccount())
-			if doc.Email != ai.PeerServiceAccount() {
-				glog.Errorf("   ALTS ServiceAccount does not match provided OIDC Token Email")
-				return nil, grpc.Errorf(codes.Unauthenticated, "ALTS ServiceAccount does not match provided OIDC Token Email")
-			}
-		}
-
 		issuedTime := time.Unix(doc.IssuedAt, 0)
 		now := time.Now()
-		if issuedTime.Add(time.Duration(*jwtIssuedAtJitter) * time.Second).Before(now) {
+		if now.Sub(issuedTime).Seconds() > float64(*jwtIssuedAtJitter) {
 			glog.Errorf("   IssuedAt Identity document timestamp too old")
 			return nil, grpc.Errorf(codes.Unauthenticated, "IssuedAt Identity document timestamp too old")
 		}
@@ -261,7 +213,7 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 	var c ServiceEntry
 	dsnap.DataTo(&c)
 
-	if !*useALTS {
+	if *useMTLS {
 		glog.V(2).Infof("     TLS Client cert Peer IP and SerialNumber")
 		peer, ok := peer.FromContext(ctx)
 		if ok {
@@ -344,13 +296,31 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 	// }
 	// log.Printf(resp.UpdateTime.String())
 
+	var tssecrets []*tokenservice.Secret
+	for _, s := range c.Secrets {
+		sec := &Secret{
+			Name: s.Name,
+			Type: s.Type,
+			Data: base64.StdEncoding.EncodeToString([]byte(s.Data)),
+		}
+
+		byteData, err := base64.StdEncoding.DecodeString(sec.Data)
+		if err != nil {
+			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.Internal, "Could not decode secret!")
+		}
+		tsSecret := &tokenservice.Secret{
+			Name: sec.Name,
+			Type: sec.Type,
+			Data: byteData,
+		}
+
+		tssecrets = append(tssecrets, tsSecret)
+	}
+
 	return &tokenservice.TokenResponse{
 		ResponseID:   respID.String(),
 		InResponseTo: in.RequestId,
-		SealedAESKey: c.SealedAESKey,
-		SealedRSAKey: c.SealedRSAKey,
-		RawKey:       c.RawKey,
-		Pcr:          c.PCR,
+		Secrets:      tssecrets,
 	}, nil
 }
 
@@ -383,108 +353,98 @@ func main() {
 	}
 
 	sopts := []grpc.ServerOption{grpc.MaxConcurrentStreams(10)}
-	if *useALTS {
-		glog.V(2).Infof("     Using ALTS")
 
-		altsTC := alts.NewServerCreds(alts.DefaultServerOptions())
-		sopts = append(sopts, grpc.Creds(altsTC))
-	} else {
-		glog.V(2).Infof("     Using mTLS")
-		if *useSecrets {
-			glog.V(10).Infof("     Getting mTLS certs from Secrets Manager")
+	if *useSecrets {
+		glog.V(10).Infof("     Getting mTLS certs from Secrets Manager")
 
-			ctx := context.Background()
+		ctx := context.Background()
 
-			client, err := secretmanager.NewClient(ctx)
-			if err != nil {
-				glog.Fatalf("Error creating Secrets Client")
-			}
-
-			tlsCACert_name := fmt.Sprintf("%s/versions/latest", *tlsCertChain)
-			tlsCACert_req := &secretmanagerpb.AccessSecretVersionRequest{
-				Name: tlsCACert_name,
-			}
-
-			tlsCACert_result, err := client.AccessSecretVersion(ctx, tlsCACert_req)
-			if err != nil {
-				glog.Fatalf("failed to access  tlsCertChain secret version: %v", err)
-			}
-			caCert = tlsCACert_result.Payload.Data
-
-			tlsCert_name := fmt.Sprintf("%s/versions/latest", *tlsCert)
-			tlsCert_req := &secretmanagerpb.AccessSecretVersionRequest{
-				Name: tlsCert_name,
-			}
-
-			tlsCert_result, err := client.AccessSecretVersion(ctx, tlsCert_req)
-			if err != nil {
-				glog.Fatalf("Error: failed to access tlsCert secret version: %v", err)
-			}
-			certPem := tlsCert_result.Payload.Data
-
-			tlsKey_name := fmt.Sprintf("%s/versions/latest", *tlsKey)
-			tlsKey_req := &secretmanagerpb.AccessSecretVersionRequest{
-				Name: tlsKey_name,
-			}
-
-			tlsKey_result, err := client.AccessSecretVersion(ctx, tlsKey_req)
-			if err != nil {
-				glog.Fatalf("Error: failed to access tlsKey secret version: %v", err)
-			}
-			keyPem := tlsKey_result.Payload.Data
-
-			certificate, err = tls.X509KeyPair(certPem, keyPem)
-			if err != nil {
-				glog.Fatalf("Error: could not load TLS Certificate chain: %s", err)
-			}
-
-		} else {
-			glog.V(10).Infof("     Getting mTLS certs from files")
-
-			caCert, err = ioutil.ReadFile(*tlsCertChain)
-			if err != nil {
-				glog.Fatalf("could not load TLS Certificate chain: %s", err)
-			}
-
-			certificate, err = tls.LoadX509KeyPair(*tlsCert, *tlsKey)
-			if err != nil {
-				glog.Fatalf("could not load server key pair: %s", err)
-			}
+		client, err := secretmanager.NewClient(ctx)
+		if err != nil {
+			glog.Fatalf("Error creating Secrets Client")
 		}
 
-		caCertPool = x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
+		tlsCACert_name := fmt.Sprintf("%s/versions/latest", *tlsCertChain)
+		tlsCACert_req := &secretmanagerpb.AccessSecretVersionRequest{
+			Name: tlsCACert_name,
+		}
 
-		var tlsConfig tls.Config
+		tlsCACert_result, err := client.AccessSecretVersion(ctx, tlsCACert_req)
+		if err != nil {
+			glog.Fatalf("failed to access  tlsCertChain secret version: %v", err)
+		}
+		caCert = tlsCACert_result.Payload.Data
+
+		tlsCert_name := fmt.Sprintf("%s/versions/latest", *tlsCert)
+		tlsCert_req := &secretmanagerpb.AccessSecretVersionRequest{
+			Name: tlsCert_name,
+		}
+
+		tlsCert_result, err := client.AccessSecretVersion(ctx, tlsCert_req)
+		if err != nil {
+			glog.Fatalf("Error: failed to access tlsCert secret version: %v", err)
+		}
+		certPem := tlsCert_result.Payload.Data
+
+		tlsKey_name := fmt.Sprintf("%s/versions/latest", *tlsKey)
+		tlsKey_req := &secretmanagerpb.AccessSecretVersionRequest{
+			Name: tlsKey_name,
+		}
+
+		tlsKey_result, err := client.AccessSecretVersion(ctx, tlsKey_req)
+		if err != nil {
+			glog.Fatalf("Error: failed to access tlsKey secret version: %v", err)
+		}
+		keyPem := tlsKey_result.Payload.Data
+
+		certificate, err = tls.X509KeyPair(certPem, keyPem)
+		if err != nil {
+			glog.Fatalf("Error: could not load TLS Certificate chain: %s", err)
+		}
+
+	} else {
+		glog.V(10).Infof("     Getting mTLS certs from files")
+
+		caCert, err = ioutil.ReadFile(*tlsCertChain)
+		if err != nil {
+			glog.Fatalf("could not load TLS Certificate chain: %s", err)
+		}
+
+		certificate, err = tls.LoadX509KeyPair(*tlsCert, *tlsKey)
+		if err != nil {
+			glog.Fatalf("could not load server key pair: %s", err)
+		}
+	}
+
+	caCertPool = x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	var tlsConfig tls.Config
+
+	if *useMTLS {
+		glog.V(10).Infof("     Enable mTLS...")
 		tlsConfig = tls.Config{
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			Certificates: []tls.Certificate{certificate},
 			ClientCAs:    caCertPool,
 		}
-
-		ce := credentials.NewTLS(&tlsConfig)
-		sopts = append(sopts, grpc.Creds(ce))
+	} else {
+		tlsConfig = tls.Config{
+			Certificates: []tls.Certificate{certificate},
+		}
 	}
+
+	ce := credentials.NewTLS(&tlsConfig)
+	sopts = append(sopts, grpc.Creds(ce))
 
 	sopts = append(sopts, grpc.UnaryInterceptor(authUnaryInterceptor))
 	sopts = append(sopts)
 	s := grpc.NewServer(sopts...)
 
 	tokenservice.RegisterTokenServiceServer(s, &server{})
-	tokenservice.RegisterVerifierServer(s, &verifierserver{})
+
 	healthpb.RegisterHealthServer(s, &healthServer{})
 
-	if *useTPM {
-		rwc, err = tpm2.OpenTPM(tpmDevice)
-		if err != nil {
-			glog.Fatalf("can't open TPM %q: %v", tpmDevice, err)
-		}
-		defer func() {
-			if err := rwc.Close(); err != nil {
-				glog.Fatalf("can't close TPM %q: %v", tpmDevice, err)
-			}
-		}()
-	}
 	var gracefulStop = make(chan os.Signal)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
@@ -497,340 +457,4 @@ func main() {
 	}()
 	glog.V(2).Infof("Starting TokenService..")
 	s.Serve(lis)
-}
-
-func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.MakeCredentialRequest) (*tokenservice.MakeCredentialResponse, error) {
-
-	glog.V(2).Infof("======= MakeCredential ========")
-	glog.V(5).Infof("     client provided uid: %s", in.Uid)
-	glog.V(10).Infof("     Got AKName %s", in.AkName)
-	glog.V(10).Infof("     Registry size %d\n", len(registry))
-
-	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
-	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
-
-	if *useTPM == false {
-		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
-		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
-	}
-	newCtx := context.Background()
-
-	computService, err := compute.NewService(newCtx)
-	if err != nil {
-		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to Verify EK with GCP APIs %v", err))
-	}
-
-	req := computService.Instances.GetShieldedInstanceIdentity(idToken.Google.ComputeEngine.ProjectID, idToken.Google.ComputeEngine.Zone, idToken.Google.ComputeEngine.InstanceName)
-	r, err := req.Do()
-	if err != nil {
-		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to Recall Shielded Identity %v", err))
-	}
-
-	glog.V(10).Infof("     Acquired PublickKey from GCP API: \n%s", r.EncryptionKey.EkPub)
-
-	glog.V(10).Infof("     Decoding ekPub from client")
-	ekPub, err := tpm2.DecodePublic(in.EkPub)
-	if err != nil {
-		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Error DecodePublic EK %v", err))
-	}
-
-	ekPubKey, err := ekPub.Key()
-	if err != nil {
-		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Error extracting ekPubKey: %s", err))
-	}
-	ekBytes, err := x509.MarshalPKIXPublicKey(ekPubKey)
-	if err != nil {
-		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to convert ekPub: %v", err))
-	}
-
-	ekPubPEM := pem.EncodeToMemory(
-		&pem.Block{
-			Type:  "PUBLIC KEY",
-			Bytes: ekBytes,
-		},
-	)
-	glog.V(10).Infof("     EKPubPEM: \n%v", string(ekPubPEM))
-
-	if string(ekPubPEM) != r.EncryptionKey.EkPub {
-		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("EkPub mismatchKey"))
-	}
-
-	glog.V(2).Infof("     Verified EkPub from GCE API matches ekPub from Client")
-
-	registry[idToken.Google.ComputeEngine.InstanceID] = *in
-
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	b := make([]rune, 10)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	nonces[in.Uid] = string(b)
-	//nonces[idToken.Google.ComputeEngine.InstanceID] = string(b)
-
-	credBlob, encryptedSecret, err := makeCredential(nonces[in.Uid], in.EkPub, in.AkPub)
-	if err != nil {
-		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to makeCredential"))
-	}
-	glog.V(2).Infof("     Returning MakeCredentialResponse ========")
-	return &tokenservice.MakeCredentialResponse{
-		Uid:             in.Uid,
-		CredBlob:        credBlob,
-		EncryptedSecret: encryptedSecret,
-		Pcr:             int32(*pcr),
-	}, nil
-}
-
-func (s *verifierserver) ActivateCredential(ctx context.Context, in *tokenservice.ActivateCredentialRequest) (*tokenservice.ActivateCredentialResponse, error) {
-
-	glog.V(2).Infof("======= ActivateCredential ========")
-	glog.V(5).Infof("     client provided uid: %s", in.Uid)
-	glog.V(10).Infof("     Secret %s", in.Secret)
-
-	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
-	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
-
-	if *useTPM == false {
-		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
-		return &tokenservice.ActivateCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
-	}
-	verified := false
-	var id string
-	id = idToken.Google.ComputeEngine.InstanceID
-
-	err := verifyQuote(id, nonces[in.Uid], in.Attestation, in.Signature)
-	if err != nil {
-		glog.Errorf("     Quote Verification Failed Quote: %v", err)
-		return &tokenservice.ActivateCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Quote Verification Failed Quote: %v", err))
-	} else {
-		glog.V(2).Infof("     Verified Quote")
-		verified = true
-		delete(nonces, in.Uid)
-	}
-
-	glog.V(2).Infof("     Returning ActivateCredentialResponse ========")
-
-	return &tokenservice.ActivateCredentialResponse{
-		Uid:      in.Uid,
-		Verified: verified,
-	}, nil
-}
-
-func (s *verifierserver) OfferQuote(ctx context.Context, in *tokenservice.OfferQuoteRequest) (*tokenservice.OfferQuoteResponse, error) {
-	glog.V(2).Infof("======= OfferQuote ========")
-	glog.V(5).Infof("     client provided uid: %s", in.Uid)
-
-	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
-	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
-	if *useTPM == false {
-		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
-		return &tokenservice.OfferQuoteResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
-	}
-
-	nonce := uuid.New().String()
-	var id string
-
-	id = idToken.Google.ComputeEngine.InstanceID
-
-	glog.V(2).Infof("     Returning OfferQuoteResponse ========")
-	nonces[id] = nonce
-	return &tokenservice.OfferQuoteResponse{
-		Uid:   in.Uid,
-		Pcr:   int32(*pcr),
-		Nonce: nonce,
-	}, nil
-}
-
-func (s *verifierserver) ProvideQuote(ctx context.Context, in *tokenservice.ProvideQuoteRequest) (*tokenservice.ProvideQuoteResponse, error) {
-	glog.V(2).Infof("======= ProvideQuote ========")
-	glog.V(5).Infof("     client provided uid: %s", in.Uid)
-	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
-	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
-
-	if *useTPM == false {
-		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
-		return &tokenservice.ProvideQuoteResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
-	}
-	ver := false
-	var id string
-
-	id = idToken.Google.ComputeEngine.InstanceID
-
-	val, ok := nonces[id]
-	if !ok {
-		glog.V(2).Infof("Unable to find nonce request for uid")
-	} else {
-		delete(nonces, id)
-		err := verifyQuote(id, val, in.Attestation, in.Signature)
-		if err == nil {
-			ver = true
-		} else {
-			return &tokenservice.ProvideQuoteResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to Verify Quote %v", err))
-		}
-	}
-
-	glog.V(2).Infof("     Returning ProvideQuoteResponse ========")
-	return &tokenservice.ProvideQuoteResponse{
-		Uid:      in.Uid,
-		Verified: ver,
-	}, nil
-}
-
-func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice.ProvideSigningKeyRequest) (*tokenservice.ProvideSigningKeyResponse, error) {
-	glog.V(2).Infof("======= ProvideSigningKey ========")
-	glog.V(5).Infof("     client provided uid: %s", in.Uid)
-
-	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
-	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
-
-	if *useTPM == false {
-		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
-		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
-	}
-
-	glog.V(5).Infof("     SigningKey %s\n", in.Signingkey)
-	glog.V(5).Infof("     SigningKey Attestation %s\n", base64.StdEncoding.EncodeToString(in.Attestation))
-	glog.V(5).Infof("     SigningKey Signature %s\n", base64.StdEncoding.EncodeToString(in.Signature))
-	// TODO: use EK to verify Attestation and Signature
-	// https://github.com/salrashid123/tpm2/tree/master/sign_certify_ak
-	ver := true
-
-	glog.V(2).Infof("     Returning ProvideSigningKeyResponse ========")
-	return &tokenservice.ProvideSigningKeyResponse{
-		Uid:      in.Uid,
-		Verified: ver,
-	}, nil
-}
-
-func verifyQuote(uid string, nonce string, attestation []byte, sigBytes []byte) (retErr error) {
-	glog.V(2).Infof("     --> Starting verifyQuote()")
-
-	if *useTPM == false {
-		glog.Errorf("    TPM Usage not enabled, exiting")
-		return fmt.Errorf("TPM Operation not supported")
-	}
-
-	nn := registry[uid]
-	akPub := nn.AkPub
-
-	glog.V(10).Infof("     Read and Decode (attestion)")
-	att, err := tpm2.DecodeAttestationData(attestation)
-	if err != nil {
-		glog.Errorf("ERROR:  DecodeAttestationData(%v) failed: %v", attestation, err)
-		return fmt.Errorf("DecodeAttestationData(%v) failed: %v", attestation, err)
-	}
-
-	glog.V(5).Infof("     Attestation ExtraData (nonce): %s ", string(att.ExtraData))
-	glog.V(5).Infof("     Attestation PCR#: %v ", att.AttestedQuoteInfo.PCRSelection.PCRs)
-	glog.V(5).Infof("     Attestation Hash: %v ", hex.EncodeToString(att.AttestedQuoteInfo.PCRDigest))
-
-	if nonce != string(att.ExtraData) {
-		glog.Errorf("     Nonce Value mismatch Got: (%s) Expected: (%v)", string(att.ExtraData), nonce)
-		return fmt.Errorf("ERROR Nonce Value mismatch Got: (%s) Expected: (%v)", string(att.ExtraData), nonce)
-	}
-
-	sigL := tpm2.SignatureRSA{
-		HashAlg:   tpm2.AlgSHA256,
-		Signature: sigBytes,
-	}
-	decoded, err := hex.DecodeString(*expectedPCRValue)
-	if err != nil {
-		return fmt.Errorf("DecodeAttestationData(%v) failed: %v", attestation, err)
-	}
-	hash := sha256.Sum256(decoded)
-
-	glog.V(5).Infof("     Expected PCR Value:           --> %s", *expectedPCRValue)
-	glog.V(5).Infof("     sha256 of Expected PCR Value: --> %x", hash)
-
-	glog.V(2).Infof("     Decoding PublicKey for AK ========")
-	p, err := tpm2.DecodePublic(akPub)
-	if err != nil {
-		return fmt.Errorf("DecodePublic failed: %v", err)
-	}
-	rsaPub := rsa.PublicKey{E: int(p.RSAParameters.Exponent()), N: p.RSAParameters.Modulus()}
-	hsh := crypto.SHA256.New()
-	hsh.Write(attestation)
-	if err := rsa.VerifyPKCS1v15(&rsaPub, crypto.SHA256, hsh.Sum(nil), sigL.Signature); err != nil {
-		return fmt.Errorf("VerifyPKCS1v15 failed: %v", err)
-	}
-
-	if fmt.Sprintf("%x", hash) != hex.EncodeToString(att.AttestedQuoteInfo.PCRDigest) {
-		return fmt.Errorf("Unexpected PCR hash Value expected: %s  Got %s", fmt.Sprintf("%x", hash), hex.EncodeToString(att.AttestedQuoteInfo.PCRDigest))
-	}
-
-	if nonce != string(att.ExtraData) {
-		return fmt.Errorf("Unexpected secret Value expected: %v  Got %v", nonce, string(att.ExtraData))
-	}
-	glog.V(2).Infof("     Attestation Signature Verified ")
-	glog.V(2).Infof("     <-- End verifyQuote()")
-	return nil
-}
-
-func makeCredential(sec string, ekPubBytes []byte, akPubBytes []byte) (credBlob []byte, encryptedSecret []byte, retErr error) {
-
-	glog.V(2).Infof("     --> Starting makeCredential()")
-	glog.V(10).Infof("     Read (ekPub) from request")
-
-	if *useTPM == false {
-		glog.Errorf("    TPM Usage not enabled, exiting")
-		return []byte(""), []byte(""), fmt.Errorf("TPM Operation not supported")
-	}
-
-	ekPub, err := tpm2.DecodePublic(ekPubBytes)
-	if err != nil {
-		return []byte(""), []byte(""), fmt.Errorf("Error DecodePublic AK %v", err)
-	}
-
-	ekh, keyName, err := tpm2.LoadExternal(rwc, ekPub, tpm2.Private{}, tpm2.HandleNull)
-	if err != nil {
-		return []byte(""), []byte(""), fmt.Errorf("Error loadingExternal EK %v", err)
-	}
-	defer tpm2.FlushContext(rwc, ekh)
-
-	glog.V(10).Infof("     Read (akPub) from request")
-
-	tPub, err := tpm2.DecodePublic(akPubBytes)
-	if err != nil {
-		return []byte(""), []byte(""), fmt.Errorf("Error DecodePublic AK %v", tPub)
-	}
-
-	ap, err := tPub.Key()
-	if err != nil {
-		return []byte(""), []byte(""), fmt.Errorf("akPub.Key() failed: %s", err)
-	}
-	akBytes, err := x509.MarshalPKIXPublicKey(ap)
-	if err != nil {
-		return []byte(""), []byte(""), fmt.Errorf("Unable to convert akPub: %v", err)
-	}
-
-	akPubPEM := pem.EncodeToMemory(
-		&pem.Block{
-			Type:  "PUBLIC KEY",
-			Bytes: akBytes,
-		},
-	)
-	glog.V(10).Infof("     Decoded AkPub: \n%v", string(akPubPEM))
-
-	if tPub.MatchesTemplate(defaultKeyParams) {
-		glog.V(10).Infof("     AK Default parameter match template")
-	} else {
-		return []byte(""), []byte(""), fmt.Errorf("AK does not have correct defaultParameters")
-	}
-	h, keyName, err := tpm2.LoadExternal(rwc, tPub, tpm2.Private{}, tpm2.HandleNull)
-	if err != nil {
-		return []byte(""), []byte(""), fmt.Errorf("Error loadingExternal AK %v", err)
-	}
-	defer tpm2.FlushContext(rwc, h)
-	glog.V(10).Infof("     Loaded AK KeyName %s", hex.EncodeToString(keyName))
-
-	glog.V(5).Infof("     MakeCredential Start")
-	credential := []byte(sec)
-	credBlob, encryptedSecret0, err := tpm2.MakeCredential(rwc, ekh, credential, keyName)
-	if err != nil {
-		glog.Errorf("ERROR in Make Credential %v", err)
-		return []byte(""), []byte(""), fmt.Errorf("MakeCredential failed: %v", err)
-	}
-	glog.V(10).Infof("     credBlob %s", hex.EncodeToString(credBlob))
-	glog.V(10).Infof("     encryptedSecret0 %s", hex.EncodeToString(encryptedSecret0))
-	glog.V(2).Infof("     <-- End makeCredential()")
-	return credBlob, encryptedSecret0, nil
 }

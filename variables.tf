@@ -33,17 +33,10 @@ variable "collection_id" {
   type    = string
   default = "foo"
 }
-variable "bind_pcr" {
-  type    = string
-  default = "0"
-}
-variable "bind_pcr_value" {
-  type    = string
-  default = "fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe"
-}
+
 variable "ts_image_hash" {
   type    = string
-  default = "docker.io/salrashid123/tokenserver@sha256:d6f25876bc04f2a7b2e5253b93daba39b5f1be570b11dffd81acf3992063dd91"
+  default = "docker.io/salrashid123/tokenserver@sha256:758c61cd0b1906bc1739d3ff9c49e85f394bcdbcde62f86759d421182caadd06"
 }
 
 variable "gae_location_id" {
@@ -87,7 +80,7 @@ variable "tls_client_key" {
 }
 variable "tc_image_hash" {
   type    = string
-  default = "docker.io/salrashid123/tokenclient@sha256:b40b8f71d96828ef00f839f9993b7cc65f24ee6cf22c386e0939ce0fca252f6a"  
+  default = "docker.io/salrashid123/tokenclient@sha256:3242cdc14f35686751c72a11c387281303e3869e903da1ddcb075e0870f2303e"  
 }
 variable "sni_servername" {
   type    = string

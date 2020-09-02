@@ -84,24 +84,83 @@ func (x *TokenRequest) GetProcessID() string {
 	return ""
 }
 
+type Secret struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Data []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (x *Secret) Reset() {
+	*x = Secret{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_tokenservice_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Secret) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Secret) ProtoMessage() {}
+
+func (x *Secret) ProtoReflect() protoreflect.Message {
+	mi := &file_tokenservice_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Secret.ProtoReflect.Descriptor instead.
+func (*Secret) Descriptor() ([]byte, []int) {
+	return file_tokenservice_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Secret) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Secret) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *Secret) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type TokenResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ResponseID        string `protobuf:"bytes,1,opt,name=responseID,proto3" json:"responseID,omitempty"`
-	InResponseTo      string `protobuf:"bytes,2,opt,name=inResponseTo,proto3" json:"inResponseTo,omitempty"`
-	SealedRSAKey      []byte `protobuf:"bytes,3,opt,name=sealedRSAKey,proto3" json:"sealedRSAKey,omitempty"`
-	SealedAESKey      []byte `protobuf:"bytes,4,opt,name=sealedAESKey,proto3" json:"sealedAESKey,omitempty"`
-	RawKey            []byte `protobuf:"bytes,5,opt,name=rawKey,proto3" json:"rawKey,omitempty"`
-	Pcr               int64  `protobuf:"varint,6,opt,name=pcr,proto3" json:"pcr,omitempty"`
-	ResourceReference string `protobuf:"bytes,7,opt,name=resourceReference,proto3" json:"resourceReference,omitempty"`
+	ResponseID   string    `protobuf:"bytes,1,opt,name=responseID,proto3" json:"responseID,omitempty"`
+	InResponseTo string    `protobuf:"bytes,2,opt,name=inResponseTo,proto3" json:"inResponseTo,omitempty"`
+	Secrets      []*Secret `protobuf:"bytes,3,rep,name=secrets,proto3" json:"secrets,omitempty"`
 }
 
 func (x *TokenResponse) Reset() {
 	*x = TokenResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[1]
+		mi := &file_tokenservice_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -114,7 +173,7 @@ func (x *TokenResponse) String() string {
 func (*TokenResponse) ProtoMessage() {}
 
 func (x *TokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[1]
+	mi := &file_tokenservice_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -127,7 +186,7 @@ func (x *TokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TokenResponse.ProtoReflect.Descriptor instead.
 func (*TokenResponse) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{1}
+	return file_tokenservice_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *TokenResponse) GetResponseID() string {
@@ -144,669 +203,11 @@ func (x *TokenResponse) GetInResponseTo() string {
 	return ""
 }
 
-func (x *TokenResponse) GetSealedRSAKey() []byte {
+func (x *TokenResponse) GetSecrets() []*Secret {
 	if x != nil {
-		return x.SealedRSAKey
+		return x.Secrets
 	}
 	return nil
-}
-
-func (x *TokenResponse) GetSealedAESKey() []byte {
-	if x != nil {
-		return x.SealedAESKey
-	}
-	return nil
-}
-
-func (x *TokenResponse) GetRawKey() []byte {
-	if x != nil {
-		return x.RawKey
-	}
-	return nil
-}
-
-func (x *TokenResponse) GetPcr() int64 {
-	if x != nil {
-		return x.Pcr
-	}
-	return 0
-}
-
-func (x *TokenResponse) GetResourceReference() string {
-	if x != nil {
-		return x.ResourceReference
-	}
-	return ""
-}
-
-type MakeCredentialRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Uid       string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	AkName    string `protobuf:"bytes,2,opt,name=akName,proto3" json:"akName,omitempty"`
-	EkPub     []byte `protobuf:"bytes,3,opt,name=ekPub,proto3" json:"ekPub,omitempty"` //   TPMT_PUBLIC  use tpm2.DecodePublic, tpm2.LoadExternal..TODO, just send RSAPublicKey
-	AkPub     []byte `protobuf:"bytes,4,opt,name=akPub,proto3" json:"akPub,omitempty"`
-	AkPubCert []byte `protobuf:"bytes,5,opt,name=akPubCert,proto3" json:"akPubCert,omitempty"`
-}
-
-func (x *MakeCredentialRequest) Reset() {
-	*x = MakeCredentialRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[2]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *MakeCredentialRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MakeCredentialRequest) ProtoMessage() {}
-
-func (x *MakeCredentialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[2]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use MakeCredentialRequest.ProtoReflect.Descriptor instead.
-func (*MakeCredentialRequest) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *MakeCredentialRequest) GetUid() string {
-	if x != nil {
-		return x.Uid
-	}
-	return ""
-}
-
-func (x *MakeCredentialRequest) GetAkName() string {
-	if x != nil {
-		return x.AkName
-	}
-	return ""
-}
-
-func (x *MakeCredentialRequest) GetEkPub() []byte {
-	if x != nil {
-		return x.EkPub
-	}
-	return nil
-}
-
-func (x *MakeCredentialRequest) GetAkPub() []byte {
-	if x != nil {
-		return x.AkPub
-	}
-	return nil
-}
-
-func (x *MakeCredentialRequest) GetAkPubCert() []byte {
-	if x != nil {
-		return x.AkPubCert
-	}
-	return nil
-}
-
-type MakeCredentialResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Uid             string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	Pcr             int32  `protobuf:"varint,2,opt,name=pcr,proto3" json:"pcr,omitempty"`
-	CredBlob        []byte `protobuf:"bytes,3,opt,name=credBlob,proto3" json:"credBlob,omitempty"`
-	EncryptedSecret []byte `protobuf:"bytes,4,opt,name=encryptedSecret,proto3" json:"encryptedSecret,omitempty"`
-}
-
-func (x *MakeCredentialResponse) Reset() {
-	*x = MakeCredentialResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[3]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *MakeCredentialResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MakeCredentialResponse) ProtoMessage() {}
-
-func (x *MakeCredentialResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[3]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use MakeCredentialResponse.ProtoReflect.Descriptor instead.
-func (*MakeCredentialResponse) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *MakeCredentialResponse) GetUid() string {
-	if x != nil {
-		return x.Uid
-	}
-	return ""
-}
-
-func (x *MakeCredentialResponse) GetPcr() int32 {
-	if x != nil {
-		return x.Pcr
-	}
-	return 0
-}
-
-func (x *MakeCredentialResponse) GetCredBlob() []byte {
-	if x != nil {
-		return x.CredBlob
-	}
-	return nil
-}
-
-func (x *MakeCredentialResponse) GetEncryptedSecret() []byte {
-	if x != nil {
-		return x.EncryptedSecret
-	}
-	return nil
-}
-
-type ActivateCredentialRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Uid         string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	Secret      string `protobuf:"bytes,2,opt,name=secret,proto3" json:"secret,omitempty"`
-	Attestation []byte `protobuf:"bytes,3,opt,name=attestation,proto3" json:"attestation,omitempty"`
-	Signature   []byte `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty"`
-}
-
-func (x *ActivateCredentialRequest) Reset() {
-	*x = ActivateCredentialRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[4]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ActivateCredentialRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ActivateCredentialRequest) ProtoMessage() {}
-
-func (x *ActivateCredentialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[4]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ActivateCredentialRequest.ProtoReflect.Descriptor instead.
-func (*ActivateCredentialRequest) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *ActivateCredentialRequest) GetUid() string {
-	if x != nil {
-		return x.Uid
-	}
-	return ""
-}
-
-func (x *ActivateCredentialRequest) GetSecret() string {
-	if x != nil {
-		return x.Secret
-	}
-	return ""
-}
-
-func (x *ActivateCredentialRequest) GetAttestation() []byte {
-	if x != nil {
-		return x.Attestation
-	}
-	return nil
-}
-
-func (x *ActivateCredentialRequest) GetSignature() []byte {
-	if x != nil {
-		return x.Signature
-	}
-	return nil
-}
-
-type ActivateCredentialResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Uid      string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	Verified bool   `protobuf:"varint,2,opt,name=verified,proto3" json:"verified,omitempty"`
-}
-
-func (x *ActivateCredentialResponse) Reset() {
-	*x = ActivateCredentialResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[5]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ActivateCredentialResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ActivateCredentialResponse) ProtoMessage() {}
-
-func (x *ActivateCredentialResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[5]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ActivateCredentialResponse.ProtoReflect.Descriptor instead.
-func (*ActivateCredentialResponse) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *ActivateCredentialResponse) GetUid() string {
-	if x != nil {
-		return x.Uid
-	}
-	return ""
-}
-
-func (x *ActivateCredentialResponse) GetVerified() bool {
-	if x != nil {
-		return x.Verified
-	}
-	return false
-}
-
-type OfferQuoteRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Uid string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-}
-
-func (x *OfferQuoteRequest) Reset() {
-	*x = OfferQuoteRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[6]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *OfferQuoteRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*OfferQuoteRequest) ProtoMessage() {}
-
-func (x *OfferQuoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[6]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use OfferQuoteRequest.ProtoReflect.Descriptor instead.
-func (*OfferQuoteRequest) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *OfferQuoteRequest) GetUid() string {
-	if x != nil {
-		return x.Uid
-	}
-	return ""
-}
-
-type OfferQuoteResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Uid   string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	Pcr   int32  `protobuf:"varint,2,opt,name=pcr,proto3" json:"pcr,omitempty"`
-	Nonce string `protobuf:"bytes,3,opt,name=nonce,proto3" json:"nonce,omitempty"`
-}
-
-func (x *OfferQuoteResponse) Reset() {
-	*x = OfferQuoteResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[7]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *OfferQuoteResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*OfferQuoteResponse) ProtoMessage() {}
-
-func (x *OfferQuoteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[7]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use OfferQuoteResponse.ProtoReflect.Descriptor instead.
-func (*OfferQuoteResponse) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *OfferQuoteResponse) GetUid() string {
-	if x != nil {
-		return x.Uid
-	}
-	return ""
-}
-
-func (x *OfferQuoteResponse) GetPcr() int32 {
-	if x != nil {
-		return x.Pcr
-	}
-	return 0
-}
-
-func (x *OfferQuoteResponse) GetNonce() string {
-	if x != nil {
-		return x.Nonce
-	}
-	return ""
-}
-
-type ProvideQuoteRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Uid         string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	Attestation []byte `protobuf:"bytes,2,opt,name=attestation,proto3" json:"attestation,omitempty"`
-	Signature   []byte `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
-}
-
-func (x *ProvideQuoteRequest) Reset() {
-	*x = ProvideQuoteRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[8]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ProvideQuoteRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProvideQuoteRequest) ProtoMessage() {}
-
-func (x *ProvideQuoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[8]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ProvideQuoteRequest.ProtoReflect.Descriptor instead.
-func (*ProvideQuoteRequest) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *ProvideQuoteRequest) GetUid() string {
-	if x != nil {
-		return x.Uid
-	}
-	return ""
-}
-
-func (x *ProvideQuoteRequest) GetAttestation() []byte {
-	if x != nil {
-		return x.Attestation
-	}
-	return nil
-}
-
-func (x *ProvideQuoteRequest) GetSignature() []byte {
-	if x != nil {
-		return x.Signature
-	}
-	return nil
-}
-
-type ProvideQuoteResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Uid      string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	Verified bool   `protobuf:"varint,2,opt,name=verified,proto3" json:"verified,omitempty"`
-}
-
-func (x *ProvideQuoteResponse) Reset() {
-	*x = ProvideQuoteResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[9]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ProvideQuoteResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProvideQuoteResponse) ProtoMessage() {}
-
-func (x *ProvideQuoteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[9]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ProvideQuoteResponse.ProtoReflect.Descriptor instead.
-func (*ProvideQuoteResponse) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *ProvideQuoteResponse) GetUid() string {
-	if x != nil {
-		return x.Uid
-	}
-	return ""
-}
-
-func (x *ProvideQuoteResponse) GetVerified() bool {
-	if x != nil {
-		return x.Verified
-	}
-	return false
-}
-
-type ProvideSigningKeyRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Uid         string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	Signingkey  []byte `protobuf:"bytes,2,opt,name=signingkey,proto3" json:"signingkey,omitempty"`
-	Attestation []byte `protobuf:"bytes,3,opt,name=attestation,proto3" json:"attestation,omitempty"`
-	Signature   []byte `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty"`
-}
-
-func (x *ProvideSigningKeyRequest) Reset() {
-	*x = ProvideSigningKeyRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[10]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ProvideSigningKeyRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProvideSigningKeyRequest) ProtoMessage() {}
-
-func (x *ProvideSigningKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[10]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ProvideSigningKeyRequest.ProtoReflect.Descriptor instead.
-func (*ProvideSigningKeyRequest) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *ProvideSigningKeyRequest) GetUid() string {
-	if x != nil {
-		return x.Uid
-	}
-	return ""
-}
-
-func (x *ProvideSigningKeyRequest) GetSigningkey() []byte {
-	if x != nil {
-		return x.Signingkey
-	}
-	return nil
-}
-
-func (x *ProvideSigningKeyRequest) GetAttestation() []byte {
-	if x != nil {
-		return x.Attestation
-	}
-	return nil
-}
-
-func (x *ProvideSigningKeyRequest) GetSignature() []byte {
-	if x != nil {
-		return x.Signature
-	}
-	return nil
-}
-
-type ProvideSigningKeyResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Uid      string `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`
-	Verified bool   `protobuf:"varint,2,opt,name=verified,proto3" json:"verified,omitempty"`
-}
-
-func (x *ProvideSigningKeyResponse) Reset() {
-	*x = ProvideSigningKeyResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_tokenservice_proto_msgTypes[11]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ProvideSigningKeyResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProvideSigningKeyResponse) ProtoMessage() {}
-
-func (x *ProvideSigningKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tokenservice_proto_msgTypes[11]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ProvideSigningKeyResponse.ProtoReflect.Descriptor instead.
-func (*ProvideSigningKeyResponse) Descriptor() ([]byte, []int) {
-	return file_tokenservice_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *ProvideSigningKeyResponse) GetUid() string {
-	if x != nil {
-		return x.Uid
-	}
-	return ""
-}
-
-func (x *ProvideSigningKeyResponse) GetVerified() bool {
-	if x != nil {
-		return x.Verified
-	}
-	return false
 }
 
 var File_tokenservice_proto protoreflect.FileDescriptor
@@ -818,123 +219,27 @@ var file_tokenservice_proto_rawDesc = []byte{
 	0x73, 0x74, 0x12, 0x1c, 0x0a, 0x09, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x64, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x64,
 	0x12, 0x1c, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x49, 0x44, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x49, 0x44, 0x22, 0xf3,
-	0x01, 0x0a, 0x0d, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x12, 0x1e, 0x0a, 0x0a, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x49, 0x44, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x49, 0x44,
-	0x12, 0x22, 0x0a, 0x0c, 0x69, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x54, 0x6f,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x69, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x54, 0x6f, 0x12, 0x22, 0x0a, 0x0c, 0x73, 0x65, 0x61, 0x6c, 0x65, 0x64, 0x52, 0x53,
-	0x41, 0x4b, 0x65, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x0c, 0x73, 0x65, 0x61, 0x6c,
-	0x65, 0x64, 0x52, 0x53, 0x41, 0x4b, 0x65, 0x79, 0x12, 0x22, 0x0a, 0x0c, 0x73, 0x65, 0x61, 0x6c,
-	0x65, 0x64, 0x41, 0x45, 0x53, 0x4b, 0x65, 0x79, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x0c,
-	0x73, 0x65, 0x61, 0x6c, 0x65, 0x64, 0x41, 0x45, 0x53, 0x4b, 0x65, 0x79, 0x12, 0x16, 0x0a, 0x06,
-	0x72, 0x61, 0x77, 0x4b, 0x65, 0x79, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x72, 0x61,
-	0x77, 0x4b, 0x65, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x70, 0x63, 0x72, 0x18, 0x06, 0x20, 0x01, 0x28,
-	0x03, 0x52, 0x03, 0x70, 0x63, 0x72, 0x12, 0x2c, 0x0a, 0x11, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72,
-	0x63, 0x65, 0x52, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x07, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x11, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x52, 0x65, 0x66, 0x65, 0x72,
-	0x65, 0x6e, 0x63, 0x65, 0x22, 0x8b, 0x01, 0x0a, 0x15, 0x4d, 0x61, 0x6b, 0x65, 0x43, 0x72, 0x65,
-	0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x10,
-	0x0a, 0x03, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x69, 0x64,
-	0x12, 0x16, 0x0a, 0x06, 0x61, 0x6b, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x06, 0x61, 0x6b, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x6b, 0x50, 0x75,
-	0x62, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x65, 0x6b, 0x50, 0x75, 0x62, 0x12, 0x14,
-	0x0a, 0x05, 0x61, 0x6b, 0x50, 0x75, 0x62, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x61,
-	0x6b, 0x50, 0x75, 0x62, 0x12, 0x1c, 0x0a, 0x09, 0x61, 0x6b, 0x50, 0x75, 0x62, 0x43, 0x65, 0x72,
-	0x74, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x61, 0x6b, 0x50, 0x75, 0x62, 0x43, 0x65,
-	0x72, 0x74, 0x22, 0x82, 0x01, 0x0a, 0x16, 0x4d, 0x61, 0x6b, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65,
-	0x6e, 0x74, 0x69, 0x61, 0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x10, 0x0a,
-	0x03, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x69, 0x64, 0x12,
-	0x10, 0x0a, 0x03, 0x70, 0x63, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x03, 0x70, 0x63,
-	0x72, 0x12, 0x1a, 0x0a, 0x08, 0x63, 0x72, 0x65, 0x64, 0x42, 0x6c, 0x6f, 0x62, 0x18, 0x03, 0x20,
-	0x01, 0x28, 0x0c, 0x52, 0x08, 0x63, 0x72, 0x65, 0x64, 0x42, 0x6c, 0x6f, 0x62, 0x12, 0x28, 0x0a,
-	0x0f, 0x65, 0x6e, 0x63, 0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74,
-	0x18, 0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x0f, 0x65, 0x6e, 0x63, 0x72, 0x79, 0x70, 0x74, 0x65,
-	0x64, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x22, 0x85, 0x01, 0x0a, 0x19, 0x41, 0x63, 0x74, 0x69,
-	0x76, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x03, 0x75, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x65, 0x63, 0x72, 0x65,
-	0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x12,
-	0x20, 0x0a, 0x0b, 0x61, 0x74, 0x74, 0x65, 0x73, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x03,
-	0x20, 0x01, 0x28, 0x0c, 0x52, 0x0b, 0x61, 0x74, 0x74, 0x65, 0x73, 0x74, 0x61, 0x74, 0x69, 0x6f,
-	0x6e, 0x12, 0x1c, 0x0a, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18, 0x04,
-	0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x22,
-	0x4a, 0x0a, 0x1a, 0x41, 0x63, 0x74, 0x69, 0x76, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65,
-	0x6e, 0x74, 0x69, 0x61, 0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x10, 0x0a,
-	0x03, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x69, 0x64, 0x12,
-	0x1a, 0x0a, 0x08, 0x76, 0x65, 0x72, 0x69, 0x66, 0x69, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x08, 0x52, 0x08, 0x76, 0x65, 0x72, 0x69, 0x66, 0x69, 0x65, 0x64, 0x22, 0x25, 0x0a, 0x11, 0x4f,
-	0x66, 0x66, 0x65, 0x72, 0x51, 0x75, 0x6f, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x12, 0x10, 0x0a, 0x03, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75,
-	0x69, 0x64, 0x22, 0x4e, 0x0a, 0x12, 0x4f, 0x66, 0x66, 0x65, 0x72, 0x51, 0x75, 0x6f, 0x74, 0x65,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x69, 0x64, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x69, 0x64, 0x12, 0x10, 0x0a, 0x03, 0x70, 0x63,
-	0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x03, 0x70, 0x63, 0x72, 0x12, 0x14, 0x0a, 0x05,
-	0x6e, 0x6f, 0x6e, 0x63, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x6e, 0x6f, 0x6e,
-	0x63, 0x65, 0x22, 0x67, 0x0a, 0x13, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x51, 0x75, 0x6f,
-	0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x69, 0x64,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x69, 0x64, 0x12, 0x20, 0x0a, 0x0b, 0x61,
-	0x74, 0x74, 0x65, 0x73, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c,
-	0x52, 0x0b, 0x61, 0x74, 0x74, 0x65, 0x73, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1c, 0x0a,
-	0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c,
-	0x52, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x22, 0x44, 0x0a, 0x14, 0x50,
-	0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x51, 0x75, 0x6f, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x03, 0x75, 0x69, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x76, 0x65, 0x72, 0x69, 0x66, 0x69, 0x65,
-	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x76, 0x65, 0x72, 0x69, 0x66, 0x69, 0x65,
-	0x64, 0x22, 0x8c, 0x01, 0x0a, 0x18, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x53, 0x69, 0x67,
-	0x6e, 0x69, 0x6e, 0x67, 0x4b, 0x65, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x10,
-	0x0a, 0x03, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x69, 0x64,
-	0x12, 0x1e, 0x0a, 0x0a, 0x73, 0x69, 0x67, 0x6e, 0x69, 0x6e, 0x67, 0x6b, 0x65, 0x79, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x0c, 0x52, 0x0a, 0x73, 0x69, 0x67, 0x6e, 0x69, 0x6e, 0x67, 0x6b, 0x65, 0x79,
-	0x12, 0x20, 0x0a, 0x0b, 0x61, 0x74, 0x74, 0x65, 0x73, 0x74, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18,
-	0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x0b, 0x61, 0x74, 0x74, 0x65, 0x73, 0x74, 0x61, 0x74, 0x69,
-	0x6f, 0x6e, 0x12, 0x1c, 0x0a, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18,
-	0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65,
-	0x22, 0x49, 0x0a, 0x19, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x53, 0x69, 0x67, 0x6e, 0x69,
-	0x6e, 0x67, 0x4b, 0x65, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x10, 0x0a,
-	0x03, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x69, 0x64, 0x12,
-	0x1a, 0x0a, 0x08, 0x76, 0x65, 0x72, 0x69, 0x66, 0x69, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x08, 0x52, 0x08, 0x76, 0x65, 0x72, 0x69, 0x66, 0x69, 0x65, 0x64, 0x32, 0x55, 0x0a, 0x0c, 0x54,
-	0x6f, 0x6b, 0x65, 0x6e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x45, 0x0a, 0x08, 0x47,
-	0x65, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x1a, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73,
-	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x22, 0x00, 0x32, 0xe8, 0x03, 0x0a, 0x08, 0x56, 0x65, 0x72, 0x69, 0x66, 0x69, 0x65, 0x72, 0x12,
-	0x5d, 0x0a, 0x0e, 0x4d, 0x61, 0x6b, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61,
-	0x6c, 0x12, 0x23, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
-	0x2e, 0x4d, 0x61, 0x6b, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x24, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65,
-	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x4d, 0x61, 0x6b, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e,
-	0x74, 0x69, 0x61, 0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x69,
-	0x0a, 0x12, 0x41, 0x63, 0x74, 0x69, 0x76, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e,
-	0x74, 0x69, 0x61, 0x6c, 0x12, 0x27, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76,
-	0x69, 0x63, 0x65, 0x2e, 0x41, 0x63, 0x74, 0x69, 0x76, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64,
-	0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x28, 0x2e,
-	0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x41, 0x63, 0x74,
-	0x69, 0x76, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x51, 0x0a, 0x0a, 0x4f, 0x66, 0x66,
-	0x65, 0x72, 0x51, 0x75, 0x6f, 0x74, 0x65, 0x12, 0x1f, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73,
-	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x4f, 0x66, 0x66, 0x65, 0x72, 0x51, 0x75, 0x6f, 0x74,
-	0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x20, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e,
-	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x4f, 0x66, 0x66, 0x65, 0x72, 0x51, 0x75, 0x6f,
-	0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x57, 0x0a, 0x0c,
-	0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x51, 0x75, 0x6f, 0x74, 0x65, 0x12, 0x21, 0x2e, 0x74,
-	0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x50, 0x72, 0x6f, 0x76,
-	0x69, 0x64, 0x65, 0x51, 0x75, 0x6f, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
-	0x22, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x50,
-	0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x51, 0x75, 0x6f, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x66, 0x0a, 0x11, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65,
-	0x53, 0x69, 0x67, 0x6e, 0x69, 0x6e, 0x67, 0x4b, 0x65, 0x79, 0x12, 0x26, 0x2e, 0x74, 0x6f, 0x6b,
-	0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64,
-	0x65, 0x53, 0x69, 0x67, 0x6e, 0x69, 0x6e, 0x67, 0x4b, 0x65, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x27, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x53, 0x69, 0x67, 0x6e, 0x69, 0x6e, 0x67,
-	0x4b, 0x65, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x0e, 0x5a,
-	0x0c, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x62, 0x06, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x49, 0x44, 0x22, 0x44,
+	0x0a, 0x06, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x12, 0x0a, 0x04,
+	0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65,
+	0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04,
+	0x64, 0x61, 0x74, 0x61, 0x22, 0x83, 0x01, 0x0a, 0x0d, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1e, 0x0a, 0x0a, 0x72, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x72, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x49, 0x44, 0x12, 0x22, 0x0a, 0x0c, 0x69, 0x6e, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x54, 0x6f, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x69, 0x6e,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x54, 0x6f, 0x12, 0x2e, 0x0a, 0x07, 0x73, 0x65,
+	0x63, 0x72, 0x65, 0x74, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x74, 0x6f,
+	0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65,
+	0x74, 0x52, 0x07, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x32, 0x55, 0x0a, 0x0c, 0x54, 0x6f,
+	0x6b, 0x65, 0x6e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x45, 0x0a, 0x08, 0x47, 0x65,
+	0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x1a, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x2e, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
+	0x00, 0x42, 0x0e, 0x5a, 0x0c, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -949,39 +254,21 @@ func file_tokenservice_proto_rawDescGZIP() []byte {
 	return file_tokenservice_proto_rawDescData
 }
 
-var file_tokenservice_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_tokenservice_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_tokenservice_proto_goTypes = []interface{}{
-	(*TokenRequest)(nil),               // 0: tokenservice.TokenRequest
-	(*TokenResponse)(nil),              // 1: tokenservice.TokenResponse
-	(*MakeCredentialRequest)(nil),      // 2: tokenservice.MakeCredentialRequest
-	(*MakeCredentialResponse)(nil),     // 3: tokenservice.MakeCredentialResponse
-	(*ActivateCredentialRequest)(nil),  // 4: tokenservice.ActivateCredentialRequest
-	(*ActivateCredentialResponse)(nil), // 5: tokenservice.ActivateCredentialResponse
-	(*OfferQuoteRequest)(nil),          // 6: tokenservice.OfferQuoteRequest
-	(*OfferQuoteResponse)(nil),         // 7: tokenservice.OfferQuoteResponse
-	(*ProvideQuoteRequest)(nil),        // 8: tokenservice.ProvideQuoteRequest
-	(*ProvideQuoteResponse)(nil),       // 9: tokenservice.ProvideQuoteResponse
-	(*ProvideSigningKeyRequest)(nil),   // 10: tokenservice.ProvideSigningKeyRequest
-	(*ProvideSigningKeyResponse)(nil),  // 11: tokenservice.ProvideSigningKeyResponse
+	(*TokenRequest)(nil),  // 0: tokenservice.TokenRequest
+	(*Secret)(nil),        // 1: tokenservice.Secret
+	(*TokenResponse)(nil), // 2: tokenservice.TokenResponse
 }
 var file_tokenservice_proto_depIdxs = []int32{
-	0,  // 0: tokenservice.TokenService.GetToken:input_type -> tokenservice.TokenRequest
-	2,  // 1: tokenservice.Verifier.MakeCredential:input_type -> tokenservice.MakeCredentialRequest
-	4,  // 2: tokenservice.Verifier.ActivateCredential:input_type -> tokenservice.ActivateCredentialRequest
-	6,  // 3: tokenservice.Verifier.OfferQuote:input_type -> tokenservice.OfferQuoteRequest
-	8,  // 4: tokenservice.Verifier.ProvideQuote:input_type -> tokenservice.ProvideQuoteRequest
-	10, // 5: tokenservice.Verifier.ProvideSigningKey:input_type -> tokenservice.ProvideSigningKeyRequest
-	1,  // 6: tokenservice.TokenService.GetToken:output_type -> tokenservice.TokenResponse
-	3,  // 7: tokenservice.Verifier.MakeCredential:output_type -> tokenservice.MakeCredentialResponse
-	5,  // 8: tokenservice.Verifier.ActivateCredential:output_type -> tokenservice.ActivateCredentialResponse
-	7,  // 9: tokenservice.Verifier.OfferQuote:output_type -> tokenservice.OfferQuoteResponse
-	9,  // 10: tokenservice.Verifier.ProvideQuote:output_type -> tokenservice.ProvideQuoteResponse
-	11, // 11: tokenservice.Verifier.ProvideSigningKey:output_type -> tokenservice.ProvideSigningKeyResponse
-	6,  // [6:12] is the sub-list for method output_type
-	0,  // [0:6] is the sub-list for method input_type
-	0,  // [0:0] is the sub-list for extension type_name
-	0,  // [0:0] is the sub-list for extension extendee
-	0,  // [0:0] is the sub-list for field type_name
+	1, // 0: tokenservice.TokenResponse.secrets:type_name -> tokenservice.Secret
+	0, // 1: tokenservice.TokenService.GetToken:input_type -> tokenservice.TokenRequest
+	2, // 2: tokenservice.TokenService.GetToken:output_type -> tokenservice.TokenResponse
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_tokenservice_proto_init() }
@@ -1003,7 +290,7 @@ func file_tokenservice_proto_init() {
 			}
 		}
 		file_tokenservice_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TokenResponse); i {
+			switch v := v.(*Secret); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1015,115 +302,7 @@ func file_tokenservice_proto_init() {
 			}
 		}
 		file_tokenservice_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MakeCredentialRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_tokenservice_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MakeCredentialResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_tokenservice_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ActivateCredentialRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_tokenservice_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ActivateCredentialResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_tokenservice_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*OfferQuoteRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_tokenservice_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*OfferQuoteResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_tokenservice_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ProvideQuoteRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_tokenservice_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ProvideQuoteResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_tokenservice_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ProvideSigningKeyRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_tokenservice_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ProvideSigningKeyResponse); i {
+			switch v := v.(*TokenResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1141,9 +320,9 @@ func file_tokenservice_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_tokenservice_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   3,
 			NumExtensions: 0,
-			NumServices:   2,
+			NumServices:   1,
 		},
 		GoTypes:           file_tokenservice_proto_goTypes,
 		DependencyIndexes: file_tokenservice_proto_depIdxs,
@@ -1229,222 +408,6 @@ var _TokenService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetToken",
 			Handler:    _TokenService_GetToken_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "tokenservice.proto",
-}
-
-// VerifierClient is the client API for Verifier service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type VerifierClient interface {
-	MakeCredential(ctx context.Context, in *MakeCredentialRequest, opts ...grpc.CallOption) (*MakeCredentialResponse, error)
-	ActivateCredential(ctx context.Context, in *ActivateCredentialRequest, opts ...grpc.CallOption) (*ActivateCredentialResponse, error)
-	OfferQuote(ctx context.Context, in *OfferQuoteRequest, opts ...grpc.CallOption) (*OfferQuoteResponse, error)
-	ProvideQuote(ctx context.Context, in *ProvideQuoteRequest, opts ...grpc.CallOption) (*ProvideQuoteResponse, error)
-	ProvideSigningKey(ctx context.Context, in *ProvideSigningKeyRequest, opts ...grpc.CallOption) (*ProvideSigningKeyResponse, error)
-}
-
-type verifierClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewVerifierClient(cc grpc.ClientConnInterface) VerifierClient {
-	return &verifierClient{cc}
-}
-
-func (c *verifierClient) MakeCredential(ctx context.Context, in *MakeCredentialRequest, opts ...grpc.CallOption) (*MakeCredentialResponse, error) {
-	out := new(MakeCredentialResponse)
-	err := c.cc.Invoke(ctx, "/tokenservice.Verifier/MakeCredential", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *verifierClient) ActivateCredential(ctx context.Context, in *ActivateCredentialRequest, opts ...grpc.CallOption) (*ActivateCredentialResponse, error) {
-	out := new(ActivateCredentialResponse)
-	err := c.cc.Invoke(ctx, "/tokenservice.Verifier/ActivateCredential", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *verifierClient) OfferQuote(ctx context.Context, in *OfferQuoteRequest, opts ...grpc.CallOption) (*OfferQuoteResponse, error) {
-	out := new(OfferQuoteResponse)
-	err := c.cc.Invoke(ctx, "/tokenservice.Verifier/OfferQuote", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *verifierClient) ProvideQuote(ctx context.Context, in *ProvideQuoteRequest, opts ...grpc.CallOption) (*ProvideQuoteResponse, error) {
-	out := new(ProvideQuoteResponse)
-	err := c.cc.Invoke(ctx, "/tokenservice.Verifier/ProvideQuote", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *verifierClient) ProvideSigningKey(ctx context.Context, in *ProvideSigningKeyRequest, opts ...grpc.CallOption) (*ProvideSigningKeyResponse, error) {
-	out := new(ProvideSigningKeyResponse)
-	err := c.cc.Invoke(ctx, "/tokenservice.Verifier/ProvideSigningKey", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// VerifierServer is the server API for Verifier service.
-type VerifierServer interface {
-	MakeCredential(context.Context, *MakeCredentialRequest) (*MakeCredentialResponse, error)
-	ActivateCredential(context.Context, *ActivateCredentialRequest) (*ActivateCredentialResponse, error)
-	OfferQuote(context.Context, *OfferQuoteRequest) (*OfferQuoteResponse, error)
-	ProvideQuote(context.Context, *ProvideQuoteRequest) (*ProvideQuoteResponse, error)
-	ProvideSigningKey(context.Context, *ProvideSigningKeyRequest) (*ProvideSigningKeyResponse, error)
-}
-
-// UnimplementedVerifierServer can be embedded to have forward compatible implementations.
-type UnimplementedVerifierServer struct {
-}
-
-func (*UnimplementedVerifierServer) MakeCredential(context.Context, *MakeCredentialRequest) (*MakeCredentialResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method MakeCredential not implemented")
-}
-func (*UnimplementedVerifierServer) ActivateCredential(context.Context, *ActivateCredentialRequest) (*ActivateCredentialResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ActivateCredential not implemented")
-}
-func (*UnimplementedVerifierServer) OfferQuote(context.Context, *OfferQuoteRequest) (*OfferQuoteResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method OfferQuote not implemented")
-}
-func (*UnimplementedVerifierServer) ProvideQuote(context.Context, *ProvideQuoteRequest) (*ProvideQuoteResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ProvideQuote not implemented")
-}
-func (*UnimplementedVerifierServer) ProvideSigningKey(context.Context, *ProvideSigningKeyRequest) (*ProvideSigningKeyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ProvideSigningKey not implemented")
-}
-
-func RegisterVerifierServer(s *grpc.Server, srv VerifierServer) {
-	s.RegisterService(&_Verifier_serviceDesc, srv)
-}
-
-func _Verifier_MakeCredential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MakeCredentialRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifierServer).MakeCredential(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/tokenservice.Verifier/MakeCredential",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifierServer).MakeCredential(ctx, req.(*MakeCredentialRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Verifier_ActivateCredential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ActivateCredentialRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifierServer).ActivateCredential(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/tokenservice.Verifier/ActivateCredential",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifierServer).ActivateCredential(ctx, req.(*ActivateCredentialRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Verifier_OfferQuote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(OfferQuoteRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifierServer).OfferQuote(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/tokenservice.Verifier/OfferQuote",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifierServer).OfferQuote(ctx, req.(*OfferQuoteRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Verifier_ProvideQuote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ProvideQuoteRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifierServer).ProvideQuote(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/tokenservice.Verifier/ProvideQuote",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifierServer).ProvideQuote(ctx, req.(*ProvideQuoteRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Verifier_ProvideSigningKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ProvideSigningKeyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VerifierServer).ProvideSigningKey(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/tokenservice.Verifier/ProvideSigningKey",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VerifierServer).ProvideSigningKey(ctx, req.(*ProvideSigningKeyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _Verifier_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "tokenservice.Verifier",
-	HandlerType: (*VerifierServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "MakeCredential",
-			Handler:    _Verifier_MakeCredential_Handler,
-		},
-		{
-			MethodName: "ActivateCredential",
-			Handler:    _Verifier_ActivateCredential_Handler,
-		},
-		{
-			MethodName: "OfferQuote",
-			Handler:    _Verifier_OfferQuote_Handler,
-		},
-		{
-			MethodName: "ProvideQuote",
-			Handler:    _Verifier_ProvideQuote_Handler,
-		},
-		{
-			MethodName: "ProvideSigningKey",
-			Handler:    _Verifier_ProvideSigningKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
