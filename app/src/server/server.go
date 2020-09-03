@@ -302,6 +302,18 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 	}
 	glog.V(2).Infof("     Found  VM instanceID %#v\n", strconv.FormatUint(cresp.Id, 10))
 	glog.V(2).Infof("     Found  VM ServiceAccount %#v\n", cresp.ServiceAccounts[0].Email)
+	for _, ni := range cresp.NetworkInterfaces {
+		for _, ac := range ni.AccessConfigs {
+			if ac.Type == "ONE_TO_ONE_NAT" {
+				glog.V(2).Infof("     Found Registered External IP Address: %s", ac.NatIP)
+				// optionally cross check with ac.NatIP,c.PeerAddress,peerIPPort  (they should all be the same if the tokenclient doesn't use a NAT gateway..)
+				//  ac.NATIP:  this is the public ip of the tokenclient as viewed by the GCE API
+				//  c.PeerAddress:  this is the public ip of the tokenclient that we provisioned
+				//  peerIP:  this is the ip address as viewed by the socket connection
+			}
+		}
+	}
+
 	var initScriptHash string
 	for _, m := range cresp.Metadata.Items {
 		if m.Key == "user-data" {
