@@ -342,6 +342,12 @@ gcloud compute instances add-iam-policy-binding  tokenclient 	 \
 gcloud compute instances add-iam-policy-binding  tokenclient 	 \
    --member=user:$ts_provisioner_email --role roles/compute.viewer   --project $tc_project_id 
 
+gcloud compute disks add-iam-policy-binding  tokenclient 	 \
+   --member=serviceAccount:$ts_service_account_email  --role roles/compute.viewer   --project $tc_project_id 
+
+gcloud compute disks add-iam-policy-binding  tokenclient 	 \
+   --member=user:$ts_provisioner_email --role roles/compute.viewer   --project $tc_project_id 
+
 
 export tc_instanceID=`gcloud compute instances describe tokenclient --format='value(id)' --project $tc_project_id`
 

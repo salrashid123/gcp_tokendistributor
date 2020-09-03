@@ -14,6 +14,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -206,6 +207,29 @@ func main() {
 			}
 		}
 	}
+
+	for _, d := range cresp.Disks {
+		log.Printf("     Found  VM Disk %#v\n", d)
+		if d.Boot {
+			log.Printf("     Found  VM Boot Disk Source %#v\n", d.Source)
+			u, err := url.Parse(d.Source)
+			if err != nil {
+				log.Fatal(err)
+			}
+			// yeah, i don't know of a better way to parse a GCP ResourceURL...
+			// compute/v1/projects/mineral-minutia-820/zones/us-central1-a/disks/tpm-a
+			vals := strings.Split(u.Path, "/")
+			if len(vals) == 9 {
+				dresp, err := computeService.Disks.Get(vals[4], vals[6], vals[8]).Do()
+				if err != nil {
+					log.Fatalf("ERROR:  Could not find Disk  %s", err)
+				}
+				log.Printf("     Found Disk Image %s", dresp.SourceImage)
+			}
+
+		}
+	}
+
 	mresp, err := computeService.Instances.GetShieldedInstanceIdentity(*clientProjectId, *clientVMZone, *clientVMId).Do()
 	if err != nil {
 		log.Fatalf("Unable to find  Instance %v", err)

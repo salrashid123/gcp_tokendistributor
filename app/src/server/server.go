@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 
 	"net"
 	"os/signal"
@@ -301,7 +302,6 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("InstanceID not Found using GCE API %v", err))
 	}
 	glog.V(2).Infof("     Found  VM instanceID %#v\n", strconv.FormatUint(cresp.Id, 10))
-	glog.V(2).Infof("     Found  VM ServiceAccount %#v\n", cresp.ServiceAccounts[0].Email)
 	for _, ni := range cresp.NetworkInterfaces {
 		for _, ac := range ni.AccessConfigs {
 			if ac.Type == "ONE_TO_ONE_NAT" {
@@ -311,6 +311,32 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 				//  c.PeerAddress:  this is the public ip of the tokenclient that we provisioned
 				//  peerIP:  this is the ip address as viewed by the socket connection
 			}
+		}
+	}
+
+	for _, sa := range cresp.ServiceAccounts {
+		glog.V(2).Infof("     Found  VM ServiceAccount %#v\n", sa.Email)
+	}
+	for _, d := range cresp.Disks {
+		if d.Boot {
+			glog.V(2).Infof("     Found  VM Boot Disk Source %#v\n", d.Source)
+			u, err := url.Parse(d.Source)
+			if err != nil {
+				glog.Errorf("   -------->  ERROR:  Could not Parse Disk URL [%s] [%s]", d.Source, err)
+				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("ERROR:  Could not find Disk URL [%s] [%s]", d.Source, err))
+			}
+			// yeah, i don't know of a better way to parse a GCP ResourceURL...
+			// compute/v1/projects/mineral-minutia-820/zones/us-central1-a/disks/tpm-a
+			vals := strings.Split(u.Path, "/")
+			if len(vals) == 9 {
+				dresp, err := computeService.Disks.Get(vals[4], vals[6], vals[8]).Do()
+				if err != nil {
+					glog.Errorf("   -------->  ERROR:  Could not find Disk [%s] [%s]", u.Path, err)
+					return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("ERROR:  Could not find Disk [%s] [%s]", u.Path, err))
+				}
+				glog.V(2).Infof("    Found Disk Image %s", dresp.SourceImage)
+			}
+
 		}
 	}
 
@@ -327,18 +353,18 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 		glog.Errorf("   -------->  Error Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash)
 		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash))
 	}
-	/*	// comment to debug without checking GCE metadata
-		if c.InitScriptHash == "" {
-			glog.Errorf("   *********** NOTE: initscript is empty (non-COS VM or never set)...")
-			// optionally just continue here if debugging
-			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script is empty"))
-		}
 
-		if cresp.Fingerprint != c.ImageFingerprint {
-			glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
-			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
-		}
-	*/
+	if c.InitScriptHash == "" {
+		glog.Errorf("   *********** NOTE: initscript is empty (non-COS VM or never set)...")
+		// optionally just continue here if debugging
+		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script is empty"))
+	}
+
+	if cresp.Fingerprint != c.ImageFingerprint {
+		glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
+		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
+	}
+
 	respID, err := uuid.NewUUID()
 	if err != nil {
 		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.Internal, "Unable to create UUID?!")
