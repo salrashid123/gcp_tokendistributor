@@ -17,8 +17,8 @@ require (
 	google.golang.org/genproto v0.0.0-20200608115520-7c474a2e3482
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0 // indirect
-//	tokenservice v0.0.0
+	tokenservice v0.0.0
 
 )
 
-//replace tokenservice => ./src/tokenservice
+replace tokenservice => ./src/tokenservice

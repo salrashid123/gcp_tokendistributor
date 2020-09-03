@@ -213,32 +213,35 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 	var c ServiceEntry
 	dsnap.DataTo(&c)
 
-	if *useMTLS {
-		glog.V(2).Infof("     TLS Client cert Peer IP and SerialNumber")
-		peer, ok := peer.FromContext(ctx)
-		if ok {
+	glog.V(2).Infof("     TLS Client cert Peer IP and SerialNumber")
+	peer, ok := peer.FromContext(ctx)
+	if ok {
+		peerIPPort, _, err := net.SplitHostPort(peer.Addr.String())
+		if err != nil {
+			glog.Errorf("ERROR:  Could not Remote IP %s", instanceID)
+			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Could not Remote IP   %v", err))
+		}
+		if *validatePeerIP && (c.PeerAddress != peerIPPort) {
+			glog.Errorf("ERROR:  Unregistered  Peer address: %s", peer.Addr.String())
+			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Unregistered  Peer address  %v", peer.Addr.String()))
+		} else {
+			glog.V(2).Infof("    Verified PeerIP %s\n", peer.Addr.String())
+		}
+		if *useMTLS {
 			tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
 			v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
 			sn := tlsInfo.State.VerifiedChains[0][0].SerialNumber
-			peerIPPort, _, err := net.SplitHostPort(peer.Addr.String())
-			if err != nil {
-				glog.Errorf("ERROR:  Could not Remote IP %s", instanceID)
-				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Could not Remote IP   %v", err))
-			}
-			if *validatePeerIP && (c.PeerAddress != peerIPPort) {
-				glog.Errorf("ERROR:  Unregistered  Peer address: %s", peer.Addr.String())
-				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Unregistered  Peer address  %v", peer.Addr.String()))
-			}
 			if *validatePeerSN && (sn.String() != c.PeerSerialNumber) {
 				glog.Errorf("ERROR:  Unregistered  Client Certificate SN: %s", sn.String())
 				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Unregistered  Peer address  %v", sn.String()))
 			}
 			glog.V(2).Infof("     Client Peer Address [%v] - Subject[%v] - SerialNumber [%v] Validated\n", peer.Addr.String(), v, sn)
-		} else {
-			glog.Errorf("ERROR:  Could not extract peerInfo from TLS")
-			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, "ERROR:  Could not extract peerInfo from TLS")
 		}
+	} else {
+		glog.Errorf("ERROR:  Could not extract peerInfo from TLS")
+		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, "ERROR:  Could not extract peerInfo from TLS")
 	}
+
 	glog.V(2).Infof("     Looking up InstanceID using GCE APIs for instanceID %s", instanceID)
 
 	computeService, err := compute.NewService(ctx)
@@ -254,6 +257,19 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 	}
 	glog.V(2).Infof("     Found  VM instanceID %#v\n", strconv.FormatUint(cresp.Id, 10))
 	glog.V(2).Infof("     Found  VM ServiceAccount %#v\n", cresp.ServiceAccounts[0].Email)
+
+	for _, ni := range cresp.NetworkInterfaces {
+		for _, ac := range ni.AccessConfigs {
+			if ac.Type == "ONE_TO_ONE_NAT" {
+				glog.V(2).Infof("     Found Registered External IP Address: %s", ac.NatIP)
+				// optionally cross check with ac.NatIP,c.PeerAddress,peerIPPort  (they should all be the same if the tokenclient doesn't use a NAT gateway..)
+				//  ac.NATIP:  this is the public ip of the tokenclient as viewed by the GCE API
+				//  c.PeerAddress:  this is the public ip of the tokenclient that we provisioned
+				//  peerIP:  this is the ip address as viewed by the socket connection
+			}
+		}
+	}
+
 	var initScriptHash string
 	for _, m := range cresp.Metadata.Items {
 		if m.Key == "user-data" {

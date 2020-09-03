@@ -24,9 +24,6 @@ RUN export GOBIN=/app/bin && go install src/client/client.go
 
 
 FROM gcr.io/distroless/base
-# COPY --from=build /app/tokenservice.crt /
-# COPY --from=build /app/tokenservice.key /
-# COPY --from=build /app/tls-ca.crt /
 COPY --from=build /app/bin /
 
 ENTRYPOINT ["/client"]
