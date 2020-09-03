@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -79,7 +80,6 @@ func main() {
 
 	// TODO check name, service account
 	log.Printf("Found  VM instanceID %#v\n", strconv.FormatUint(cresp.Id, 10))
-	log.Printf("Found s VM ServiceAccount %#v\n", cresp.ServiceAccounts[0].Email)
 	var initScriptHash string
 	for _, m := range cresp.Metadata.Items {
 		if m.Key == "user-data" {
@@ -96,13 +96,29 @@ func main() {
 	// If a NAT is used, you need to specify that as the --peerAddress= value instead
 
 	log.Printf("     Found  VM initScriptHash: [%s]\n", initScriptHash)
-	log.Printf("     Found  VM instanceID %#v\n", strconv.FormatUint(cresp.Id, 10))
 	log.Printf("     Found  VM CreationTimestamp %#v\n", cresp.CreationTimestamp)
 	log.Printf("     Found  VM Fingerprint %#v\n", cresp.Fingerprint)
 	log.Printf("     Found  VM CpuPlatform %#v\n", cresp.CpuPlatform)
 
 	for _, d := range cresp.Disks {
-		log.Printf("     Found  VM Disk %#v\n", d)
+		if d.Boot {
+			log.Printf("     Found  VM Boot Disk Source %#v\n", d.Source)
+			u, err := url.Parse(d.Source)
+			if err != nil {
+				log.Fatal(err)
+			}
+			// yeah, i don't know of a better way to parse a GCP ResourceURL...
+			// compute/v1/projects/mineral-minutia-820/zones/us-central1-a/disks/tpm-a
+			vals := strings.Split(u.Path, "/")
+			if len(vals) == 9 {
+				dresp, err := computeService.Disks.Get(vals[4], vals[6], vals[8]).Do()
+				if err != nil {
+					log.Fatalf("ERROR:  Could not find Disk  %s", err)
+				}
+				log.Printf("     Found Disk Image %s", dresp.SourceImage)
+			}
+
+		}
 	}
 	for _, sa := range cresp.ServiceAccounts {
 		log.Printf("     Found  VM ServiceAccount %#v\n", sa.Email)
