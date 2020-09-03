@@ -66,7 +66,7 @@ func main() {
 
 	if *useSecrets {
 
-		glog.V(10).Infof("     Getting mTLS certs from Secrets Manager")
+		glog.V(10).Infof("     Getting certs from Secrets Manager")
 
 		ctx := context.Background()
 
@@ -90,6 +90,7 @@ func main() {
 		}
 
 		if *useMTLS {
+			glog.V(10).Infof("     Loading mTLS certs from Secrets")
 			tlsCert_name := fmt.Sprintf("%s/versions/latest", *tlsClientCert)
 			tlsCert_req := &secretmanagerpb.AccessSecretVersionRequest{
 				Name: tlsCert_name,
@@ -122,6 +123,7 @@ func main() {
 		var err error
 
 		if *useMTLS {
+			glog.V(10).Infof("     Loading mTLS certs from File")
 			clientCerts, err = tls.LoadX509KeyPair(
 				*tlsClientCert,
 				*tlsClientKey,
@@ -145,6 +147,7 @@ func main() {
 			RootCAs:      rootCAs,
 		}
 	} else {
+		glog.V(10).Infof("     Enabling TLS")
 		tlsConfig = tls.Config{
 			ServerName: *sniServerName,
 			RootCAs:    rootCAs,

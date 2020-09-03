@@ -242,7 +242,7 @@ Bob needs to set some additional environment variables that were *provided by Al
 
 * `TF_VAR_ts_service_account`:  this is the service account Alice is using for the TokenServer (`tokenserver@ts-039e6b6a.iam.gserviceaccount.com`)
 * `TF_VAR_ts_address`: this is the IP address of the TokenServer (`34.72.145.220`)
-* `TF_VAR_ts_provisioner`: this is Alice's email address that Bob will authorize to read the TokenClients metadata values (`alice@esodemoapp2.com`)
+* `TF_VAR_ts_provisioner`: this is Alice's email address that Bob will authorize to read the TokenClients metadata values (eg `export TF_VAR_ts_provisioner=alice@esodemoapp2.com`)
 
 Make sure the env vars are set (`TF_VAR_project_id` would be the the TokenClient (Bob) project)
 

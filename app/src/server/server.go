@@ -404,7 +404,7 @@ func main() {
 	sopts := []grpc.ServerOption{grpc.MaxConcurrentStreams(10)}
 
 	if *useSecrets {
-		glog.V(10).Infof("     Getting mTLS certs from Secrets Manager")
+		glog.V(10).Infof("     Getting certs from Secrets Manager")
 
 		ctx := context.Background()
 
@@ -478,6 +478,7 @@ func main() {
 			ClientCAs:    caCertPool,
 		}
 	} else {
+		glog.V(10).Infof("     Enable TLS...")
 		tlsConfig = tls.Config{
 			Certificates: []tls.Certificate{certificate},
 		}
