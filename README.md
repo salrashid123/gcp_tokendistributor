@@ -192,7 +192,8 @@ The terraform script `alice/deploy/main.tf` uses the default options described b
 | Option | Description |
 |:------------|-------------|
 | **`-grpcport`** | host:port for the grpcServer(s) listener (default `:50051`|
-| **`-useALTS`** | Use ALTS instead of mTLS. |
+| **`-useALTS`** | Use ALTS. |
+| **`-useMTLS`** | Use mTLS instead of mTLS (default just TLS). |
 | **`-useSecrets`** | Use GCP Secret Manager for mTLS Certificates  |
 | **`-tlsCert`** | TLS Certificate file for mTLS; specify either file or Secret Manager Path (valid if `useALTS` is not set) |
 | **`-tlsKey`** | TLS CertiKeyficate file for mTLS; specify either file or Secret Manager Path (valid if `useALTS` is not set) |
@@ -289,7 +290,8 @@ The terraform script `bob/deploy/main.tf` uses the default options described bel
 | Option | Description |
 |:------------|-------------|
 | **`-address`** | host:port for the TokenServer |
-| **`-useALTS`** | Use ALTS instead of mTLS. |
+| **`-useALTS`** | Use ALTS instead. |
+| **`-useMTLS`** | Use mTLS instead of mTLS (default just TLS). |
 | **`-tsAudience`** | Audience value to assign when generating and `id_token`.  Must match what the TokenServer expects (default: `"https://tokenservice"`) |
 | **`-useSecrets`** | Use GCP Secret Manager for mTLS Certificates  |
 | **`-tlsClientCert`** | TLS Certificate file for mTLS; specify either file or Secret Manager Path (valid if `useALTS` is not set) |
@@ -375,10 +377,6 @@ echo $TF_VAR_ts_project_id
 
 $ cd app/
 
-## To generate an RSA and AES Key automatically (eg, just to test the system):
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id 
-
-## To use an existing AES and RSA or RawKey file
 
 python -c 'import base64; import os;\
            print(base64.encodestring(os.urandom(32)))'  > /tmp/sym_keyfile.key

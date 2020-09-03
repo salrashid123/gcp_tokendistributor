@@ -191,9 +191,6 @@ func main() {
 	log.Printf("     Found  VM Fingerprint %#v\n", cresp.Fingerprint)
 	log.Printf("     Found  VM CpuPlatform %#v\n", cresp.CpuPlatform)
 
-	for _, d := range cresp.Disks {
-		log.Printf("     Found  VM Disk %#v\n", d)
-	}
 	for _, sa := range cresp.ServiceAccounts {
 		log.Printf("     Found  VM ServiceAccount %#v\n", sa.Email)
 	}
@@ -209,7 +206,6 @@ func main() {
 	}
 
 	for _, d := range cresp.Disks {
-		log.Printf("     Found  VM Disk %#v\n", d)
 		if d.Boot {
 			log.Printf("     Found  VM Boot Disk Source %#v\n", d.Source)
 			u, err := url.Parse(d.Source)

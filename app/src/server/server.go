@@ -109,6 +109,7 @@ var (
 	tsAudience              = flag.String("tsAudience", "", "Audience value for the TokenService")
 	useSecrets              = flag.Bool("useSecrets", false, "Use Google Secrets Manager for TLS Keys")
 	useALTS                 = flag.Bool("useALTS", false, "Use Application Layer Transport Security")
+	useMTLS                 = flag.Bool("useMTLS", false, "Use mTLS")
 	useTPM                  = flag.Bool("useTPM", false, "Use TPM to seal data")
 	validatePeerIP          = flag.Bool("validatePeerIP", false, "Validate each TokenClients origin IP")
 	validatePeerSN          = flag.Bool("validatePeerSN", false, "Validate each TokenClients Certificate Serial Number")
@@ -225,9 +226,9 @@ func authUnaryInterceptor(
 
 		issuedTime := time.Unix(doc.IssuedAt, 0)
 		now := time.Now()
-		if issuedTime.Add(time.Duration(*jwtIssuedAtJitter) * time.Second).Before(now) {
-			glog.Errorf("   IssuedAt Identity document timestamp too old")
-			return nil, grpc.Errorf(codes.Unauthenticated, "IssuedAt Identity document timestamp too old")
+		if now.Sub(issuedTime).Seconds() > float64(*jwtIssuedAtJitter) {
+			glog.Errorf("   IssuedAt Identity document timestamp too old Provided [%d]  Current [%d]: Jitter [%f]", issuedTime.Unix(), now.Unix(), now.Sub(issuedTime).Seconds())
+			return nil, grpc.Errorf(codes.Unauthenticated, "IssuedAt Identity document timestamp too old Provided [%d]  Current [%d]: Jitter [%f]", issuedTime.Unix(), now.Unix(), now.Sub(issuedTime).Seconds())
 		}
 
 		newCtx := context.WithValue(ctx, contextKey("idtoken"), doc)
@@ -266,9 +267,6 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 		glog.V(2).Infof("     TLS Client cert Peer IP and SerialNumber")
 		peer, ok := peer.FromContext(ctx)
 		if ok {
-			tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
-			v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
-			sn := tlsInfo.State.VerifiedChains[0][0].SerialNumber
 			peerIPPort, _, err := net.SplitHostPort(peer.Addr.String())
 			if err != nil {
 				glog.Errorf("ERROR:  Could not Remote IP %s", instanceID)
@@ -277,12 +275,19 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 			if *validatePeerIP && (c.PeerAddress != peerIPPort) {
 				glog.Errorf("ERROR:  Unregistered  Peer address: %s", peer.Addr.String())
 				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Unregistered  Peer address  %v", peer.Addr.String()))
+			} else {
+				glog.V(2).Infof("    Verified PeerIP %s\n", peer.Addr.String())
 			}
-			if *validatePeerSN && (sn.String() != c.PeerSerialNumber) {
-				glog.Errorf("ERROR:  Unregistered  Client Certificate SN: %s", sn.String())
-				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Unregistered  Peer address  %v", sn.String()))
+			if *useMTLS {
+				tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
+				v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
+				sn := tlsInfo.State.VerifiedChains[0][0].SerialNumber
+				if *validatePeerSN && (sn.String() != c.PeerSerialNumber) {
+					glog.Errorf("ERROR:  Unregistered  Client Certificate SN: %s", sn.String())
+					return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Unregistered  Peer address  %v", sn.String()))
+				}
+				glog.V(2).Infof("     Client Peer Address [%v] - Subject[%v] - SerialNumber [%v] Validated\n", peer.Addr.String(), v, sn)
 			}
-			glog.V(2).Infof("     Client Peer Address [%v] - Subject[%v] - SerialNumber [%v] Validated\n", peer.Addr.String(), v, sn)
 		} else {
 			glog.Errorf("ERROR:  Could not extract peerInfo from TLS")
 			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, "ERROR:  Could not extract peerInfo from TLS")
@@ -427,9 +432,9 @@ func main() {
 		altsTC := alts.NewServerCreds(alts.DefaultServerOptions())
 		sopts = append(sopts, grpc.Creds(altsTC))
 	} else {
-		glog.V(2).Infof("     Using mTLS")
+		glog.V(2).Infof("     Acquire SSL certificates")
 		if *useSecrets {
-			glog.V(10).Infof("     Getting mTLS certs from Secrets Manager")
+			glog.V(10).Infof("     Getting certs from Secrets Manager")
 
 			ctx := context.Background()
 
@@ -477,7 +482,7 @@ func main() {
 			}
 
 		} else {
-			glog.V(10).Infof("     Getting mTLS certs from files")
+			glog.V(10).Infof("     Getting certs from files")
 
 			caCert, err = ioutil.ReadFile(*tlsCertChain)
 			if err != nil {
@@ -494,10 +499,18 @@ func main() {
 		caCertPool.AppendCertsFromPEM(caCert)
 
 		var tlsConfig tls.Config
-		tlsConfig = tls.Config{
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			Certificates: []tls.Certificate{certificate},
-			ClientCAs:    caCertPool,
+		if *useMTLS {
+			glog.V(10).Infof("     Enable mTLS...")
+			tlsConfig = tls.Config{
+				ClientAuth:   tls.RequireAndVerifyClientCert,
+				Certificates: []tls.Certificate{certificate},
+				ClientCAs:    caCertPool,
+			}
+		} else {
+			glog.V(10).Infof("     Enable TLS...")
+			tlsConfig = tls.Config{
+				Certificates: []tls.Certificate{certificate},
+			}
 		}
 
 		ce := credentials.NewTLS(&tlsConfig)

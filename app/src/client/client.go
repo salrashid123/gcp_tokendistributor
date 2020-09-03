@@ -60,6 +60,7 @@ var (
 	sniServerName             = flag.String("servername", "tokenservice.esodemoapp2.com", "SNIServer Name assocaited with the server")
 	serviceAccount            = flag.String("serviceAccount", "/home/srashid/gcp_misc/certs/mineral-minutia-820-e9a7c8665867.json", "Path to the service account JSOn file")
 	useALTS                   = flag.Bool("useALTS", false, "Use ALTS")
+	useMTLS                   = flag.Bool("useMTLS", false, "Use mTLS")
 	useTPM                    = flag.Bool("useTPM", false, "Use TPM to unseal data")
 	doAttestation             = flag.Bool("doAttestation", false, "Start offer to Make/Activate Credential flow")
 	exchangeSigningKey        = flag.Bool("exchangeSigningKey", false, "Offer RSA Signing Key (requires --doAttestation)")
@@ -152,13 +153,12 @@ func main() {
 			TargetServiceAccounts: []string{*tokenServerServiceAccount},
 		})
 	} else {
-		glog.V(2).Infof("     Using mTLS")
+		glog.V(2).Infof("     Using TLS")
 		rootCAs := x509.NewCertPool()
 		var clientCerts tls.Certificate
 
 		if *useSecrets {
-
-			glog.V(10).Infof("     Getting mTLS certs from Secrets Manager")
+			glog.V(10).Infof("     Getting TLS certs from Secrets Manager")
 
 			ctx := context.Background()
 
@@ -181,39 +181,46 @@ func main() {
 				glog.Fatalf("ERROR no root CA certs parsed from file ")
 			}
 
-			tlsCert_name := fmt.Sprintf("%s/versions/latest", *tlsClientCert)
-			tlsCert_req := &secretmanagerpb.AccessSecretVersionRequest{
-				Name: tlsCert_name,
-			}
+			if *useMTLS {
+				glog.V(2).Infof("     Using mTLS with useSecrets")
+				tlsCert_name := fmt.Sprintf("%s/versions/latest", *tlsClientCert)
+				tlsCert_req := &secretmanagerpb.AccessSecretVersionRequest{
+					Name: tlsCert_name,
+				}
 
-			tlsCert_result, err := client.AccessSecretVersion(ctx, tlsCert_req)
-			if err != nil {
-				glog.Fatalf("Error: failed to access tlsCert secret version: %v", err)
-			}
-			certPem := tlsCert_result.Payload.Data
+				tlsCert_result, err := client.AccessSecretVersion(ctx, tlsCert_req)
+				if err != nil {
+					glog.Fatalf("Error: failed to access tlsCert secret version: %v", err)
+				}
+				certPem := tlsCert_result.Payload.Data
 
-			tlsKey_name := fmt.Sprintf("%s/versions/latest", *tlsClientKey)
-			tlsKey_req := &secretmanagerpb.AccessSecretVersionRequest{
-				Name: tlsKey_name,
-			}
+				tlsKey_name := fmt.Sprintf("%s/versions/latest", *tlsClientKey)
+				tlsKey_req := &secretmanagerpb.AccessSecretVersionRequest{
+					Name: tlsKey_name,
+				}
 
-			tlsKey_result, err := client.AccessSecretVersion(ctx, tlsKey_req)
-			if err != nil {
-				glog.Fatalf("Error: failed to access tlsKey secret version: %v", err)
-			}
-			keyPem := tlsKey_result.Payload.Data
+				tlsKey_result, err := client.AccessSecretVersion(ctx, tlsKey_req)
+				if err != nil {
+					glog.Fatalf("Error: failed to access tlsKey secret version: %v", err)
+				}
+				keyPem := tlsKey_result.Payload.Data
 
-			clientCerts, err = tls.X509KeyPair(certPem, keyPem)
-			if err != nil {
-				glog.Fatalf("Error: could not load TLS Certificate chain: %s", err)
+				clientCerts, err = tls.X509KeyPair(certPem, keyPem)
+				if err != nil {
+					glog.Fatalf("Error: could not load TLS Certificate chain: %s", err)
+				}
 			}
 
 		} else {
 			var err error
-			clientCerts, err = tls.LoadX509KeyPair(
-				*tlsClientCert,
-				*tlsClientKey,
-			)
+			glog.V(2).Infof("     Using Files based TLS")
+			if *useMTLS {
+				glog.V(2).Infof("     Using mTLS with Files")
+				clientCerts, err = tls.LoadX509KeyPair(
+					*tlsClientCert,
+					*tlsClientKey,
+				)
+			}
 			pem, err := ioutil.ReadFile(*tlsCertChain)
 			if err != nil {
 				glog.Fatalf("ERROR failed to load root CA certificates  error=%v", err)
@@ -228,17 +235,25 @@ func main() {
 			Certificates: []tls.Certificate{clientCerts},
 			RootCAs:      rootCAs,
 		}
+		if *useMTLS {
+			glog.V(10).Infof("     Enabling mTLS")
+			tlsConfig = tls.Config{
+				ServerName:   *sniServerName,
+				ClientAuth:   tls.RequireAndVerifyClientCert,
+				Certificates: []tls.Certificate{clientCerts},
+				RootCAs:      rootCAs,
+			}
+		} else {
+			glog.V(10).Infof("     Enabling TLS")
+			tlsConfig = tls.Config{
+				ServerName: *sniServerName,
+				RootCAs:    rootCAs,
+			}
+		}
 		ce = credentials.NewTLS(&tlsConfig)
 	}
 
 	ctx := context.Background()
-
-	//idTokenSource, err := idtoken.NewTokenSource(ctx, *tsAudience, idtoken.WithCredentialsFile(*serviceAccount))
-	idTokenSource, err := idtoken.NewTokenSource(ctx, *tsAudience)
-	if err != nil {
-		glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
-		return
-	}
 
 	attempt := 0
 	for attempt < *maxLoop && !isProvisioned {
@@ -246,6 +261,13 @@ func main() {
 		glog.V(2).Infof("Attempting to contact TokenServer [%d]", attempt)
 		if !isProvisioned {
 			go func() {
+
+				//idTokenSource, err := idtoken.NewTokenSource(ctx, *tsAudience, idtoken.WithCredentialsFile(*serviceAccount))
+				idTokenSource, err := idtoken.NewTokenSource(ctx, *tsAudience)
+				if err != nil {
+					glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
+					return
+				}
 				// tok, err := idTokenSource.Token()
 				// if err != nil {
 				// 	log.Fatal(err)
