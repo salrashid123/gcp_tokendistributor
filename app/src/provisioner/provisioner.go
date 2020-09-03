@@ -89,13 +89,25 @@ func main() {
 			log.Printf("Image Data: %s\n", *m.Value)
 		}
 	}
-	log.Printf("ImageStartup Hash: [%s]\n", initScriptHash)
-	log.Printf("Image Fingerprint: [%s]\n", cresp.Fingerprint)
+	// TODO: save any of these parameters to ServiceEntry Firestore
+	//       as other values to check for when GetToken() is called by the TokenClient
+	//       The idea is to make sure the TokenClient is the same isolated system that
+	//       Was provisioned here that makes the call to get the token at runtime
+	// If a NAT is used, you need to specify that as the --peerAddress= value instead
 
-	// This is an optional check which binds the ServiceEntry to an IP address for a given VM
-	// If a NAT is used, you need to specify that as teh --peerAddress= value instead
-	nis := cresp.NetworkInterfaces
-	for _, ni := range nis {
+	log.Printf("     Found  VM initScriptHash: [%s]\n", initScriptHash)
+	log.Printf("     Found  VM instanceID %#v\n", strconv.FormatUint(cresp.Id, 10))
+	log.Printf("     Found  VM CreationTimestamp %#v\n", cresp.CreationTimestamp)
+	log.Printf("     Found  VM Fingerprint %#v\n", cresp.Fingerprint)
+	log.Printf("     Found  VM CpuPlatform %#v\n", cresp.CpuPlatform)
+
+	for _, d := range cresp.Disks {
+		log.Printf("     Found  VM Disk %#v\n", d)
+	}
+	for _, sa := range cresp.ServiceAccounts {
+		log.Printf("     Found  VM ServiceAccount %#v\n", sa.Email)
+	}
+	for _, ni := range cresp.NetworkInterfaces {
 		for _, ac := range ni.AccessConfigs {
 			if ac.Type == "ONE_TO_ONE_NAT" {
 				log.Printf("Found VM External IP %s\n", ac.NatIP)
