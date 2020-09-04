@@ -10,7 +10,7 @@ provider "docker" {
 
 resource "null_resource" "submit" {
   provisioner "local-exec" {
-    command = "gcloud builds submit --config ${var.app_source_dir}/cloudbuild-ts.yaml --project ${var.project_id} ${var.app_source_dir}/ "    
+    command = "gcloud builds submit --config ${var.app_source_dir}/cloudbuild-ts.yaml --machine-type=n1-highcpu-32  --project ${var.project_id} ${var.app_source_dir}/ "    
   }
 }
 

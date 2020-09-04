@@ -478,6 +478,9 @@ Docker based images will not generate deterministic builds but you can use `Baze
 
 You can find more information about how to build the TokenClient and TokenServer in the appendix.
 
+
+>> **TODO**  allow Provisioning application to enable firewall rule to only allow `tc_address` to connect to the tokenserver
+
 #### After Provisioning
 
 After provisioning, the full sequence to exchange encrypted keys takes place.  
