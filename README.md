@@ -164,6 +164,7 @@ export TF_VAR_ts_address=`terraform output -state=terraform.tfstate ts_address`
 
 echo
 echo "Provide the following to Bob"
+echo
 echo export TF_VAR_ts_project_id=$TF_VAR_ts_project_id
 echo export TF_VAR_ts_service_account=$TF_VAR_ts_service_account
 echo export TF_VAR_ts_address=$TF_VAR_ts_address
@@ -330,6 +331,7 @@ export TF_VAR_tc_address=`terraform output -state=terraform.tfstate tc_address`
 
 echo
 echo "Provide the following to Alice"
+echo
 echo export TF_VAR_tc_project_id=$TF_VAR_tc_project_id
 echo export TF_VAR_tc_instance_id=$TF_VAR_tc_instance_id
 echo export TF_VAR_tc_address=$TF_VAR_tc_address
@@ -414,6 +416,19 @@ $ tpm2_pcrread sha256:0
 sha256:
   0 : 0xFCECB56ACC303862B30EB342C4990BEB50B5E0AB89722449C2D9A73F37B019FE
 ```
+
+to provision with a TPM
+
+```
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id \
+  --firestoreCollectionName foo \
+  --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a \
+  --clientVMId $TF_VAR_tc_instance_id --rsaKeyFile=/tmp/rsakey.pem \
+  --aesKeyFile=/tmp/sym_keyfile.key --rawKeyFile=/tmp/raw_keyfile.txt \
+  --useTPM \
+  --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+```
+
 
 Gives the sha1 PCR value:
 
