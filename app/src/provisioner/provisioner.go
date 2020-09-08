@@ -1,12 +1,15 @@
 package main
 
 import (
+	"crypto"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -14,41 +17,47 @@ import (
 	"strings"
 	"time"
 
+	tspb "tokenservice"
+
 	"cloud.google.com/go/firestore"
+
+	"github.com/golang/protobuf/jsonpb"
+	tpmpb "github.com/google/go-tpm-tools/proto"
+	"github.com/google/go-tpm-tools/server"
 	"google.golang.org/api/compute/v1"
+
+	"github.com/golang/protobuf/proto"
 
 	"golang.org/x/net/context"
 )
 
-type Secret struct {
-	Name string `firestore:"name"`
-	Type string `firestore:"type"`
-	Data string `firestore:"data"`
-}
 type ServiceEntry struct {
-	Description        string    `firestore:"description,omitempty"`
-	Done               bool      `firestore:"done"`
-	InstanceID         string    `firestore:"instanceid"`
-	ClientProject      string    `firestore:"client_project"`
-	ClientZone         string    `firestore:"client_zone"`
-	ServiceAccountName string    `firestore:"service_account_name"`
-	InitScriptHash     string    `firestore:"init_script_hash"`
-	ImageFingerprint   string    `firestore:"image_fingerprint"`
-	GCSObjectReference string    `firestore:"gcs_object,omitempty"`
-	Secrets            []Secret  `firestore:"secrets,omitempty"`
-	ProvidedAt         time.Time `firestore:"provided_at"`
-	PeerAddress        string    `firestore:"peer_address"`
-	PeerSerialNumber   string    `firestore:"peer_serial_number"`
+	Description        string         `firestore:"description,omitempty"`
+	Done               bool           `firestore:"done"`
+	InstanceID         string         `firestore:"instanceid"`
+	ClientProject      string         `firestore:"client_project"`
+	ClientZone         string         `firestore:"client_zone"`
+	ServiceAccountName string         `firestore:"service_account_name"`
+	InitScriptHash     string         `firestore:"init_script_hash"`
+	ImageFingerprint   string         `firestore:"image_fingerprint"`
+	GCSObjectReference string         `firestore:"gcs_object,omitempty"`
+	Secrets            []*tspb.Secret `firestore:"secrets,omitempty"`
+	ProvidedAt         time.Time      `firestore:"provided_at"`
+	PeerAddress        string         `firestore:"peer_address"`
+	PeerSerialNumber   string         `firestore:"peer_serial_number"`
 }
 
-const ()
+const (
+	tpmDevice = "/dev/tpm0"
+)
 
 var (
 	fireStoreProjectId      = flag.String("fireStoreProjectId", "", "ProjectID for Firestore")
 	firestoreCollectionName = flag.String("firestoreCollectionName", "", "firestoreCollectionName where the sealedData is Stored")
 
-	sealToPCR       = flag.Int64("sealToPCR", -1, "The PCR number to seal this data to where the sealedData is Stored")
-	sealToPCRValue  = flag.String("sealToPCRValue", "", "The PCR Vallue to seal this data to")
+	sealToPCR       = flag.Int64("sealToPCR", 0, "The PCR number to seal this data to where the sealedData is Stored")
+	sealToPCRValue  = flag.String("sealToPCRValue", "fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe", "The PCR Vallue to seal this data to")
+	encryptToTPM    = flag.String("encryptToTPM", "", "Data to seal with EkPub of target VM")
 	clientProjectId = flag.String("clientProjectId", "", "clientProjectId for VM")
 	clientVMZone    = flag.String("clientVMZone", "", "clientVMZone for VM")
 	clientVMId      = flag.String("clientVMId", "", "clientVMId for VM")
@@ -59,10 +68,10 @@ var (
 	peerAddress = flag.String("peerAddress", "", "Token Client IP address")
 	// SerialNumber=5 happens to be the value inside `bob/certs/tokenclient.crt`
 	peerSerialNumber = flag.String("peerSerialNumber", "5", "Client Certificate Serial Number Serial Number: 5 (0x5) ")
+	pcrMap           = map[uint32][]byte{}
 )
 
 func main() {
-
 	flag.Parse()
 	ctx := context.Background()
 
@@ -134,6 +143,21 @@ func main() {
 		}
 	}
 
+	if *encryptToTPM != "" {
+		mresp, err := computeService.Instances.GetShieldedInstanceIdentity(*clientProjectId, *clientVMZone, *clientVMId).Do()
+		if err != nil {
+			log.Fatalf("Unable to find  Instance %v", err)
+		}
+		log.Println("Derived EKPub for Instance:")
+		log.Printf(mresp.EncryptionKey.EkPub)
+
+		te, err := createImportBlob(mresp.EncryptionKey.EkPub, *encryptToTPM)
+		log.Printf("Encrypted Data %v", base64.StdEncoding.EncodeToString(te))
+		//  --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+		//  --sealToPCR=23 --sealToPCRValue=DB56114E00FDD4C1F85C892BF35AC9A89289AAECB1EBD0A96CDE606A748B5D71
+		return
+	}
+
 	var s string
 
 	if *autoAccept {
@@ -154,22 +178,22 @@ func main() {
 	}
 
 	jsonFile, err := os.Open(*secretsFile)
-
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	defer jsonFile.Close()
-	byteValue, err := ioutil.ReadAll(jsonFile)
+	jsonDecoder := json.NewDecoder(jsonFile)
+	_, err = jsonDecoder.Token()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	var sec []Secret
-
-	err = json.Unmarshal(byteValue, &sec)
-	if err != nil {
-		log.Fatal(err)
+	var protoMessages []*tspb.Secret
+	for jsonDecoder.More() {
+		protoMessage := tspb.Secret{}
+		err := jsonpb.UnmarshalNext(jsonDecoder, &protoMessage)
+		if err != nil {
+			log.Fatal(err)
+		}
+		protoMessages = append(protoMessages, &protoMessage)
 	}
 
 	client, err := firestore.NewClient(ctx, *fireStoreProjectId)
@@ -185,7 +209,7 @@ func main() {
 		ServiceAccountName: cresp.ServiceAccounts[0].Email,
 		InitScriptHash:     initScriptHash,
 		ImageFingerprint:   cresp.Fingerprint,
-		Secrets:            sec,
+		Secrets:            protoMessages,
 
 		ProvidedAt: time.Now(),
 
@@ -207,4 +231,37 @@ func main() {
 	dsnap.DataTo(&c)
 	log.Printf("Document data: %#v\n", c.InstanceID)
 
+}
+
+func createImportBlob(ekPubPEM string, aesKey string) (sealedOutput []byte, retErr error) {
+
+	block, _ := pem.Decode([]byte(ekPubPEM))
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return []byte(""), err
+	}
+
+	ekPub := pub.(crypto.PublicKey)
+	var pcrs *tpmpb.Pcrs
+	if *sealToPCR >= 0 && *sealToPCRValue != "" {
+		hv, err := hex.DecodeString(*sealToPCRValue)
+		if err != nil {
+			return []byte(""), err
+		}
+		pcrMap = map[uint32][]byte{uint32(*sealToPCR): hv}
+	} else {
+		pcrMap = map[uint32][]byte{}
+	}
+	pcrs = &tpmpb.Pcrs{Hash: tpmpb.HashAlgo_SHA256, Pcrs: pcrMap}
+
+	blob, err := server.CreateImportBlob(ekPub, []byte(aesKey), pcrs)
+	if err != nil {
+		return []byte(""), err
+	}
+	data, err := proto.Marshal(blob)
+	if err != nil {
+		return []byte(""), err
+	}
+
+	return data, nil
 }

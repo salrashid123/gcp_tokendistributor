@@ -367,11 +367,16 @@ Now provision the secrets you want to transfer as a formatted JSON file that map
 
 ```proto
 message Secret {
-  string name = 1;  // the name of the secret
-  string type = 2;  // user defined type
-  bytes data = 3;   // b64encoded value of the secret
-}
+  string name = 1;
+  SecretType type = 2;
+  bytes data = 3;
 
+  enum SecretType {
+    RAW = 0;   // do not decode;
+    TPM = 1;   // decode as TPM sealed data
+    TINK = 2;  // decode as Tink Secret
+  }  
+}
 message TokenResponse {
   string responseID = 1;
   string inResponseTo = 2;
@@ -385,16 +390,17 @@ As JSON `secrets.json`:
 [
     {
         "name": "secret1",
-        "type": "GCP Bearer",
+        "type": "RAW",
         "data": "Zm9vb2Jhcg=="
     },
     {
         "name": "secret2",
-        "type": "GCP Bearer2",
-        "data": "Zm9vb2Jhcg=="
+        "type": "RAW",
+        "data": "Zm9vbyBiYXJycnI="
     }
 ]
 ```
+
 
 Where the datafield is a base64encoded string of the actual secret:
 
@@ -425,13 +431,12 @@ At that point, the image hash value will be saved into Firestore `R0OB1dVupyp/rN
 The output also shows the unique `Fingerprint` of the VM `2020/07/22 09:47:32 Image Fingerprint: [yM8bKId-VQA=]`.  Eventually this data should also get saved into Firestore and validated by the TokenServer.
 
 ```
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
+$ $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id  \
     --secretsFile=secrets.json
-2020/09/02 14:02:59 tc-03330b55  us-central1-a  8152507027078407166
-2020/09/02 14:03:00 Found  VM instanceID "8152507027078407166"
-2020/09/02 14:03:00 Found s VM ServiceAccount "tokenclient@tc-03330b55.iam.gserviceaccount.com"
-2020/09/02 14:03:00 Image Data: #cloud-config
+2020/09/08 16:03:27 tc-e381ee09  us-central1-a  4616733414634708048
+2020/09/08 16:03:27 Found  VM instanceID "4616733414634708048"
+2020/09/08 16:03:27 Image Data: #cloud-config
 
 write_files:
 - path: /etc/systemd/system/cloudservice.service
@@ -446,7 +451,7 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm -u 0 --name=mycloudservice gcr.io/tc-03330b55/tokenclient@sha256:9f12cd9cdb74171be354862c8b135c1598a647042d1a81433932d3ff3ca6d896 --address 34.71.192.160:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useMTLS --useSecrets --tlsClientCert projects/974228495173/secrets/tls_crt --tlsClientKey projects/974228495173/secrets/tls_key --tlsCertChain projects/974228495173/secrets/tls-ca --v=25 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-e381ee09/tokenclient@sha256:f133156a505050f383e908023b040439af73e0e26aadc8543160f7d62fe5a254 --address 35.222.5.146:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useSecrets --tlsCertChain projects/620714181540/secrets/tls-ca --v=25 -alsologtostderr
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
@@ -458,18 +463,23 @@ runcmd:
 - systemctl daemon-reload
 - systemctl start cloudservice.service
 
-2020/09/02 14:03:00 ImageStartup Hash: [HW4wW9IHdm1WF2qxfVL8UQnoicrgaGZtPQAMz9qqrEc=]
-2020/09/02 14:03:00 Image Fingerprint: [vnFGtIa1vvU=]
-2020/09/02 14:03:00 Found VM External IP 35.223.189.250
-2020/09/02 14:03:00 looks ok? (y/N): 
+2020/09/08 16:03:27      Found  VM initScriptHash: [bRU/GQt02of49h56ph2dv7F5ZgZ1kUskdREZvwWNaWg=]
+2020/09/08 16:03:27      Found  VM CreationTimestamp "2020-09-08T12:59:59.972-07:00"
+2020/09/08 16:03:27      Found  VM Fingerprint "Mj7BV6UuUs4="
+2020/09/08 16:03:27      Found  VM CpuPlatform "Intel Haswell"
+2020/09/08 16:03:27      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-e381ee09/zones/us-central1-a/disks/tokenclient"
+2020/09/08 16:03:27      Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
+2020/09/08 16:03:27      Found  VM ServiceAccount "tokenclient@tc-e381ee09.iam.gserviceaccount.com"
+2020/09/08 16:03:27 Found VM External IP 104.154.65.88
+2020/09/08 16:03:27 looks ok? (y/N): 
 y
-2020/09/02 14:03:10 2020-09-02 18:03:10.851908 +0000 UTC
-2020/09/02 14:03:11 Document data: "8152507027078407166"
+2020/09/08 16:03:34 2020-09-08 20:03:34.37037 +0000 UTC
+2020/09/08 16:03:34 Document data: "4616733414634708048"
 
 ```
 
 Note that Alice not trusts the entire TokenClient vm Image hash which itself includes a docker image hash 
-(`gcr.io/tc-03330b55/tokenclient@sha256:9f12cd9cdb74171be354862c8b135c1598a647042d1a81433932d3ff3ca6d896`).  
+(`gcr.io/tc-03330b55/tokenclient@sha256:f133156a505050f383e908023b040439af73e0e26aadc8543160f7d62fe5a254`).  
 It is expected that this image was generated elsewhere such that both Alice and Bob would know the precise and source code that it includes.  
 Docker based images will not generate deterministic builds but you can use `Bazel` as described in [Building deterministic Docker images with Bazel](https://blog.bazel.build/2015/07/28/docker_build.html) and as an example:
 
@@ -637,6 +647,54 @@ $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_
   --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id \
   --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id \
   --peerAddress $TF_VAR_tc_address --peerSerialNumber=5  --secretsFile=secrets.json
+```
+
+
+### Provision with TPM Sealed data
+
+To Seal data to a TPM, you must generate an encoded token, embed it into a Secret and then provision.
+
+The `provision.go` utility provides a way to seal data to the target VM's TPM:
+
+- Seal data to TPM with PCR value:
+
+```bash
+go run src/provisioner/provisioner.go --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --encryptToTPM="datasealedtotpm"  --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+```
+(the PCR=0 value for GCP COS images is `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`).  You can bind to any other PCR value you choose.
+
+The optionsl to use for the provisioner in this output only mode are:
+| Option | Description |
+|:------------|-------------|
+| **`-encryptToTPM`** | Seal data to TokenClient's TPM Endorsement Public Key |
+| **`-sealToPCR`** | PCR bank to seal data to (default: `0`) |
+| **`-sealToPCRValue`** | PCR Bank value as hex string (default: `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
+
+Note, running the the command with the provisioner will just emit the PCR sealed value.  It will NOT write to firestore
+
+Once you have the sealed data, edit  `secrets.json` and add in the TPM seladed data as base64.  Remember ot label the type as `TPM`
+
+```json
+[
+    {
+        "name": "secret1",
+        "type": "RAW",
+        "data": "Zm9vb2Jhcg=="
+    },
+    {
+        "name": "secret2",
+        "type": "TPM",
+        "data": "ClsAIHbS8s1nZ9RO/cjwrWJIIbJ+r1RvXSdwz2kLaNW2wTFiB+8YA+3ooGwjjR4OBO9sWYO4i4jDbBehISPXAqSzG4XnHqm0C89zUt+FfdPAtDJAmypWThb/JnsrEoACbjk2PCxZRLESfXwjU+3KFVxiUdHC/igz2D7n2Oy3E4rruCoaa1EKZ3l/teeGeTEpXU4osLPMMmYdAOviGbrbCEw0kVgOuQuSxydnL/ASRCL7G1jQUFEcC/VrBEpj7efCVw8zYp9DR32/VZRV3qN54m0gp1LnIKAOTT50a3SHjpPoUY96mnAhnMfwh6aa7v/JN5gdKTzG2+5JNQZM4bReqEBMOMkiSeorIeOx8fKg3zTkMU4sTIhW7UngpBj0wfPlfsnsZ6GZEWoRccK/29/XOqkbrpH7YOUR1AHPMZShT/748Wt6oQWogxgpQhQ570+1p6Gcz54XhIr6n+jN7K7dTxpOAAgACwAAAIAAIBTk3S+cCtyx7C0Y09sEqmuNLlbZFO+HyLbfupwEnllPABAAINPOonBGOxXG1EIAnOnzaiS+qow3x7HjgUyPMpDl/HZyIigICxIkCAASIPzstWrMMDhisw6zQsSZC+tQteCriXIkScLZpz83sBn+"
+    }
+]
+```
+
+Then provision
+
+```bash
+go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
+    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id  \
+    --secretsFile=secrets.json
 ```
 
 ### Appendix

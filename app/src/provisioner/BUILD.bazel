@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+
+go_binary(
+    name = "provisioner",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = ["provisioner.go"],
+    importpath = "main",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//src/tokenservice:go_default_library",    
+        "@com_github_golang_glog//:go_default_library",
+        "@org_golang_x_net//context:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_google_go_tpm//tpm2:go_default_library",
+        "@com_github_google_go_tpm_tools//proto:go_default_library",
+        "@com_github_google_go_tpm_tools//tpm2tools:go_default_library",
+        "@com_github_google_go_tpm_tools//server:go_default_library",           
+        "@com_google_cloud_go_firestore//:go_default_library",
+        "@org_golang_google_api//compute/v1:go_default_library",
+        "@com_github_golang_protobuf//jsonpb:go_default_library",
+    ],
+)

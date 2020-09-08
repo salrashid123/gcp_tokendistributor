@@ -24,14 +24,13 @@ import (
 	"github.com/golang/glog"
 
 	"os"
+	pb "tokenservice"
 
 	"cloud.google.com/go/firestore"
-	jwt "github.com/dgrijalva/jwt-go"
-
-	"github.com/lestrrat/go-jwx/jwk"
-
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
+	"github.com/lestrrat/go-jwx/jwk"
 	"google.golang.org/api/compute/v1"
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	"google.golang.org/grpc"
@@ -61,25 +60,20 @@ type gcpIdentityDoc struct {
 	jwt.StandardClaims
 }
 
-type Secret struct {
-	Name string `firestore:"name"`
-	Type string `firestore:"type"`
-	Data string `firestore:"data"`
-}
 type ServiceEntry struct {
-	Description        string    `firestore:"description,omitempty"`
-	Done               bool      `firestore:"done"`
-	InstanceID         string    `firestore:"instanceid"`
-	ClientProject      string    `firestore:"client_project"`
-	ClientZone         string    `firestore:"client_zone"`
-	ServiceAccountName string    `firestore:"service_account_name"`
-	InitScriptHash     string    `firestore:"init_script_hash"`
-	ImageFingerprint   string    `firestore:"image_fingerprint"`
-	GCSObjectReference string    `firestore:"gcs_object,omitempty"`
-	Secrets            []Secret  `firestore:"secrets,omitempty"`
-	ProvidedAt         time.Time `firestore:"provided_at"`
-	PeerAddress        string    `firestore:"peer_address"`
-	PeerSerialNumber   string    `firestore:"peer_serial_number"`
+	Description        string       `firestore:"description,omitempty"`
+	Done               bool         `firestore:"done"`
+	InstanceID         string       `firestore:"instanceid"`
+	ClientProject      string       `firestore:"client_project"`
+	ClientZone         string       `firestore:"client_zone"`
+	ServiceAccountName string       `firestore:"service_account_name"`
+	InitScriptHash     string       `firestore:"init_script_hash"`
+	ImageFingerprint   string       `firestore:"image_fingerprint"`
+	GCSObjectReference string       `firestore:"gcs_object,omitempty"`
+	Secrets            []*pb.Secret `firestore:"secrets,omitempty"`
+	ProvidedAt         time.Time    `firestore:"provided_at"`
+	PeerAddress        string       `firestore:"peer_address"`
+	PeerSerialNumber   string       `firestore:"peer_serial_number"`
 }
 
 type contextKey string
@@ -345,31 +339,10 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 	// }
 	// log.Printf(resp.UpdateTime.String())
 
-	var tssecrets []*tokenservice.Secret
-	for _, s := range c.Secrets {
-		sec := &Secret{
-			Name: s.Name,
-			Type: s.Type,
-			Data: base64.StdEncoding.EncodeToString([]byte(s.Data)),
-		}
-
-		byteData, err := base64.StdEncoding.DecodeString(sec.Data)
-		if err != nil {
-			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.Internal, "Could not decode secret!")
-		}
-		tsSecret := &tokenservice.Secret{
-			Name: sec.Name,
-			Type: sec.Type,
-			Data: byteData,
-		}
-
-		tssecrets = append(tssecrets, tsSecret)
-	}
-
 	return &tokenservice.TokenResponse{
 		ResponseID:   respID.String(),
 		InResponseTo: in.RequestId,
-		Secrets:      tssecrets,
+		Secrets:      c.Secrets,
 	}, nil
 }
 

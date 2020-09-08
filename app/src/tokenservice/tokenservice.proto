@@ -16,8 +16,14 @@ message TokenRequest {
 
 message Secret {
   string name = 1;
-  string type = 2;
+  SecretType type = 2;
   bytes data = 3;
+
+  enum SecretType {
+    RAW = 0;
+    TPM = 1;
+    TINK = 2;
+  }  
 }
 
 message TokenResponse {
