@@ -41,12 +41,9 @@ Validates that `VM-B` has been deprivileged (no ssh access)
 
 Validates the docker image running on `VM-B` is known image hash and trusted by Alice) 
 
-Provisioning Server creates arbitrary secret data (eg`RSAKey-A`, `AESKey-A`).   RSAKeyA maybe a GCP ServiceAccount Key.
-
 Provisioning Server generates hash of `VM-B` startup script that includes commands to prevent SSH and `docker run` command for the trusted image image.
 
-Provisioning Server saves encrypted RSA/AES keys, hash of startupscript to Google FireStore using the `instance_id` for `VM-B` as the primary key
-  
+Provisioning Server saves arbitrary `Secret` data as well as the hash of startupscript, Public IP address, ServiceAccount for the remote VM to Google FireStore using the `instance_id` for `VM-B` as the primary key 
 
 `VM-B` contacts `TokenService`
 
@@ -54,15 +51,15 @@ Provisioning Server saves encrypted RSA/AES keys, hash of startupscript to Googl
 
 `VM-A` verifies the `identity document` is signed by Google
 
-`VM-A` checks `instanceID`, `serviceAccount`, `audience` and other claims in the document.
+`VM-A` checks `instanceID`, `serviceAccount`, `audience` and other claims in the document.  The identity document must be signed within some duration threshold.
 
 `VM-A` looks up Firestore using the `instanceID` as  the key.
 
 `VM-A` uses GCP Compute API to retrieve the current/active startup script for `VM-B`
 
-`VM-A` compares the hash of the retrieved startup script against the value in Firestore previously authorized.  If mismatch, return error.
+`VM-A` compares the hash of the retrieved startup script against the value in Firestore previously authorized, the egress IP address, VM Fingerprint, etc.  If mismatch, return error.
 
-`VM-A` returns encrypted `Secrets`` to `VM-B`
+`VM-A` returns encrypted `Secrets` to `VM-B`
 
 If the Secret is a GCP Service Account, use that to download data from Google Services.  
 
@@ -602,7 +599,7 @@ The server can also issue a [downscoped Token](https://github.com/salrashid123/d
 You can also bind a given TokenClient's IP address to the `ServiceEntry` during provisioning.
 
 What this means is even if a TokenClient connects to the TokenServer over mTLS using a valid certificate, the tokenserver will extract the provided SerialNumber that was provided by the TokenClient
-In the default certificate in this repo, the SerialNumber is just `5`
+In the default certificate in this repo, the SerialNumber is just `5`.  If you want to generate your own certificates, please see the section in the appendix
 
 ```
 openssl x509 -in bob/certs/tokenclient.crt -noout -text
@@ -737,6 +734,19 @@ Further enhancements can be to use
 #### Using preexisting projects
 
 You can bootstrap this system using your own existing project, see the steps detaled in the `gcloud_steps/` folder
+
+#### Generating your own Certificates
+
+This repo includes mTLS certificates that were pre-generated with specific SNI values.
+
+```
+openssl x509 -in alice/certs/tokenservice.crt -noout -text
+        X509v3 extensions:
+            X509v3 Subject Alternative Name: 
+                DNS:tokenservice.esodemoapp2.com
+```
+
+If you want to use a different DNS SAN value or create a CA from scratch, see [Create Root CA Key and cert](https://github.com/salrashid123/ca_scratchpad).
 
 #### Automated Testing
 

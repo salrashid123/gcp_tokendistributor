@@ -332,7 +332,7 @@ gcloud beta compute  instances create   tokenclient   \
  --project $tc_project_id
 
 
-## The following setps run by the tokenclient will authorize the provisioner user/service account and the service account that
+## The following setsup run by the tokenclient will authorize the provisioner user/service account and the service account that
 ## runs as the tokenserver access to READ the metadata for the TokenClients VM.
 ### This step is necessary to verify that the tokenclient has SSH disabled, running a known image, etc
 
@@ -409,6 +409,7 @@ gcloud beta compute  instances create   tokenserver   \
  --address $tsIP   --tags tokenserver \
  --service-account $ts_service_account_email \
  --scopes=cloud-platform,userinfo-email \
+ --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring \
  --image=debian-10-buster-v20200805 --image-project=debian-cloud  \
  --project $ts_project_id
 
@@ -418,7 +419,7 @@ gcloud compute  firewall-rules create allow-ssh --allow=tcp:22 --network=tsnetwo
 ```
 
 Then ssh into that VM, [install golang](https://golang.org/doc/install), then finally execute the TokenServer using the parameters
-you would use within `ts-cloud-config.yam` ExecStart command, eg
+you would use within `ts-cloud-config.yaml` ExecStart command, eg
 
 ```bash
 git clone https://github.com/salrashid123/gcp_tokendistributor.git
@@ -434,6 +435,7 @@ gcloud beta compute  instances create   tokenclient   \
  --subnet=tcsubnet     --address $tcIP   --tags tokenclient  \
  --service-account $tc_service_account_email \
  --scopes=cloud-platform,userinfo-email   --image cos-stable-81-12871-119-0  \
+ --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring \
  --image=debian-10-buster-v20200805 --image-project=debian-cloud  \
  --project $tc_project_id
 
