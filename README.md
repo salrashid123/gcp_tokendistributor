@@ -694,6 +694,9 @@ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id
     --secretsFile=secrets.json
 ```
 
+* Some notes about using the TPM to seal data:
+  Decryption of TPM based data by the TokenClient is visible by the GCP Hypervisor (meaning, if its compromized).  If the threat model you are using this configuration stipulates that hypervisor cannot read VM memory (eg, why you use GCP Confidential Compute Instance), then you cannot use vTPM.
+
 ### Appendix
 
 #### No externalIP
