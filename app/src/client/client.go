@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"io"
 	pb "tokenservice"
@@ -29,6 +31,10 @@ import (
 	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
+
+	"github.com/google/tink/go/aead"
+	"github.com/google/tink/go/insecurecleartextkeyset"
+	"github.com/google/tink/go/keyset"
 )
 
 const (
@@ -239,6 +245,8 @@ func main() {
 
 				glog.V(20).Infof("     Received  toResponse: %s\n", r.InResponseTo)
 
+				// iterate through the Secrets.  The actual secret is printed to log for debugging reasons only.
+				// For production use, _do_not_ print them here nor persist the keys..
 				for _, ss := range r.GetSecrets() {
 					glog.V(20).Infof("     Received  Data: %s\n", ss)
 					switch ss.Type {
@@ -253,8 +261,38 @@ func main() {
 						}
 						glog.V(20).Infof("     Decoded data %s", decdata)
 					case pb.Secret_TINK:
-						glog.V(20).Infof("     Decoding as TINK %s", string(ss.Data))
-						//TODO: Decode as TINK
+						glog.V(20).Infof("     Decoding as Tink")
+						ksr := keyset.NewBinaryReader(bytes.NewBuffer(ss.Data))
+						ks, err := ksr.Read()
+						if err != nil {
+							glog.Errorf("Error:   GetToken() Could not Read Tink based bytes secret: %v", err)
+							return
+						}
+
+						handle, err := insecurecleartextkeyset.Read(&keyset.MemReaderWriter{Keyset: ks})
+						if err != nil {
+							glog.Errorf("Error:   GetToken() Could not generate Tink Handle ased secret: %v", err)
+							return
+						}
+
+						a, err := aead.New(handle)
+						if err != nil {
+							glog.Errorf("Error:   GetToken() Could not initialize AEAD Tink secret: %v", err)
+							return
+						}
+						enc, err := a.Encrypt([]byte("foo"), []byte(""))
+						if err != nil {
+							glog.Errorf("Error:   GetToken() Could not encrypt sample baseline data with TINK Key: %v", err)
+							return
+						}
+						glog.V(20).Infof("     Tink AEAD encrypted text %s", base64.StdEncoding.EncodeToString(enc))
+						dec, err := a.Decrypt(enc, []byte(""))
+						if err != nil {
+							glog.Errorf("Error:   GetToken() Could not decrypt sample baseline data with TINK Key: %v", err)
+							return
+						}
+
+						glog.V(20).Infof("     Tink AEAD Decrypted Text %s", string(dec))
 					default:
 						glog.Errorf("Error:   GetToken() Unknown Secret Type secret: %v", ss.Type)
 						return

@@ -9,6 +9,7 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-tpm v0.2.1-0.20191106030929-f0607eac7f8a
 	github.com/google/go-tpm-tools v0.1.3-0.20200303025303-b83096c36b80
+	github.com/google/tink/go v1.4.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/lestrrat/go-jwx v0.0.0-20180221005942-b7d4802280ae // indirect
 	github.com/lestrrat/go-pdebug v0.0.0-20180220043741-569c97477ae8 // indirect

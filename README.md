@@ -381,7 +381,7 @@ message TokenResponse {
 }
 ```
 
-As JSON `secrets.json`:
+The following `secrets.json` describes two secrets of differing types
 
 ```json
 [
@@ -392,14 +392,13 @@ As JSON `secrets.json`:
     },
     {
         "name": "secret2",
-        "type": "RAW",
-        "data": "Zm9vbyBiYXJycnI="
+        "type": "TINK",
+        "data": "CLnwmtYGEmQKWAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EiIaIA7TocwCm37/3vReEGSRsoSp+a0KAq+KYEKqKH5dVqC4GAEQARi58JrWBiAB"
     }
 ]
 ```
 
-
-Where the datafield is a base64encoded string of the actual secret:
+The datafield is a base64encoded string of the actual secret.
 
 Then provision
 
@@ -515,23 +514,6 @@ Each clientVM unique vm_id is saved in TokenServer's Firestore database.  Note, 
 #### Deterministic Builds using Bazel
 
 You can build the TokenClient and Server images using Bazel 
-
-- Edit `app/src/client/BUILD.bazel` and specify the gcr reposity projectID you will use.  For the TokenClient:
-
-```bazel
-container_image(
-    name = "tokenclient",
-    base = "@alpine_linux_amd64//image",
-    entrypoint = ["/client"],
-    files = [":client"], 
-     repository = "gcr.io/yourproject/tokenclient"
-)
-```
-
-Make a similar change to ``app/src/server/BUILD.bazel``
-
-
-Then build and generate the images using bazel:
 
 
 ```bash
@@ -696,6 +678,46 @@ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id
 
 * Some notes about using the TPM to seal data:
   Decryption of TPM based data by the TokenClient is visible by the GCP Hypervisor (meaning, if its compromized).  If the threat model you are using this configuration stipulates that hypervisor cannot read VM memory (eg, why you use GCP Confidential Compute Instance), then you cannot use vTPM.
+
+
+### Provision with TINK Encryption Key
+
+`Secrets` proto also supports [TINK](https://github.com/google/tink) Keysets.  What that means is you can define an AEAD Tink JSON keyset inline as a secert
+
+```json
+[
+    {
+        "name": "secret1",
+        "type": "RAW",
+        "data": "Zm9vb2Jhcg=="
+    },
+    {
+        "name": "secret2",
+        "type": "TINK",
+        "data": "CLnwmtYGEmQKWAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EiIaIA7TocwCm37/3vReEGSRsoSp+a0KAq+KYEKqKH5dVqC4GAEQARi58JrWBiAB"
+    }
+]
+```
+
+And then use that to decrypt data.  For example, the following snippet uses an AEAD TINK key to encrypt and decrypt some data
+
+- Tink [encrypt/decrypt](https://gist.github.com/salrashid123/d943846f4512226fa3e5803749c7371f)
+
+Also, depending on the security model you are using (i.e, you entrust google with the key but not the tokenclient's owner), you can also emit the AEAD key as a BigQuery decryption key as described here and in the command line equivalent below:
+
+- [AEAD encryption concepts in Standard SQL](https://cloud.google.com/bigquery/docs/reference/standard-sql/aead-encryption-concepts#advanced_encryption_standard_aes)
+
+
+```bash
+bq  query \
+--parameter=keyset1::CLnwmtYGEmQKWAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EiIaIA7TocwCm37/3vReEGSRsoSp+a0KAq+KYEKqKH5dVqC4GAEQARi58JrWBiAB \
+--use_legacy_sql=false  'SELECT
+  ecd1.customer_id as ecd1_cid
+FROM mineral-minutia-820.aead.EncryptedCustomerData AS ecd1
+WHERE AEAD.DECRYPT_STRING(FROM_BASE64(@keyset1),
+  ecd1.encrypted_animal,
+  "somedata") = "liger";'
+```
 
 ### Appendix
 

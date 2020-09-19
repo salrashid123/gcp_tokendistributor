@@ -18,7 +18,7 @@ go_register_toolchains()
 # Gazelle
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "86c6d481b3f7aedc1d60c1c211c6f76da282ae197c3b3160f54bd3a8f847896f",
+    sha256 = "d4113967ab451dd4d2d767c3ca5f927fec4b30f3b2c6f8135a2033b9c05a5687",
     urls = [
         "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.0/bazel-gazelle-v0.22.0.tar.gz",
     ],
@@ -86,6 +86,13 @@ load(
 
 _go_image_repos()
 
+## Tink
+http_archive(
+    name = "tink_base",
+    urls = ["https://github.com/google/tink/archive/master.zip"],
+    strip_prefix = "tink-master/",
+)
+
 ## From gazelle
 
 go_repository(
@@ -102,6 +109,14 @@ go_repository(
     importpath = "github.com/armon/consul-api",
     sum = "h1:G1bPvciwNyF7IUmKXNt9Ak3m6u9DE1rF+RmtIkBpVdA=",
     version = "v0.0.0-20180202201655-eb2c6b5be1b6",
+)
+
+go_repository(
+    name = "com_github_aws_aws_sdk_go",
+    build_file_proto_mode = "disable_global",
+    importpath = "github.com/aws/aws-sdk-go",
+    sum = "h1:1xxya3nsUaFlEZuoE5PWsIEd47RoDV/kkOGt0qEuwNw=",
+    version = "v1.25.39",
 )
 
 go_repository(
@@ -257,6 +272,14 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_gogo_protobuf",
+    build_file_proto_mode = "disable_global",
+    importpath = "github.com/gogo/protobuf",
+    sum = "h1:DqDEcV5aeaTmdFBePNpYsp3FlcVH/2ISVVM9Qf8PSls=",
+    version = "v1.3.1",
+)
+
+go_repository(
     name = "com_github_golang_glog",
     build_file_proto_mode = "disable_global",
     importpath = "github.com/golang/glog",
@@ -353,6 +376,14 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_google_tink_go",
+    build_file_proto_mode = "disable_global",
+    importpath = "github.com/google/tink/go",
+    sum = "h1:7Ihv6n6/0zPrm2GRAeeF408P9Y00HXC2J6tvUzgb2sg=",
+    version = "v1.4.0",
+)
+
+go_repository(
     name = "com_github_google_uuid",
     build_file_proto_mode = "disable_global",
     importpath = "github.com/google/uuid",
@@ -401,11 +432,27 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_jmespath_go_jmespath",
+    build_file_proto_mode = "disable_global",
+    importpath = "github.com/jmespath/go-jmespath",
+    sum = "h1:pmfjZENx5imkbgOkpRUYLnmbU7UEFbjtDA2hxJ1ichM=",
+    version = "v0.0.0-20180206201540-c2b33e8439af",
+)
+
+go_repository(
     name = "com_github_jstemmer_go_junit_report",
     build_file_proto_mode = "disable_global",
     importpath = "github.com/jstemmer/go-junit-report",
     sum = "h1:6QPYqodiu3GuPL+7mfx+NwDdp2eTkp9IfEUpgAwUN0o=",
     version = "v0.9.1",
+)
+
+go_repository(
+    name = "com_github_kisielk_errcheck",
+    build_file_proto_mode = "disable_global",
+    importpath = "github.com/kisielk/errcheck",
+    sum = "h1:reN85Pxc5larApoH1keMBiu2GWtPqXQ1nc9gx+jOU+E=",
+    version = "v1.2.0",
 )
 
 go_repository(
@@ -878,20 +925,4 @@ go_repository(
     importpath = "golang.org/x/xerrors",
     sum = "h1:go1bK/D/BFZV2I8cIQd1NKEZ+0owSTG1fDTci4IqFcE=",
     version = "v0.0.0-20200804184101-5ec99f83aff1",
-)
-
-go_repository(
-    name = "com_github_gogo_protobuf",
-    build_file_proto_mode = "disable_global",
-    importpath = "github.com/gogo/protobuf",
-    sum = "h1:DqDEcV5aeaTmdFBePNpYsp3FlcVH/2ISVVM9Qf8PSls=",
-    version = "v1.3.1",
-)
-
-go_repository(
-    name = "com_github_kisielk_errcheck",
-    build_file_proto_mode = "disable_global",
-    importpath = "github.com/kisielk/errcheck",
-    sum = "h1:reN85Pxc5larApoH1keMBiu2GWtPqXQ1nc9gx+jOU+E=",
-    version = "v1.2.0",
 )
