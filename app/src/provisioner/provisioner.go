@@ -55,8 +55,7 @@ var (
 	fireStoreProjectId      = flag.String("fireStoreProjectId", "", "ProjectID for Firestore")
 	firestoreCollectionName = flag.String("firestoreCollectionName", "", "firestoreCollectionName where the sealedData is Stored")
 
-	sealToPCR       = flag.Int64("sealToPCR", 0, "The PCR number to seal this data to where the sealedData is Stored")
-	sealToPCRValue  = flag.String("sealToPCRValue", "fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe", "The PCR Vallue to seal this data to")
+	pcrsValues      = flag.String("pcrValues", "", "SHA256 PCR Values to seal against 23:=foo,20=bar.")
 	encryptToTPM    = flag.String("encryptToTPM", "", "Data to seal with EkPub of target VM")
 	clientProjectId = flag.String("clientProjectId", "", "clientProjectId for VM")
 	clientVMZone    = flag.String("clientVMZone", "", "clientVMZone for VM")
@@ -243,15 +242,31 @@ func createImportBlob(ekPubPEM string, aesKey string) (sealedOutput []byte, retE
 
 	ekPub := pub.(crypto.PublicKey)
 	var pcrs *tpmpb.Pcrs
-	if *sealToPCR >= 0 && *sealToPCRValue != "" {
-		hv, err := hex.DecodeString(*sealToPCRValue)
-		if err != nil {
-			return []byte(""), err
+
+	if *pcrsValues != "" {
+		entries := strings.Split(*pcrsValues, ",")
+		pcrMap = make(map[uint32][]byte)
+		for _, e := range entries {
+			parts := strings.Split(e, "=")
+			u, err := strconv.ParseUint(parts[0], 10, 64)
+			if err != nil {
+				return []byte(""), err
+			}
+
+			hv, err := hex.DecodeString(parts[1])
+			if err != nil {
+				return []byte(""), err
+			}
+			pcrMap[uint32(u)] = hv
+
+			rr := hex.Dump(hv)
+			log.Printf("PCR key: %v\n", uint32(u))
+			log.Printf("PCR Values: %v\n", rr)
+
 		}
-		pcrMap = map[uint32][]byte{uint32(*sealToPCR): hv}
-	} else {
-		pcrMap = map[uint32][]byte{}
+		log.Printf("PCR Values: %v\n", pcrMap)
 	}
+
 	pcrs = &tpmpb.Pcrs{Hash: tpmpb.HashAlgo_SHA256, Pcrs: pcrMap}
 
 	blob, err := server.CreateImportBlob(ekPub, []byte(aesKey), pcrs)

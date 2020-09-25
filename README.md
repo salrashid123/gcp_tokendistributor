@@ -106,7 +106,7 @@ As Alice, you will need your
   `gcloud beta billing accounts list`
 
 * OrganizationID
-  `gcloud organzations list`
+  `gcloud organizations list`
   If you do not have an organization, edit `alice/main.tf` and remove the `org_id` variable from `google_project`
  
 Alice should also login to local gcloud for both cli and application-default credentials sources
@@ -140,6 +140,31 @@ You should see the new project details and IP address allocated/assigned for the
 ```
 
 
+### Deploy TokenService (Alice)
+
+Deploy the TokenService with defaults.  The command below will deploy an _unconfigured_ TokenServer with a static IP address (`TF_VAR_ts_address`)
+
+```
+terraform apply --target=module.ts_deploy -auto-approve
+```
+
+The terraform script `alice/deploy/main.tf` uses the default options described below.  Modify the startup commands appropriately and redeploy the Server as needed.
+
+| Option | Description |
+|:------------|-------------|
+| **`-grpcport`** | host:port for the grpcServer(s) listener (default `:50051`|
+| **`-useMTLS`** | Use mTLS. |
+| **`-useSecrets`** | Use GCP Secret Manager for mTLS Certificates  |
+| **`-tlsCert`** | TLS Certificate file for mTLS; specify either file or Secret Manager Path  |
+| **`-tlsKey`** | TLS CertiKeyficate file for mTLS; specify either file or Secret Manager Path |
+| **`-tlsCertChain`** | TLS Certificate Chain file for mTLS; specify either file or Secret Manager Path  |
+| **`-tsAudience`** | The audience value for the tokenServer (default: `"https://tokenserver"`) |
+| **`-validatePeerIP`** | Extract the PeerIP address for the TokenClient from the TLS Session and compare with provisioned value. |
+| **`-validatePeerSN`** | Extract the SSL Serial Number and compare to provisioned value |
+| **`-firestoreProjectId`** | ProjectID where the FireStore database is hosted. |
+| **`-firestoreCollectionName`** | Name of the collection where provisioned values are saved (default: `foo`) |
+| **`-jwtIssuedAtJitter`** | Validate the IssuedAt timestamp.  If issuedAt+jwtIssueAtJitter > now(), then reject (default: `1`) |
+
 Note: if you would rather use an existing project for either the Client or Server, see the section in the Appendix.
 
 **Provide Bob the values of `ts_address` and `ts_service_account` variables anytime later**
@@ -166,31 +191,6 @@ $ echo $TF_VAR_ts_service_account
 $ echo $TF_VAR_ts_address
   35.239.36.219
 ```
-
-### Deploy TokenService (Alice)
-
-Deploy the TokenService with defaults.  The command below will deploy an _unconfigured_ TokenServer with a static IP address (`TF_VAR_ts_address`)
-
-```
-terraform apply --target=module.ts_deploy -auto-approve
-```
-
-The terraform script `alice/deploy/main.tf` uses the default options described below.  Modify the startup commands appropriately and redeploy the Server as needed.
-
-| Option | Description |
-|:------------|-------------|
-| **`-grpcport`** | host:port for the grpcServer(s) listener (default `:50051`|
-| **`-useMTLS`** | Use mTLS. |
-| **`-useSecrets`** | Use GCP Secret Manager for mTLS Certificates  |
-| **`-tlsCert`** | TLS Certificate file for mTLS; specify either file or Secret Manager Path  |
-| **`-tlsKey`** | TLS CertiKeyficate file for mTLS; specify either file or Secret Manager Path |
-| **`-tlsCertChain`** | TLS Certificate Chain file for mTLS; specify either file or Secret Manager Path  |
-| **`-tsAudience`** | The audience value for the tokenServer (default: `"https://tokenserver"`) |
-| **`-validatePeerIP`** | Extract the PeerIP address for the TokenClient from the TLS Session and compare with provisioned value. |
-| **`-validatePeerSN`** | Extract the SSL Serial Number and compare to provisioned value |
-| **`-firestoreProjectId`** | ProjectID where the FireStore database is hosted. |
-| **`-firestoreCollectionName`** | Name of the collection where provisioned values are saved (default: `foo`) |
-| **`-jwtIssuedAtJitter`** | Validate the IssuedAt timestamp.  If issuedAt+jwtIssueAtJitter > now(), then reject (default: `5`) |
 
 ### Start TokenClient Infrastructure (Bob)
 
@@ -245,7 +245,7 @@ Make sure the env vars are set (`TF_VAR_project_id` would be the the TokenClient
 
 >> this step is really important <<<
 
-`TF_VAR_ts_provisioner` is the email/serviceAccount that will run the provisioning application.  This is needed so that Bob can allow the provisioning application to read the GCE metadata.
+`TF_VAR_ts_provisioner` is the email/serviceAccount that will run the provisioning application.  This is needed so that Bob can allow the provisioning application to read the GCE metadata. For example, if Alice herself is running the privisoning app, it'd be `export TF_VAR_ts_provisioner=alice@domain.com`
 
 ```bash
 export TF_VAR_ts_service_account=<value given by Alice>
@@ -638,16 +638,18 @@ The `provision.go` utility provides a way to seal data to the target VM's TPM:
 - Seal data to TPM with PCR value:
 
 ```bash
-go run src/provisioner/provisioner.go --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id --encryptToTPM="datasealedtotpm"  --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+go run src/provisioner/provisioner.go --clientProjectId $TF_VAR_tc_project_id \
+  --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id \
+  --encryptToTPM="datasealedtotpm"  \
+  --pcrValues 0=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
 ```
-(the PCR=0 value for GCP COS images is `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`).  You can bind to any other PCR value you choose.
+(the PCR=0 value for GCP COS images is `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`).  You can bind to any other PCR value you choose.  Specify multiple values using formatted as `--pcrValues 0=foo,23=bar`
 
 The optionsl to use for the provisioner in this output only mode are:
 | Option | Description |
 |:------------|-------------|
 | **`-encryptToTPM`** | Seal data to TokenClient's TPM Endorsement Public Key |
-| **`-sealToPCR`** | PCR bank to seal data to (default: `0`) |
-| **`-sealToPCRValue`** | PCR Bank value as hex string (default: `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
+| **`-pcrValues`** | PCR bank and value to seal to (SHA256 PCR Values to seal against 0=foo,23=bar) (default: `0=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
 
 Note, running the the command with the provisioner will just emit the PCR sealed value.  It will NOT write to firestore
 
@@ -676,8 +678,8 @@ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id
     --secretsFile=secrets.json
 ```
 
-* Some notes about using the TPM to seal data:
-  Decryption of TPM based data by the TokenClient is visible by the GCP Hypervisor (meaning, if its compromized).  If the threat model you are using this configuration stipulates that hypervisor cannot read VM memory (eg, why you use GCP Confidential Compute Instance), then you cannot use vTPM.
+>> Some notes about using the TPM to seal data:
+  Decryption of TPM based data by the TokenClient is visible by the GCP Hypervisor.  If the threat model why you are using this configuration strictly stipulates that hypervisor cannot read or corrupt VM memory then that would likely mean you also cannot a vTPM.  Note that GCP Confidential Compute instances uses SEV and not SNP.  Please see [AMD SEV-SNP:  Strengthening VM Isolation with Integrity Protection](https://www.amd.com/system/files/TechDocs/SEV-SNP-strengthening-vm-isolation-with-integrity-protection-and-more.pdf)
 
 
 ### Provision with TINK Encryption Key

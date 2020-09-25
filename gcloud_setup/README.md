@@ -93,6 +93,8 @@ gcloud compute networks subnets create tssubnet --network=tsnetwork --range="10.
 
 ## Allow inbound connections from outside to the tokenserver's port
 ##  Note, i allowed all internet access ($allowedclientsubnet).  In reality, you probably just need the IP range any token client will connect from
+## eg, the static ip addresses allocated to each tokenclient
+
 gcloud compute  firewall-rules create allow-inbound-token-requests --allow=tcp:50051 --network=tsnetwork  --source-ranges=$allowedclientsubnet  --target-tags=tokenserver --project $ts_project_id
 
 ## Create a NAT IP address for egress traffic from the tokenserver to internet.  This isn't used in the default configuration
@@ -332,16 +334,18 @@ gcloud beta compute  instances create   tokenclient   \
  --project $tc_project_id
 
 
-## The following setsup run by the tokenclient will authorize the provisioner user/service account and the service account that
+## The following setup run by the tokenclient will authorize the provisioner user/service account and the service account that
 ## runs as the tokenserver access to READ the metadata for the TokenClients VM.
 ### This step is necessary to verify that the tokenclient has SSH disabled, running a known image, etc
+
+## NOTE ts_provisioner_email is the person who will be running the provisioner application.  he/she needs to be able to view
+##  the disk and VM specifications Bob runs.  Typically, this is alice@domain.com
 
 gcloud compute instances add-iam-policy-binding  tokenclient 	 \
    --member=serviceAccount:$ts_service_account_email  --role roles/compute.viewer   --project $tc_project_id 
 
 gcloud compute instances add-iam-policy-binding  tokenclient 	 \
    --member=user:$ts_provisioner_email --role roles/compute.viewer   --project $tc_project_id 
-
 
 gcloud compute disks add-iam-policy-binding  tokenclient 	 \
    --member=serviceAccount:$ts_service_account_email  --role roles/compute.viewer   --project $tc_project_id 
@@ -359,7 +363,7 @@ echo export tc_project_id=$tc_project_id
 
 ### Provision
 
-Create a file called `secrets.json`.  THis will contain the raw/unencrypted data that will be saved into firestore and returned back to the client.
+Create a file called `secrets.json`.  This will contain the raw/unencrypted data that will be saved into firestore and returned back to the client.
 
 The format of this file is a list of `Secrets` as defined by the tokenservice.proto file:
 
@@ -413,7 +417,7 @@ gcloud beta compute  instances create   tokenserver   \
  --image=debian-10-buster-v20200805 --image-project=debian-cloud  \
  --project $ts_project_id
 
-
+## We're opening firewall port to allow you to debug
 gcloud compute  firewall-rules create allow-ssh --allow=tcp:22 --network=tsnetwork \
    --source-ranges=0.0.0.0/0  --target-tags=tokenserver --project $ts_project_id
 ```
@@ -423,7 +427,11 @@ you would use within `ts-cloud-config.yaml` ExecStart command, eg
 
 ```bash
 git clone https://github.com/salrashid123/gcp_tokendistributor.git
+
+
 cd gcp_tokendistributor/app
+
+## Note, 58992830672 is the projectNumber where the GCP Secrets are saved (eg, the tokenserver's projectID, (ts-x3qw))
 go run src/server/server.go --grpcport 0.0.0.0:50051 --tsAudience https://tokenservice --useSecrets --tlsCert projects/58992830672/secrets/tls_crt --tlsKey projects/58992830672/secrets/tls_key --tlsCertChain projects/58992830672/secrets/tls-ca  --firestoreProjectId ts-x3qw --firestoreCollectionName foo  --v=20 -alsologtostderr
 ```
 
@@ -446,5 +454,6 @@ gcloud compute  firewall-rules create allow-ssh --allow=tcp:22 --network=tcnetwo
  Install go, run (remember to replace the IP address below that points to the TokenServer as well as the GCP ProjectNumber where the TLScertificates are saved)
 
 ```bash
+## Note, 149534119989 is the projectID where the tokenclien'ts TLS secrets are saved
 go run src/client/client.go  --address 34.67.171.121:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenservice --useMTLS --useSecrets --tlsClientCert projects/149534119989/secrets/tls_crt --tlsClientKey projects/149534119989/secrets/tls_key --tlsCertChain projects/149534119989/secrets/tls-ca --v=20 -alsologtostderr
  ```

@@ -101,7 +101,7 @@ var (
 	validatePeerSN          = flag.Bool("validatePeerSN", false, "Validate each TokenClients Certificate Serial Number")
 	firestoreProjectId      = flag.String("firestoreProjectId", "", "firestoreProjectId where the sealed data is stored")
 	firestoreCollectionName = flag.String("firestoreCollectionName", "", "firestoreCollectionName where the sealedData is Stored")
-	jwtIssuedAtJitter       = flag.Int("jwtIssuedAtJitter", 4, "Validate the IssuedAt timestamp.  If issuedAt+jwtIssueAtJitter > now(), then reject")
+	jwtIssuedAtJitter       = flag.Int("jwtIssuedAtJitter", 1, "Validate the IssuedAt timestamp.  If issuedAt+jwtIssueAtJitter > now(), then reject")
 	jwtSet                  *jwk.Set
 	hs                      *health.Server
 )
