@@ -6,6 +6,8 @@ This is problematic in some situations where Alice would like Bob's VM to proces
 
 The flow described in this repo flow inverts the access where the data owner (Alice) shares some secret material with permissions to sensitive data but **ONLY** to a isolated system owned by Bob.  The data owner (Alice) will share access _exclusively__ to the VM only after attesting some known binary that Alice is aware of and trusts is running on that VM and that that Bob cannot access the VM via SSH or any other means.
 
+>> This is not an officially supported Google product
+
 #### Architecture
 
 ![images/arch.png](images/arch.png)
@@ -484,6 +486,33 @@ Docker based images will not generate deterministic builds but you can use `Baze
 
 You can find more information about how to build the TokenClient and TokenServer in the appendix.
 
+
+Note the `fingerprint` value is a hash of the entire VM's state and configuration.  Any change (stop/restart, metadata update, etc) will change its value.
+
+
+```bash
+$ gcloud compute instances describe 4616733414634708048 --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
+Mj7BV6UuUs4=
+
+$ gcloud compute instances stop 4616733414634708048 --zone us-central1-a --project tc-e381ee09 
+$ gcloud compute instances start 4616733414634708048 --zone us-central1-a --project tc-e381ee09 
+
+$ gcloud compute instances describe 4616733414634708048 --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
+Y0hv2RZ_Qy0=
+
+# change any metadata using console
+$ gcloud compute instances describe 4616733414634708048 --zone us-central1-a --project tc-e381ee09  --format="value(fingerprint)"
+SRVm69LywSw=
+```
+
+Which is also cross checked by the tokenserver at runtime against the value stored vs the current state of the VM (meaning even if after provisioning, the VM is stopped and restarted, the following check will fail)
+
+```golang
+	if cresp.Fingerprint != c.ImageFingerprint {
+		glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
+		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
+	}
+```
 
 >> **TODO**  allow Provisioning application to enable firewall rule to only allow `tc_address` to connect to the tokenserver
 
