@@ -135,7 +135,7 @@ You should see the new project details and IP address allocated/assigned for the
     Outputs:
 
     ts_address = 35.239.242.219
-    ts_image_hash = sha256:d15fca0990db0e106cae91e975c3093fed96131250702cdd7db1d45ca77e1c21
+    ts_image_hash = sha256:edafc58fca595e17d26b41d79760b292ddf16083e76fb7215d12df1d65fab132
     ts_project_id = ts-de7f98d5
     ts_project_number = 973084368812
     ts_service_account = tokenserver@ts-de7f98d5.iam.gserviceaccount.com
@@ -227,7 +227,7 @@ The command will create a new GCP project, enable GCP api services, create a ser
     Outputs:
 
     tc_address = 35.193.246.123
-    tc_image_hash = sha256:661f10eeaf66af697a1d463ad6db2467b2ef990277cf85b0d40a53b239391704
+    tc_image_hash = sha256:4e94992868f38d51b0ad85fd0e4649f818c754111eb73afb236c505024599f6f
     tc_project_id = tc-16a39413
     tc_project_number = 538014872919
     tc_service_account = tokenclient@tc-16a39413.iam.gserviceaccount.com
@@ -294,7 +294,7 @@ You should see an output like:
 ```bash
       Outputs:
       tc_address = 35.193.246.123
-      tc_image_hash = sha256:661f10eeaf66af697a1d463ad6db2467b2ef990277cf85b0d40a53b239391704
+      tc_image_hash = sha256:4e94992868f38d51b0ad85fd0e4649f818c754111eb73afb236c505024599f6f
       tc_instance_id = 7953211237324536786
       tc_project_id = tc-16a39413
       tc_project_number = 538014872919
@@ -426,10 +426,10 @@ The output of the provisioning step will prompt Alice to confirm that the image 
 
 At that point, the image hash value will be saved into Firestore `R0OB1dVupyp/rNcb2/5Bfrx9uKjdjDNAPM9kUS7UiaI=`  using the `vm_id=2503055333933721897` in firestore document key.  Every time the TokenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
 
-The output also shows the unique `Fingerprint` of the VM `2020/07/22 09:47:32 Image Fingerprint: [yM8bKId-VQA=]`.  Eventually this data should also get saved into Firestore and validated by the TokenServer.
+The output also shows the unique `Fingerprint` of the VM `2020/07/22 09:47:32 Image Fingerprint: [yM8bKId-VQA=]`. 
 
-```
-$ $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
+```bash
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id  \
     --secretsFile=secrets.json
 2020/09/08 16:03:27 tc-e381ee09  us-central1-a  4616733414634708048
@@ -449,7 +449,7 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-e381ee09/tokenclient@sha256:f133156a505050f383e908023b040439af73e0e26aadc8543160f7d62fe5a254 --address 35.222.5.146:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useSecrets --tlsCertChain projects/620714181540/secrets/tls-ca --v=25 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-e381ee09/tokenclient@sha256:4e94992868f38d51b0ad85fd0e4649f818c754111eb73afb236c505024599f6f --address 35.222.5.146:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useSecrets --tlsCertChain projects/620714181540/secrets/tls-ca --v=25 -alsologtostderr
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
@@ -477,7 +477,7 @@ y
 ```
 
 Note that Alice not trusts the entire TokenClient vm Image hash which itself includes a docker image hash 
-(`gcr.io/tc-03330b55/tokenclient@sha256:f133156a505050f383e908023b040439af73e0e26aadc8543160f7d62fe5a254`).  
+(`gcr.io/tc-03330b55/tokenclient@sha256:4e94992868f38d51b0ad85fd0e4649f818c754111eb73afb236c505024599f6f`).  
 It is expected that this image was generated elsewhere such that both Alice and Bob would know the precise and source code that it includes.  
 Docker based images will not generate deterministic builds but you can use `Bazel` as described in [Building deterministic Docker images with Bazel](https://blog.bazel.build/2015/07/28/docker_build.html) and as an example:
 
@@ -487,8 +487,9 @@ Docker based images will not generate deterministic builds but you can use `Baze
 You can find more information about how to build the TokenClient and TokenServer in the appendix.
 
 
-Note the `fingerprint` value is a hash of the entire VM's state and configuration.  Any change (stop/restart, metadata update, etc) will change its value.
+#### VM Fingerprint verification
 
+The `fingerprint` value is a hash of the entire VM's state and configuration.  Any change (stop/restart, metadata update, etc) will change its value.  You can use this VM fingerprint to ensure that when the tokenclient makes a request, the VM is in the same state it was originally provisioned against 
 
 ```bash
 $ gcloud compute instances describe 4616733414634708048 --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
@@ -505,16 +506,14 @@ $ gcloud compute instances describe 4616733414634708048 --zone us-central1-a --p
 SRVm69LywSw=
 ```
 
-Which is also cross checked by the tokenserver at runtime against the value stored vs the current state of the VM (meaning even if after provisioning, the VM is stopped and restarted, the following check will fail)
+The following code snippet in the tokenserver performs a _runtime_ crosscheck against the value stored in firestore.
 
 ```golang
-	if cresp.Fingerprint != c.ImageFingerprint {
-		glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
-	}
+if cresp.Fingerprint != c.ImageFingerprint {
+	glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
+	return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
+}
 ```
-
->> **TODO**  allow Provisioning application to enable firewall rule to only allow `tc_address` to connect to the tokenserver
 
 #### After Provisioning
 
@@ -753,12 +752,15 @@ WHERE AEAD.DECRYPT_STRING(FROM_BASE64(@keyset1),
 ### Appendix
 
 #### No externalIP
-  Bob can also start  the VM without an external IP using the `--no-network` flag but it makes this tutorial much more complicated to 'invoke' Bob's VM to fetch secrets...I just left it out.
+  Bob can also start  the VM without an external IP using the `--no-network` flag but it makes this tutorial much more complicated to 'invoke' Bob's VM to fetch secrets.  However, using a NAT Gateway to contact the tokenserver will invalidate and waken the `validatePeerIP` check.
+
+  If a NAT Gateway is NOT used and each tokenclient connects to the server, Alice can add a firewall rule to only allow the set of egress IP addresses per tokenClient.
 
 #### Enhancements
 
 Further enhancements can be to use 
 * [VPC-SC](https://cloud.google.com/vpc-service-controls):  This will ensure only requests originating from whitelisted projects and origin IPs are allowed API access to Alices GCS objects.  However, cross-orginzation VPC-SC isn't something i think is possible at the mment.  If Bob sets up a NAT egress endpoint, Alice can define a VPC prerimeter to include that egress
+
 * [Organizational Policy](https://cloud.google.com/resource-manager/docs/organization-policy/org-policy-constraints): Bob's orgianzation can have restrictions on the type of VM and specifications Bob can start (eg, ShieldedVM, OSLogin).  
 
 * `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see [this repo](https://github.com/salrashid123/restricted_security_gce)
