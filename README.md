@@ -786,6 +786,8 @@ Further enhancements can be to use
     [Message Payload Encryption in Google Cloud PubSub (Part 1: Shared Secret)](https://github.com/salrashid123/gcp_pubsub_message_encryption/tree/master/1_symmetric)
     
   * Mount Persistent Disk with LUKS encryption:
+    - [LUKS on COS with](https://gist.github.com/salrashid123/008371c75e303727214c1012939a0ace)
+    - [LUKS on COS with Loopback](https://gist.github.com/salrashid123/c9a8e59b86e41329dd8f2052a38915f5)
     - [https://github.com/salrashid123/gcp_luks_csek_disks](https://github.com/salrashid123/gcp_luks_csek_disks)
     
 
