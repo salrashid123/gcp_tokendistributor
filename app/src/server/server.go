@@ -388,7 +388,7 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.MakeCredentialRequest) (*tokenservice.MakeCredentialResponse, error) {
 
 	glog.V(2).Infof("======= MakeCredential ========")
-	glog.V(5).Infof("     client provided uid: %s", in.Uid)
+	glog.V(5).Infof("     client provided uid: %s", in.RequestId)
 	glog.V(10).Infof("     Got AKName %s", in.AkName)
 	glog.V(10).Infof("     Registry size %d\n", len(registry))
 
@@ -450,16 +450,21 @@ func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.Ma
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
-	nonces[in.Uid] = string(b)
+	nonces[in.RequestId] = string(b)
 	//nonces[idToken.Google.ComputeEngine.InstanceID] = string(b)
 
-	credBlob, encryptedSecret, err := makeCredential(nonces[in.Uid], in.EkPub, in.AkPub)
+	credBlob, encryptedSecret, err := makeCredential(nonces[in.RequestId], in.EkPub, in.AkPub)
 	if err != nil {
 		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to makeCredential"))
 	}
 	glog.V(2).Infof("     Returning MakeCredentialResponse ========")
+	respID, err := uuid.NewUUID()
+	if err != nil {
+		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to Create UUID"))
+	}
 	return &tokenservice.MakeCredentialResponse{
-		Uid:             in.Uid,
+		ResponseID:      respID.String(),
+		InResponseTo:    in.RequestId,
 		CredBlob:        credBlob,
 		EncryptedSecret: encryptedSecret,
 		Pcr:             int32(*pcr),
@@ -469,7 +474,7 @@ func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.Ma
 func (s *verifierserver) ActivateCredential(ctx context.Context, in *tokenservice.ActivateCredentialRequest) (*tokenservice.ActivateCredentialResponse, error) {
 
 	glog.V(2).Infof("======= ActivateCredential ========")
-	glog.V(5).Infof("     client provided uid: %s", in.Uid)
+	glog.V(5).Infof("     client provided uid: %s", in.RequestId)
 	glog.V(10).Infof("     Secret %s", in.Secret)
 
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
@@ -483,27 +488,31 @@ func (s *verifierserver) ActivateCredential(ctx context.Context, in *tokenservic
 	var id string
 	id = idToken.Google.ComputeEngine.InstanceID
 
-	err := verifyQuote(id, nonces[in.Uid], in.Attestation, in.Signature)
+	err := verifyQuote(id, nonces[in.RequestId], in.Attestation, in.Signature)
 	if err != nil {
 		glog.Errorf("     Quote Verification Failed Quote: %v", err)
 		return &tokenservice.ActivateCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Quote Verification Failed Quote: %v", err))
 	} else {
 		glog.V(2).Infof("     Verified Quote")
 		verified = true
-		delete(nonces, in.Uid)
+		delete(nonces, in.RequestId)
 	}
 
 	glog.V(2).Infof("     Returning ActivateCredentialResponse ========")
-
+	respID, err := uuid.NewUUID()
+	if err != nil {
+		return &tokenservice.ActivateCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Failed to create UUID: %v", err))
+	}
 	return &tokenservice.ActivateCredentialResponse{
-		Uid:      in.Uid,
-		Verified: verified,
+		ResponseID:   respID.String(),
+		InResponseTo: in.RequestId,
+		Verified:     verified,
 	}, nil
 }
 
 func (s *verifierserver) OfferQuote(ctx context.Context, in *tokenservice.OfferQuoteRequest) (*tokenservice.OfferQuoteResponse, error) {
 	glog.V(2).Infof("======= OfferQuote ========")
-	glog.V(5).Infof("     client provided uid: %s", in.Uid)
+	glog.V(5).Infof("     client provided uid: %s", in.RequestId)
 
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
 	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
@@ -519,16 +528,21 @@ func (s *verifierserver) OfferQuote(ctx context.Context, in *tokenservice.OfferQ
 
 	glog.V(2).Infof("     Returning OfferQuoteResponse ========")
 	nonces[id] = nonce
+	respID, err := uuid.NewUUID()
+	if err != nil {
+		return &tokenservice.OfferQuoteResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Could not create UUID"))
+	}
 	return &tokenservice.OfferQuoteResponse{
-		Uid:   in.Uid,
-		Pcr:   int32(*pcr),
-		Nonce: nonce,
+		ResponseID:   respID.String(),
+		InResponseTo: in.RequestId,
+		Pcr:          int32(*pcr),
+		Nonce:        nonce,
 	}, nil
 }
 
 func (s *verifierserver) ProvideQuote(ctx context.Context, in *tokenservice.ProvideQuoteRequest) (*tokenservice.ProvideQuoteResponse, error) {
 	glog.V(2).Infof("======= ProvideQuote ========")
-	glog.V(5).Infof("     client provided uid: %s", in.Uid)
+	glog.V(5).Infof("     client provided uid: %s", in.RequestId)
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
 	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 
@@ -555,15 +569,20 @@ func (s *verifierserver) ProvideQuote(ctx context.Context, in *tokenservice.Prov
 	}
 
 	glog.V(2).Infof("     Returning ProvideQuoteResponse ========")
+	respID, err := uuid.NewUUID()
+	if err != nil {
+		return &tokenservice.ProvideQuoteResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Could not create UUID"))
+	}
 	return &tokenservice.ProvideQuoteResponse{
-		Uid:      in.Uid,
-		Verified: ver,
+		ResponseID:   respID.String(),
+		InResponseTo: in.RequestId,
+		Verified:     ver,
 	}, nil
 }
 
 func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice.ProvideSigningKeyRequest) (*tokenservice.ProvideSigningKeyResponse, error) {
 	glog.V(2).Infof("======= ProvideSigningKey ========")
-	glog.V(5).Infof("     client provided uid: %s", in.Uid)
+	glog.V(5).Infof("     client provided uid: %s", in.RequestId)
 
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
 	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
@@ -581,9 +600,14 @@ func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice
 	ver := true
 
 	glog.V(2).Infof("     Returning ProvideSigningKeyResponse ========")
+	respID, err := uuid.NewUUID()
+	if err != nil {
+		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Could not create UUID"))
+	}
 	return &tokenservice.ProvideSigningKeyResponse{
-		Uid:      in.Uid,
-		Verified: ver,
+		ResponseID:   respID.String(),
+		InResponseTo: in.RequestId,
+		Verified:     ver,
 	}, nil
 }
 

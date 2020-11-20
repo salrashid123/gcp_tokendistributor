@@ -381,129 +381,128 @@ func main() {
 						return
 					}
 
-					if *doAttestation && *useTPM {
+				}
+				if *doAttestation && *useTPM {
 
-						totalHandles := 0
-						for _, handleType := range handleNames["all"] {
-							handles, err := tpm2tools.Handles(rwc, handleType)
-							if err != nil {
-								glog.Errorf("ERROR getting handles: %v", err)
-								return
+					totalHandles := 0
+					for _, handleType := range handleNames["all"] {
+						handles, err := tpm2tools.Handles(rwc, handleType)
+						if err != nil {
+							glog.Errorf("ERROR getting handles: %v", err)
+							return
+						}
+						for _, handle := range handles {
+							if err = tpm2.FlushContext(rwc, handle); err != nil {
+								glog.Errorf("flushing handle 0x%x: %v", handle, err)
 							}
-							for _, handle := range handles {
-								if err = tpm2.FlushContext(rwc, handle); err != nil {
-									glog.Errorf("flushing handle 0x%x: %v", handle, err)
-								}
-								glog.V(20).Infof("Handle 0x%x flushed\n", handle)
-								totalHandles++
-							}
-						}
-
-						// First create attestation keys
-						akName, ekPub, akPub, err := createKeys()
-						if err != nil {
-							glog.Errorf("ERROR:     Unable to generate EK/AK: %v", err)
-							return
-						}
-						u := uuid.New().String()
-
-						req := &pb.MakeCredentialRequest{
-							Uid:    u,
-							AkName: akName,
-							EkPub:  ekPub,
-							AkPub:  akPub,
-						}
-
-						v := pb.NewVerifierClient(conn)
-
-						rr, err := v.MakeCredential(ctx, req)
-						if err != nil {
-							glog.Errorf("Error MakeCredential: %v", err)
-							return
-						}
-						time.Sleep(1 * time.Second)
-						glog.V(5).Infof("     MakeCredential RPC Response with provided uid [%s]", rr.Uid)
-
-						glog.V(5).Infof("=============== ActivateCredential  ===============")
-						secret, err := activateCredential(rr.Uid, rr.CredBlob, rr.EncryptedSecret)
-						if err != nil {
-							glog.Errorf("ERROR:  could not activateCredential: %v", err)
-							return
-						}
-						attestation, signature, err := quote(int(*r.Pcr), secret)
-						if err != nil {
-							glog.Errorf("ERROR:  Unable to generate quote: %v", err)
-							return
-						}
-						areq := &pb.ActivateCredentialRequest{
-							Uid:         u,
-							Secret:      secret,
-							Attestation: attestation,
-							Signature:   signature,
-						}
-						ar, err := v.ActivateCredential(ctx, areq)
-						if err != nil {
-							glog.Errorf("could not call ActivateCredential: %v", err)
-							return
-						}
-
-						glog.V(5).Infof("=============== %v", ar)
-						glog.V(5).Infof("=============== OfferQuote ===============")
-
-						aqr := &pb.OfferQuoteRequest{
-							Uid: u,
-						}
-						qr, err := v.OfferQuote(ctx, aqr)
-						if err != nil {
-							glog.Errorf("ERROR Could not call OfferQuote: %v", err)
-							return
-						}
-						glog.V(5).Infof("     Quote Requested with nonce %s, pcr: %d", qr.Nonce, qr.Pcr)
-
-						glog.V(5).Infof("=============== Generating Quote ===============")
-						att, ssig, err := quote(int(qr.Pcr), qr.Nonce)
-						if err != nil {
-							glog.Errorf("ERROR  could not create Quote: %v", err)
-							return
-						}
-						glog.V(5).Infof("=============== Providing Quote ===============")
-						pqr := &pb.ProvideQuoteRequest{
-							Uid:         u,
-							Attestation: att,
-							Signature:   ssig,
-						}
-						pqesp, err := v.ProvideQuote(ctx, pqr)
-						if err != nil {
-							glog.Errorf("ERROR Could not provideQuote: %v", err)
-							return
-						}
-						glog.V(5).Infof("     Provided Quote verified: %t", pqesp.Verified)
-
-						if *exchangeSigningKey {
-							glog.V(5).Infof("=============== Providing SigningKey ===============")
-							key, att, attsig, err := signingKey(*pcr)
-							if err != nil {
-								glog.Errorf("ERROR Could not signingKey: %v", err)
-								return
-							}
-							glog.V(2).Infof("     Returning SigningKey")
-
-							pskreq := &pb.ProvideSigningKeyRequest{
-								Uid:         u,
-								Signingkey:  key,
-								Attestation: att,
-								Signature:   attsig,
-							}
-							pskresp, err := v.ProvideSigningKey(ctx, pskreq)
-							if err != nil {
-								glog.Errorf("ERROR Could not ProvideSigningKey: %v", err)
-								return
-							}
-							glog.V(2).Infof("     SigningKey Response %v", pskresp.Verified)
+							glog.V(20).Infof("Handle 0x%x flushed\n", handle)
+							totalHandles++
 						}
 					}
-				}
 
+					// First create attestation keys
+					akName, ekPub, akPub, err := createKeys()
+					if err != nil {
+						glog.Errorf("ERROR:     Unable to generate EK/AK: %v", err)
+						return
+					}
+					u := uuid.New().String()
+
+					req := &pb.MakeCredentialRequest{
+						RequestId: u,
+						AkName:    akName,
+						EkPub:     ekPub,
+						AkPub:     akPub,
+					}
+
+					v := pb.NewVerifierClient(conn)
+
+					rr, err := v.MakeCredential(ctx, req)
+					if err != nil {
+						glog.Errorf("Error MakeCredential: %v", err)
+						return
+					}
+					time.Sleep(1 * time.Second)
+					glog.V(5).Infof("     MakeCredential RPC RequestID [%s] InResponseTo ID [%s]", rr.ResponseID, rr.InResponseTo)
+
+					glog.V(5).Infof("=============== ActivateCredential  ===============")
+					secret, err := activateCredential(u, rr.CredBlob, rr.EncryptedSecret)
+					if err != nil {
+						glog.Errorf("ERROR:  could not activateCredential: %v", err)
+						return
+					}
+					attestation, signature, err := quote(int(*r.Pcr), secret)
+					if err != nil {
+						glog.Errorf("ERROR:  Unable to generate quote: %v", err)
+						return
+					}
+					areq := &pb.ActivateCredentialRequest{
+						RequestId:   u,
+						Secret:      secret,
+						Attestation: attestation,
+						Signature:   signature,
+					}
+					ar, err := v.ActivateCredential(ctx, areq)
+					if err != nil {
+						glog.Errorf("could not call ActivateCredential: %v", err)
+						return
+					}
+
+					glog.V(5).Infof("=============== %v", ar)
+					glog.V(5).Infof("=============== OfferQuote ===============")
+
+					aqr := &pb.OfferQuoteRequest{
+						RequestId: u,
+					}
+					qr, err := v.OfferQuote(ctx, aqr)
+					if err != nil {
+						glog.Errorf("ERROR Could not call OfferQuote: %v", err)
+						return
+					}
+					glog.V(5).Infof("     Quote Requested with nonce %s, pcr: %d", qr.Nonce, qr.Pcr)
+
+					glog.V(5).Infof("=============== Generating Quote ===============")
+					att, ssig, err := quote(int(qr.Pcr), qr.Nonce)
+					if err != nil {
+						glog.Errorf("ERROR  could not create Quote: %v", err)
+						return
+					}
+					glog.V(5).Infof("=============== Providing Quote ===============")
+					pqr := &pb.ProvideQuoteRequest{
+						RequestId:   u,
+						Attestation: att,
+						Signature:   ssig,
+					}
+					pqesp, err := v.ProvideQuote(ctx, pqr)
+					if err != nil {
+						glog.Errorf("ERROR Could not provideQuote: %v", err)
+						return
+					}
+					glog.V(5).Infof("     Provided Quote verified: %t", pqesp.Verified)
+
+					if *exchangeSigningKey {
+						glog.V(5).Infof("=============== Providing SigningKey ===============")
+						key, att, attsig, err := signingKey(*pcr)
+						if err != nil {
+							glog.Errorf("ERROR Could not signingKey: %v", err)
+							return
+						}
+						glog.V(2).Infof("     Returning SigningKey")
+
+						pskreq := &pb.ProvideSigningKeyRequest{
+							RequestId:   u,
+							Signingkey:  key,
+							Attestation: att,
+							Signature:   attsig,
+						}
+						pskresp, err := v.ProvideSigningKey(ctx, pskreq)
+						if err != nil {
+							glog.Errorf("ERROR Could not ProvideSigningKey: %v", err)
+							return
+						}
+						glog.V(2).Infof("     SigningKey Response %v", pskresp.Verified)
+					}
+				}
 				isProvisioned = true
 			}()
 			glog.V(5).Infof("     Sleeping..")
