@@ -1,309 +1,157 @@
+```logs
 2020-11-20T23:11:59.117777407Z I1120 23:11:59.117698       1 client.go:526]      Worker 1 starting
- 
 2020-11-20T23:11:59.117019938Z I1120 23:11:59.116810       1 client.go:518]      >>>>>>>>>>>>>>> System Provisioned <<<<<<<<<<<<<<
- 
 2020-11-20T23:11:51.719173231Z I1120 23:11:51.719014       1 client.go:503]      SigningKey Response true
- 
 2020-11-20T23:11:51.715386124Z I1120 23:11:51.715145       1 client.go:490]      Returning SigningKey
- 
 2020-11-20T23:11:51.706529440Z I1120 23:11:51.705983       1 client.go:1234]      Unrestricted Key Signature Verified
- 
 2020-11-20T23:11:51.705730301Z I1120 23:11:51.705579       1 client.go:1226] Control Signature data with unrestriced Key:  omMGWFLRNqq7BrRz6RTA6ivGxBCqqYBt00WVjKiflI8J7D1dqxExgE2R9+OK0/WlXRUBE5/a3sSPfaLo8duxaJpzrKg9jtvaSHnCNZEJb2rux5i10TmGiW5C2KBQCI2XLCASMWgSKJBetpjuF1ZA4hzdgBkjMpFFJj71XY/fR42bX+qvZhA0X+39pNn+1pHT4mM0Ct6/jwRnYKc5yS1O/vUcjiLJVcMYvUT0J5FpMFay1eBu/fAluit/5CZaDpId4F3csyKK1IM9JZfskgqhLQ+0dO51HeM/YRVtdR/PERWt3uWsr2aPja2TI6RguW4IsJH4YZpsaiBTYlvskk2Ikg
- 
 2020-11-20T23:11:51.699010326Z I1120 23:11:51.698890       1 client.go:1217]      TPM based Hash for Unrestricted Key w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=
- 
 2020-11-20T23:11:51.696777897Z -----END PUBLIC KEY-----
- 
 2020-11-20T23:11:51.696773407Z 4QIDAQAB
- 
 2020-11-20T23:11:51.696768787Z IIqS/tvBq53QU4av71wUG5DVc+LH2xnxL7D3Xw7i7HzwuEnR7bfkdEQApkYlb8i1
- 
 2020-11-20T23:11:51.696764238Z euDNsiMJm3iqGU+UXCXRp8IQbMQ6mh5qik9uoB/QzC+m7ngbEf3QCFoaq5+ZRBb8
- 
 2020-11-20T23:11:51.696759608Z l/rMwAfYRXX5+G3tO4ToMebcfwieBiyg2VPoGg8UMP1I0vjAq2IsDoZZy0KusFxg
- 
 2020-11-20T23:11:51.696754938Z x6XElaU6GiDtYoBUx+v4sSZqaNd8PQwRVUSzm/7EsC+Gn1iWPs2ZfFeORP9nKMe7
- 
 2020-11-20T23:11:51.696750088Z fzyJjpwtq1GX2Px35zo9iQUAMiVYUTedZBTVyAQXZx4kstZ+jO2gUDnuOl0mcY7s
- 
 2020-11-20T23:11:51.696744948Z MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuMdl2pBdziG7uLZUtIHz
- 
 2020-11-20T23:11:51.696738378Z -----BEGIN PUBLIC KEY-----
- 
 2020-11-20T23:11:51.696707858Z I1120 23:11:51.696531       1 client.go:1208]      ukPubPEM: 
- 
 2020-11-20T23:11:51.691146882Z I1120 23:11:51.690951       1 client.go:1185]      Certify Signature: 4fc38ac137685451cdbcc0f90a68a59e675d34856f3783c342bbd448fb1690dc1927c8e8fcb1fe7dbb055e89cdca536ca060040afc28916872f3ca99c5ce886e9058b8c41359312ce50cb169c095566fefe056de7557d30c4fd8021aeff30c6f94d6d622bb1ce9fc6c1afb8bffb500ab174d2908bcad32db22cec2369357a5ea22af60e17e42436ebe4d25aec27ffc6543a4c8ca145f53f9fe462cac402343dd2fa722f5c82b05ab1b8169d6cfde393c2e8fc95a168da69c73452583787b2716a0fedc91b5973a069d727f40f20abccee93e7fe52e1979ff18aadef3517ae35cd77ecf3e0817943f4a41be03b26ef9834e55059850e140f09b22213bf640903f,
- 
 2020-11-20T23:11:51.691082662Z I1120 23:11:51.690903       1 client.go:1184]      Certify Attestation: ff54434780170022000bea4e1462e2cce108ea6fddce2bc75c1e1fc77f3f6f25472230d7d710acd721a8000000000000000242ca00000009000000000120160511001628000022000bde5b87cffde9767f53382d350c7d93e6a33e52ac104c7cad29b4e1e00a7ce3cd0022000ba260503d6e43350c833559d8101a5ba300d9ebdb30f441577eddc34e13dee379,
- 
 2020-11-20T23:11:51.682531438Z I1120 23:11:51.682314       1 client.go:1174]      ukeyName: 000bde5b87cffde9767f53382d350c7d93e6a33e52ac104c7cad29b4e1e00a7ce3cd,
- 
 2020-11-20T23:11:51.671735856Z I1120 23:11:51.671540       1 client.go:1140]      Write (ukPriv) ========
- 
 2020-11-20T23:11:51.671651756Z I1120 23:11:51.671462       1 client.go:1135]      Write (ukPub) ========
- 
 2020-11-20T23:11:51.671630536Z I1120 23:11:51.671445       1 client.go:1133]      Unrestricted ukPriv: 0020d002fab970d945513c46355b847651af1b7d693b61a3092a0ba11e5fd497f30e0010dfa7c65ba0ccfb332a2641008d4604005a0efbda63971854839000806ea1477565b1fb33d2c24672bbac2d2d4d6105f0aa2131fcafa858550567bc266816ebaa9287ea0e3bc557a7dc45a4fa619abb7461fcbe8b2cc6b0a65820959427f7eb704eee9c0e019e3a52d2a1d395571c632bd620f6f68047626daec9e228f226c4bcc104fce41ef8cbe04096b9c89fafb60ba936290a09798fe2a166e92a67e1f4fa934a144b74fe56bbfd8c4f180f64f16b3fd0c00b80ec21be6b40,
- 
 2020-11-20T23:11:51.671559647Z I1120 23:11:51.671394       1 client.go:1132]      Unrestricted ukPub: 0001000b00040072000000100014000b0800000000000100b8c765da905dce21bbb8b654b481f37f3c898e9c2dab5197d8fc77e73a3d89050032255851379d6414d5c80417671e24b2d67e8ceda05039ee3a5d26718eecc7a5c495a53a1a20ed628054c7ebf8b1266a68d77c3d0c115544b39bfec4b02f869f58963ecd997c578e44ff6728c7bb97faccc007d84575f9f86ded3b84e831e6dc7f089e062ca0d953e81a0f1430fd48d2f8c0ab622c0e8659cb42aeb05c607ae0cdb223099b78aa194f945c25d1a7c2106cc43a9a1e6a8a4f6ea01fd0cc2fa6ee781b11fdd0085a1aab9f994416fc208a92fedbc1ab9dd05386afef5c141b90d573e2c7db19f12fb0f75f0ee2ec7cf0b849d1edb7e4744400a646256fc8b5e1,
- 
 2020-11-20T23:11:51.416323927Z I1120 23:11:51.415941       1 client.go:1106] ======= SignwithUnrestrictedKey ========
- 
 2020-11-20T23:11:51.416308097Z I1120 23:11:51.415922       1 client.go:1103]      AK Verified Signature
- 
 2020-11-20T23:11:51.415851657Z I1120 23:11:51.415698       1 client.go:1082]      AK Signed Data cRHGMzqB7j4eaoYKGwdGrNQAuU3hDNzzgCyOyL4lPv9dzpe1Ntu0hDBHgoQV9YujEhPBMheh1UtSz079+5ZwT9ulyN6nSw1uzO6s+BGbPlxrjs5IdmAC8h3MChtIwwtprxpYl+RV7ewXY5KNGjIPQLEXCcHpfr5sKhDiPRaeG0X1OUsxTKZiB2HJZwZm3VLSoqmdOgyKYDNItDDTMHm2NajcKPq+z6B25o1qadQkZQo0/OSle9gEqLVgMzvjEWJY14LZOVRgwe1uhFBZUr3dGNXMEDFc/KonSDieznLatDVyaEboBjt4ZJ5BFdZvq/I61+him5ZMljNymXEvz6rWyg==
- 
 2020-11-20T23:11:51.408408013Z I1120 23:11:51.408292       1 client.go:1073]      AK Issued Hash w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=
- 
 2020-11-20T23:11:51.402528838Z I1120 23:11:51.402416       1 client.go:1024] ======= SignwithRestrictedKey ========
- 
 2020-11-20T23:11:51.401118879Z I1120 23:11:51.400892       1 client.go:1020]      AK keyName: 000bd50ad59a0a87bf76f8023753e2d8810eb945414cbc1f563201c90ccc0bb1d563
- 
 2020-11-20T23:11:51.391284396Z I1120 23:11:51.391159       1 client.go:994]      LoadUsingAuth ========
- 
 2020-11-20T23:11:51.390761756Z I1120 23:11:51.390667       1 client.go:988]      Read (akPriv)
- 
 2020-11-20T23:11:51.390688046Z I1120 23:11:51.390535       1 client.go:983]      Read (akPub)
- 
 2020-11-20T23:11:51.380464695Z I1120 23:11:51.380376       1 client.go:970]      ContextLoad (ek)
- 
 2020-11-20T23:11:51.380073074Z I1120 23:11:51.379916       1 client.go:965]      PCR 0 Value fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe 
- 
 2020-11-20T23:11:51.378749726Z I1120 23:11:51.378121       1 client.go:955]      --> Start signingKey
- 
 2020-11-20T23:11:51.378742506Z I1120 23:11:51.378106       1 client.go:484] =============== Providing SigningKey ===============
- 
 2020-11-20T23:11:51.378698396Z I1120 23:11:51.378049       1 client.go:481]      Provided Quote verified: true
- 
 2020-11-20T23:11:51.373823659Z I1120 23:11:51.373665       1 client.go:470] =============== Providing Quote ===============
- 
 2020-11-20T23:11:51.369591793Z I1120 23:11:51.369362       1 client.go:650]      <-- End Quote
- 
 2020-11-20T23:11:51.369562463Z I1120 23:11:51.369342       1 client.go:649]      Quote Sig 91d3be2e407ec266b4e69b56d280e0d5e85d85d1bc23f2f537dad93cf559838ffc64339f1e7d594ba3d60f5648528e98b7e10f882fe116bab930924b35df5f234948c5dc0ab20dacd45505661d2e23aa183dfd40cccfd1eb6a94d1402f458773a5783f1775309adc8b15fb0e2dffb39ad3cdb6d939fa1fefc9f2516e3d85519ab41281ab5ccd72a7053e8619c5dcf81699be7a5a1b3d992bbc045eaa97579487860ac37222c09d5c45c82f648d80c4b43c3c6bb53608f420226cc196624154b00141f3a03aa98a5a59535b7935a673a0f45ec07a409a1ec4d09103492be909e112be49baa465671b38e2374e0555e248e45e0012918fff04ea4a0ed889240d31
- 
 2020-11-20T23:11:51.369488673Z I1120 23:11:51.369301       1 client.go:648]      Quote Hex ff54434780180022000bea4e1462e2cce108ea6fddce2bc75c1e1fc77f3f6f25472230d7d710acd721a8002439356634323835342d396366392d346434352d613134312d3034353763363339326361310000000000024189000000090000000001201605110016280000000001000b03010000002000e0758c418aff8b359dbcf0fb9af040ca15e973b02e5630b5dca1775c7e130a
- 
 2020-11-20T23:11:51.361115079Z I1120 23:11:51.360949       1 client.go:642]      AK keyName 000bd50ad59a0a87bf76f8023753e2d8810eb945414cbc1f563201c90ccc0bb1d563
- 
 2020-11-20T23:11:51.355761973Z I1120 23:11:51.355601       1 client.go:630]      Read (akPriv) ========
- 
 2020-11-20T23:11:51.355712612Z I1120 23:11:51.355508       1 client.go:625]      Read (akPub) ========
- 
 2020-11-20T23:11:51.351696286Z I1120 23:11:51.351573       1 client.go:603]      LoadUsingAuth ========
- 
 2020-11-20T23:11:51.341573833Z I1120 23:11:51.341479       1 client.go:593]      ContextLoad (ek) ========
- 
 2020-11-20T23:11:51.341554444Z I1120 23:11:51.341452       1 client.go:588]      PCR 0 Value fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe 
- 
 2020-11-20T23:11:51.339867845Z I1120 23:11:51.339359       1 client.go:578]      --> Start Quote
- 
 2020-11-20T23:11:51.339856335Z I1120 23:11:51.339351       1 client.go:464] =============== Generating Quote ===============
- 
 2020-11-20T23:11:51.339830634Z I1120 23:11:51.339311       1 client.go:462]      Quote Requested with nonce 95f42854-9cf9-4d45-a141-0457c6392ca1, pcr: 0
- 
 2020-11-20T23:11:51.337288097Z I1120 23:11:51.337000       1 client.go:452] =============== OfferQuote ===============
- 
 2020-11-20T23:11:51.337136127Z I1120 23:11:51.336931       1 client.go:451] =============== responseID:"c5c1661d-2b85-11eb-88ad-0242ac110002"  inResponseTo:"d1725f29-a741-4092-90f9-dcfd79b66033"  verified:true
- 
 2020-11-20T23:11:51.328208603Z I1120 23:11:51.328024       1 client.go:650]      <-- End Quote
- 
 2020-11-20T23:11:51.328198774Z I1120 23:11:51.328011       1 client.go:649]      Quote Sig 51a51c868f8ef5c17fe86c9953ddd28e371148b3460c56ee93f98d91bc2da1df0b258ae0754776201b7a188864593f5eb5c021203debbc41816164e86531730bad8277c1cf377628db531988ff929166060363aa87aa71400c9d712cd5080375ff9e66dcfec3cbd64120664d8a1e6abd3c5dd7d7de43c674700ec09d26e8879e18450a9c3ad15a3db9a31b8aa4eb642e381a6dda9572d22c9f60fcc47a004338e2dbc45829bbe843342cd40da6e2e64343da7d653187522505a1f6f81a59298fb02624ee341447bebc87d371803aa43dbc6cc46a75fc9c97d1c9811f4ebcb453dc7a8643314d183322445e978bd69b6b906a6f64eaabcca233272feffcd25ed3
- 
 2020-11-20T23:11:51.328146513Z I1120 23:11:51.327970       1 client.go:648]      Quote Hex ff54434780180022000bea4e1462e2cce108ea6fddce2bc75c1e1fc77f3f6f25472230d7d710acd721a8000a6263586f4546665273570000000000024160000000090000000001201605110016280000000001000b03010000002000e0758c418aff8b359dbcf0fb9af040ca15e973b02e5630b5dca1775c7e130a
- 
 2020-11-20T23:11:51.321052728Z I1120 23:11:51.320007       1 client.go:642]      AK keyName 000bd50ad59a0a87bf76f8023753e2d8810eb945414cbc1f563201c90ccc0bb1d563
- 
 2020-11-20T23:11:51.314854424Z I1120 23:11:51.314736       1 client.go:630]      Read (akPriv) ========
- 
 2020-11-20T23:11:51.314356753Z I1120 23:11:51.314127       1 client.go:625]      Read (akPub) ========
- 
 2020-11-20T23:11:51.310658667Z I1120 23:11:51.310507       1 client.go:603]      LoadUsingAuth ========
- 
 2020-11-20T23:11:51.299770864Z I1120 23:11:51.299623       1 client.go:593]      ContextLoad (ek) ========
- 
 2020-11-20T23:11:51.299744475Z I1120 23:11:51.299591       1 client.go:588]      PCR 0 Value fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe 
- 
 2020-11-20T23:11:51.297617316Z I1120 23:11:51.297435       1 client.go:578]      --> Start Quote
- 
 2020-11-20T23:11:51.292654509Z I1120 23:11:51.292471       1 client.go:943]      <--  activateCredential()
- 
 2020-11-20T23:11:51.278896251Z I1120 23:11:51.278648       1 client.go:895]      ActivateCredentialUsingAuth
- 
 2020-11-20T23:11:51.278841190Z I1120 23:11:51.278601       1 client.go:893]      keyName 000bd50ad59a0a87bf76f8023753e2d8810eb945414cbc1f563201c90ccc0bb1d563
- 
 2020-11-20T23:11:51.271106926Z I1120 23:11:51.270893       1 client.go:866]      LoadUsingAuth
- 
 2020-11-20T23:11:51.271100396Z I1120 23:11:51.270864       1 client.go:860]      Read (akPriv)
- 
 2020-11-20T23:11:51.270998756Z I1120 23:11:51.270775       1 client.go:855]      Read (akPub)
- 
 2020-11-20T23:11:51.252483760Z I1120 23:11:51.252441       1 client.go:844]      ContextLoad (ek)
- 
 2020-11-20T23:11:51.252373190Z I1120 23:11:51.252331       1 client.go:839]      --> activateCredential()
- 
 2020-11-20T23:11:51.252215019Z I1120 23:11:51.252075       1 client.go:428] =============== ActivateCredential  ===============
- 
 2020-11-20T23:11:51.251980911Z I1120 23:11:51.251843       1 client.go:426]      MakeCredential RPC RequestID [c51bc16c-2b85-11eb-88ad-0242ac110002] InResponseTo ID [d1725f29-a741-4092-90f9-dcfd79b66033]
- 
 2020-11-20T23:11:50.007446090Z I1120 23:11:50.007265       1 client.go:833]      <-- CreateKeys()
- 
 2020-11-20T23:11:50.007435261Z I1120 23:11:50.007171       1 client.go:827]      Write (akPriv) ========
- 
 2020-11-20T23:11:50.007293Z I1120 23:11:50.007045       1 client.go:822]      Write (akPub) ========
- 
 2020-11-20T23:11:50.007288200Z -----END PUBLIC KEY-----
- 
 2020-11-20T23:11:50.007283530Z HwIDAQAB
- 
 2020-11-20T23:11:50.007278791Z qz8AKTmcAKQfUwZ/T44UOkmA/Xl4S45/WSwLrEzU2JNvPSibXtw/zTjPv8FF73Jb
- 
 2020-11-20T23:11:50.007271421Z h3HIXQ2ygW5TS9Qry7ZmXQ7HbV6ahAc9iUoFXA3tqvjINnWPS43ySxWUA8z3E5AD
- 
 2020-11-20T23:11:50.007256810Z KAShNOfLZ5PAjHueINbE9C+VvfcnYMu0RIhiw6aUDZJTxEZfc+sP2zNLjWdB4vr+
- 
 2020-11-20T23:11:50.007243151Z xBGUcpDGw8iW1df4xMxfKxBCBG0uQojDBuslZzDdMkx6wpHgV00EpZ8G8O1GubJY
- 
 2020-11-20T23:11:50.007215301Z bztYZW5SzXqj6wtQ433lA7ai8F/Z1Yd/0tIDH0Iz+ke3ZR4mvkljnFh1ZBzW8VjG
- 
 2020-11-20T23:11:50.007210080Z MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtAA2+pF2JkbATjZymJMD
- 
 2020-11-20T23:11:50.007202421Z -----BEGIN PUBLIC KEY-----
- 
 2020-11-20T23:11:50.007157621Z I1120 23:11:50.007006       1 client.go:820]      akPubPEM: 
- 
 2020-11-20T23:11:50.003487443Z I1120 23:11:50.003318       1 client.go:798]      AK keyName 000bd50ad59a0a87bf76f8023753e2d8810eb945414cbc1f563201c90ccc0bb1d563
- 
 2020-11-20T23:11:49.994690270Z I1120 23:11:49.994582       1 client.go:770]      LoadUsingAuth
- 
 2020-11-20T23:11:49.985552878Z I1120 23:11:49.985390       1 client.go:760]      ContextLoad (ek)
- 
 2020-11-20T23:11:49.974811556Z I1120 23:11:49.974591       1 client.go:749]      ContextSave (ek)
- 
 2020-11-20T23:11:49.974790596Z I1120 23:11:49.974579       1 client.go:747]      CredentialHash 555e9f33b91cd715eb291a3f98bb65c5e03ccea84de3f4a646687b0acaca0738
- 
 2020-11-20T23:11:49.974783606Z I1120 23:11:49.974565       1 client.go:746]      CredentialTicket 23d8a757d57f6b57fe66b7ebb65efdf7b87295e103fa6857b8f8b11fe37a9932
- 
 2020-11-20T23:11:49.974772196Z I1120 23:11:49.974494       1 client.go:745]      CredentialData.ParentName.Digest.Value 4c121ca0e9cb6f91ed24c2eabac80ba61c0e2989732b5c75a648b1f8734e0792
- 
 2020-11-20T23:11:49.974665446Z I1120 23:11:49.974460       1 client.go:738]      akPriv: 0020ddefd66c5e21583ceaaabcafe1ad941d9513cea4dc6061d5f95ffd2f80f72e3700101f570f86431cef0ae8cbb4b7ca62375274f3763690fa6fddb3e7e78a5550418f2d7747fe3a769b4185378d040e284b46c74146db063eba1e28a8ffbda24fad3463bd5aa60b9aec27f9839b3c14971b5c620aed0c750c99a50fcf691911fc6b6207d506d7efa90338b93c64866790dc672a47f9185897f424f8635867744b89e72989910f46d9453322dcd54e7158c19a3197a21879604bc5c7ff7b7d0cd1cf6b143f899d917132b2fb2c015b3538b9414cd4d9d116abcd963516,
- 
 2020-11-20T23:11:49.974616366Z I1120 23:11:49.974416       1 client.go:737]      akPub: 0001000b00050072000000100014000b0800000000000100b40036fa91762646c04e36729893036f3b58656e52cd7aa3eb0b50e37de503b6a2f05fd9d5877fd2d2031f4233fa47b7651e26be49639c5875641cd6f158c6c411947290c6c3c896d5d7f8c4cc5f2b1042046d2e4288c306eb256730dd324c7ac291e0574d04a59f06f0ed46b9b2582804a134e7cb6793c08c7b9e20d6c4f42f95bdf72760cbb4448862c3a6940d9253c4465f73eb0fdb334b8d6741e2fafe8771c85d0db2816e534bd42bcbb6665d0ec76d5e9a84073d894a055c0dedaaf8c836758f4b8df24b159403ccf7139003ab3f0029399c00a41f53067f4f8e143a4980fd79784b8e7f592c0bac4cd4d8936f3d289b5edc3fcd38cfbfc145ef725b1f,
- 
 2020-11-20T23:11:49.823314156Z I1120 23:11:49.823156       1 client.go:711]      CreateKeyUsingAuth
- 
 2020-11-20T23:11:49.823309657Z -----END PUBLIC KEY-----
- 
 2020-11-20T23:11:49.823305076Z VwIDAQAB
- 
 2020-11-20T23:11:49.823300537Z WAtZPDwMXpL+Hsx+gjcEp9fjWojWjJBdlW1/rLhaRSxHjav13WeNG6beH/VrWGBz
- 
 2020-11-20T23:11:49.823295796Z OKTXuGVGZqqtYgM/gnVZX9Evtwf4hFenWgCMgm1lJ922VUywUiuZE0tLfR5RqTl2
- 
 2020-11-20T23:11:49.823291097Z ED6UwMH7KUSMr+PSZ1uNft5vPJ5gapX4D4RweAM/Aae1xhPy6mRG/wkDNR0EABIG
- 
 2020-11-20T23:11:49.823286556Z /9cYEAQpZ50y7zH0ViBXDm6wo6CEmQZPonzJtGi7H1g6YpotVb9ILFeWNWUzYYj4
- 
 2020-11-20T23:11:49.823281787Z xVSKXBL/39B0GB4dEoTBu+JpW+ZxyZ2DHx5RZI7D6NhXb+waJX1Z4U/C4+jbqVyo
- 
 2020-11-20T23:11:49.823276787Z MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9pXcOWH02VtB3KKBUtd
- 
 2020-11-20T23:11:49.823270276Z -----BEGIN PUBLIC KEY-----
- 
 2020-11-20T23:11:49.823250088Z I1120 23:11:49.823102       1 client.go:704]      ekPubPEM: 
- 
 2020-11-20T23:11:49.821281579Z I1120 23:11:49.821072       1 client.go:703]      ekPub Name: 000b4c121ca0e9cb6f91ed24c2eabac80ba61c0e2989732b5c75a648b1f8734e0792
- 
 2020-11-20T23:11:49.821248358Z &{23209278048038423844531378391255492549404223128572194632868369611996211741614583272911121740155944103945256626793483350157559499532393679604300065265240059920121602904054780935304026147708015269551286476497854706630657761605751111990717931901683131270918557065729927678412932120214029185136848872437104350749345710845783861027169055103416539557167752702701330173078241889176827359866744039234436338512520650357118074804844348087960724572543896877610449394198226964872462902876739315001231576899168073097962781371504269481212743357292226718772780758761962900388233526881560061344331683940887114351737915477088064795479 65537}
- 
 2020-11-20T23:11:49.821174929Z I1120 23:11:49.820930       1 client.go:690]      tpmEkPub: 
- 
 2020-11-20T23:11:49.743196881Z I1120 23:11:49.743115       1 client.go:672]      createPrimary
- 
 2020-11-20T23:11:49.743178881Z I1120 23:11:49.743081       1 client.go:667]     Current PCR 0 Value %!d(string=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe) 
- 
 2020-11-20T23:11:49.742174292Z I1120 23:11:49.742018       1 client.go:657]      --> CreateKeys()
- 
 2020-11-20T23:11:49.738125464Z I1120 23:11:49.737950       1 client.go:345]      Decoded data datasealedtotpm
- 
 2020-11-20T23:11:49.603184563Z I1120 23:11:49.603089       1 client.go:339]      Decoding with TPM
- 
 2020-11-20T23:11:49.603154963Z I1120 23:11:49.602987       1 client.go:334]      Received  Data: name:"secret3"  type:TPM  data:"\n[\x00 \xceK\xcc\xdc.\x97\x97镊yI\xfb\xf2\xe8\xceς\xe2G\\\xc1\xe4^\x94\xb57~\xf0\xdf\xee\xec<\r\xa9\x90\xf5ɲ\x1a|{\xe7\xd4\x05\xffYXs\x8c\x92\xe41\x95Z\xdd\xeb\x11\xe9\x14\xbcG}N\xbd\x17+\x07\xa9\x19e\x07\x8f\xe4\xb4\xd1\xfb[q\x86\x0c\xbf\x19kt\xbaκH\x12\x80\x02\x14\xfe1\x91\xfe\xa7\xdd\xf5\xfd\x13\xb1\"\x08\x0b\xcdL\x16\x12Cӷbޫ\xae\x81\xb8\xc2p\x8f\xca~۠\xfe\xba\x80E8\xaf#\xb8\xee\xdc\xc2\x0b\x17i\xe4\xc2D\x0c\x9f\xe4K\xb5\x90塲\x04\x80\x06\x98\xc5f\x86\xd7\xd8Z_W'\xb1\xb5:H\x85\x85\xa16\x961H\xf1;\xacn\x92\xc1S\xef\x12\xc8ȴT]\xe42S}\x8a\xa3\xa9I\x99\x9ehKR\x97\xef\x0f\x116ٍ\n\xf0\x97\xfc\xceS\xbe&\xa4\x98\xd0{\xfba\xbc\x05֋h\r\x84\x06\xbd0\xc1\xfa<\t\xe6\xe0\x91@+`%m\x05\x8d\xd2>\x1f(U\xfem\xa1\x15.\x8d2\x0f\x9c\x911\x1e\x8b\xa5\xfdޛu\xa3\xdc\xf1\x98\xee\xe4\x8b\xd4a8\xd6\\9J\x87j$\x82\xccG'O2\xabäOH\x95\x8e\xf8\xf28\xdbYj\xfa\xa9\x16χ\xb2F?n\xd4\rn\xa0\x9e\x85h,8\x10\xc2\xf3\x0cn\xabT\xc3V\x93\x04<\xacUe.\nz3\x12dp\xe0\x1aN\x00\x08\x00\x0b\x00\x00\x00\x80\x00 \x14\xe4\xdd/\x9c\nܱ\xec-\x18\xd3\xdb\x04\xaak\x8d.V\xd9\x14\xef\x87ȶߺ\x9c\x04\x9eYO\x00\x10\x00 \xd5@9\x08\xacg\xaaP:!=Q\xdc\x13p\x127\xa1\x9e\xb1\xde0\xc8?\x03\xb8ۜ%\x9df\xf9\"(\x08\x0b\x12$\x08\x00\x12 \xfc\xec\xb5j\xcc08b\xb3\x0e\xb3Bę\x0b\xebP\xb5ૉr$I\xc2٧?7\xb0\x19\xfe"
- 
 2020-11-20T23:11:49.603130923Z I1120 23:11:49.602959       1 client.go:378]      Tink AEAD Decrypted Text foo
- 
 2020-11-20T23:11:49.602615424Z I1120 23:11:49.602419       1 client.go:371]      Tink AEAD encrypted text AWrGuDmSgUsSlf0zP6OnZUeefEA+Ei1jMeP8J5jdDK5Ss+xf
- 
 2020-11-20T23:11:49.602608784Z I1120 23:11:49.602161       1 client.go:347]      Decoding as Tink
- 
 2020-11-20T23:11:49.602553504Z I1120 23:11:49.602128       1 client.go:334]      Received  Data: name:"secret2"  type:TINK  data:"\x08\xb9\xf0\x9a\xd6\x06\x12d\nX\n0type.googleapis.com/google.crypto.tink.AesGcmKey\x12\"\x1a \x0eӡ\xcc\x02\x9b~\xff\xde\xf4^\x10d\x91\xb2\x84\xa9\xf9\xad\n\x02\xaf\x8a`B\xaa(~]V\xa0\xb8\x18\x01\x10\x01\x18\xb9\xf0\x9a\xd6\x06 \x01"
- 
 2020-11-20T23:11:49.602298794Z I1120 23:11:49.602118       1 client.go:337]      Decoding as RAW fooobar
- 
 2020-11-20T23:11:49.602290074Z I1120 23:11:49.602082       1 client.go:334]      Received  Data: name:"secret1"  data:"fooobar"
- 
 2020-11-20T23:11:49.602211184Z I1120 23:11:49.602045       1 client.go:329]      Received  toResponse: c470bb82-2b85-11eb-b4c7-0242ac110002
- 
 2020-11-20T23:11:49.117926002Z I1120 23:11:49.116546       1 client.go:508]      Sleeping..
- 
 2020-11-20T23:11:49.116731443Z I1120 23:11:49.116485       1 client.go:268] Attempting to contact TokenServer [12]
- 
 2020-11-20T23:11:39.197899669Z E1120 23:11:39.197721       1 client.go:325] Error:   GetToken() from TokenService: rpc error: code = NotFound desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-e1450a52/databases/(default)/documents/foo/2506378586367586932" not found
- 
 2020-11-20T23:11:39.116627254Z I1120 23:11:39.116198       1 client.go:508]      Sleeping..
- 
 2020-11-20T23:11:39.116315834Z I1120 23:11:39.115976       1 client.go:268] Attempting to contact TokenServer [11]
- 
 2020-11-20T23:11:29.228727442Z E1120 23:11:29.228514       1 client.go:325] Error:   GetToken() from TokenService: rpc error: code = NotFound desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-e1450a52/databases/(default)/documents/foo/2506378586367586932" not found
- 
 2020-11-20T23:11:29.115727186Z I1120 23:11:29.115367       1 client.go:508]      Sleeping..
- 
 2020-11-20T23:11:29.115270047Z I1120 23:11:29.115070       1 client.go:268] Attempting to contact TokenServer [10]
- 
 2020-11-20T23:11:19.263931537Z E1120 23:11:19.263752       1 client.go:325] Error:   GetToken() from TokenService: rpc error: code = NotFound desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-e1450a52/databases/(default)/documents/foo/2506378586367586932" not found
- 
 2020-11-20T23:11:19.114845370Z I1120 23:11:19.114717       1 client.go:508]      Sleeping..
- 
 2020-11-20T23:11:19.114776900Z I1120 23:11:19.114613       1 client.go:268] Attempting to contact TokenServer [9]
- 
 2020-11-20T23:11:09.220084767Z E1120 23:11:09.219865       1 client.go:325] Error:   GetToken() from TokenService: rpc error: code = NotFound desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-e1450a52/databases/(default)/documents/foo/2506378586367586932" not found
- 
 2020-11-20T23:11:09.114311766Z I1120 23:11:09.114095       1 client.go:508]      Sleeping..
- 
 2020-11-20T23:11:09.114261576Z I1120 23:11:09.114046       1 client.go:268] Attempting to contact TokenServer [8]
- 
 2020-11-20T23:10:59.279592155Z E1120 23:10:59.279293       1 client.go:325] Error:   GetToken() from TokenService: rpc error: code = NotFound desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-e1450a52/databases/(default)/documents/foo/2506378586367586932" not found
- 
 2020-11-20T23:10:59.114874059Z I1120 23:10:59.113838       1 client.go:508]      Sleeping..
- 
 2020-11-20T23:10:59.113944720Z I1120 23:10:59.113748       1 client.go:268] Attempting to contact TokenServer [7]
- 
 2020-11-20T23:10:49.221181240Z E1120 23:10:49.220922       1 client.go:325] Error:   GetToken() from TokenService: rpc error: code = NotFound desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-e1450a52/databases/(default)/documents/foo/2506378586367586932" not found
- 
 2020-11-20T23:10:49.113757740Z I1120 23:10:49.113571       1 client.go:508]      Sleeping..
- 
 2020-11-20T23:10:49.113712320Z I1120 23:10:49.113513       1 client.go:268] Attempting to contact TokenServer [6]
- 
 2020-11-20T23:10:39.263819749Z E1120 23:10:39.263598       1 client.go:325] Error:   GetToken() from TokenService: rpc error: code = NotFound desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-e1450a52/databases/(default)/documents/foo/2506378586367586932" not found
- 
 2020-11-20T23:10:39.113603945Z I1120 23:10:39.113450       1 client.go:508]      Sleeping..
- 
 2020-11-20T23:10:39.113543646Z I1120 23:10:39.113404       1 client.go:268] Attempting to contact TokenServer [5]
- 
 2020-11-20T23:10:29.223649610Z E1120 23:10:29.223376       1 client.go:325] Error:   GetToken() from TokenService: rpc error: code = NotFound desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-e1450a52/databases/(default)/documents/foo/2506378586367586932" not found
- 
 2020-11-20T23:10:29.113374466Z I1120 23:10:29.113189       1 client.go:508]      Sleeping..
- 
 2020-11-20T23:10:29.113315448Z I1120 23:10:29.113119       1 client.go:268] Attempting to contact TokenServer [4]
- 
 2020-11-20T23:10:19.244532572Z E1120 23:10:19.244346       1 client.go:325] Error:   GetToken() from TokenService: rpc error: code = NotFound desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-e1450a52/databases/(default)/documents/foo/2506378586367586932" not found
- 
 2020-11-20T23:10:19.113038591Z I1120 23:10:19.112848       1 client.go:508]      Sleeping..
- 
 2020-11-20T23:10:19.112992402Z I1120 23:10:19.112788       1 client.go:268] Attempting to contact TokenServer [3]
- 
 2020-11-20T23:10:10.297021743Z 2020-11-20 23:10:10 +0000 [info]: #0 Successfully sent gRPC to Stackdriver Logging API.
- 
 2020-11-20T23:10:09.222981315Z E1120 23:10:09.222835       1 client.go:325] Error:   GetToken() from TokenService: rpc error: code = NotFound desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-e1450a52/databases/(default)/documents/foo/2506378586367586932" not found
- 
 2020-11-20T23:10:09.112857846Z I1120 23:10:09.112579       1 client.go:508]      Sleeping..
-
 2020-11-20T23:10:09.112802086Z I1120 23:10:09.112507       1 client.go:268] Attempting to contact TokenServer [2]
+```
