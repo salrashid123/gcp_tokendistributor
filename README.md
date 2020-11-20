@@ -777,6 +777,7 @@ The default protocol included in this repo also performs three optional TPM base
 These flows are enabled by the TokenClient by starting up by setting
 
 - TokenClient: `--useTPM --doAttestation --exchangeSigningKey`
+
 | Option | Description |
 |:------------|-------------|
 | **`-useTPM`** | Enable TPM operations |
