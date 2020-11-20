@@ -3,7 +3,7 @@
 
 resource "google_compute_instance" "tokenserver" {
   name         = "tokenserver"
-  machine_type = "f1-micro"
+  machine_type = "e2-small"
   description = "TokenServer"
   project = var.project_id  
   zone = var.zone
@@ -42,8 +42,7 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    # ExecStart=/usr/bin/docker run --rm -u 0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --validatePeerIP --useMTLS --validatePeerSN --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --v=20 -alsologtostderr
-    ExecStart=/usr/bin/docker run --rm -u 0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --validatePeerIP --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --v=20 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --useMTLS --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0 --validatePeerIP --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=10 --v=20 -alsologtostderr
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 

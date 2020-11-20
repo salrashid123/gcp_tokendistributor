@@ -324,7 +324,7 @@ cd gcloud_setup/
 envsubst < "tc-cloud-config.yaml.tmpl" > "tc-cloud-config.yaml"
 
 gcloud beta compute  instances create   tokenclient   \
- --zone=$zone --machine-type=f1-micro    --network=tcnetwork  \
+ --zone=$zone --machine-type=e2-small    --network=tcnetwork  \
  --subnet=tcsubnet     --address $tcIP   --tags tokenclient  \
  --service-account $tc_service_account_email \
  --scopes=cloud-platform,userinfo-email   --image cos-stable-81-12871-119-0  \
@@ -393,6 +393,9 @@ go run src/provisioner/provisioner.go \
   --fireStoreProjectId $ts_project_id \
   --firestoreCollectionName foo     --clientProjectId $tc_project_id --clientVMZone us-central1-a \
   --clientVMId $tc_instanceID \
+  --useTPM \
+  --attestationPCR=0 \
+  --attestationPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe  \
   --secretsFile=secrets.json
 ```
 
@@ -407,8 +410,8 @@ For example, to run the TokenServer, create a plain VM (eg debian)
 ```bash
 envsubst < "ts-cloud-config.yaml.tmpl" > "ts-cloud-config.yaml"
 
-gcloud beta compute  instances create   tokenserver   \
- --zone=$zone --machine-type=f1-micro  \
+gcloud compute  instances create   tokenserver   \
+ --zone=$zone --machine-type=e2-small  \
  --network=tsnetwork   --subnet=tssubnet  \
  --address $tsIP   --tags tokenserver \
  --service-account $ts_service_account_email \
@@ -432,17 +435,31 @@ git clone https://github.com/salrashid123/gcp_tokendistributor.git
 cd gcp_tokendistributor/app
 
 ## Note, 58992830672 is the projectNumber where the GCP Secrets are saved (eg, the tokenserver's projectID, (ts-x3qw))
-go run src/server/server.go --grpcport 0.0.0.0:50051 --tsAudience https://tokenservice --useSecrets --tlsCert projects/58992830672/secrets/tls_crt --tlsKey projects/58992830672/secrets/tls_key --tlsCertChain projects/58992830672/secrets/tls-ca  --firestoreProjectId ts-x3qw --firestoreCollectionName foo  --v=20 -alsologtostderr
+go run src/server/server.go \
+  --grpcport 0.0.0.0:50051 \
+  --tsAudience https://tokenservice \
+  --useTPM \
+  --useMTLS \
+  --useSecrets \
+  --tlsCert projects/58992830672/secrets/tls_crt \
+  --tlsKey projects/58992830672/secrets/tls_key \
+  --tlsCertChain projects/58992830672/secrets/tls-ca  \
+  --firestoreProjectId ts-x3qw \
+  --firestoreCollectionName foo \
+  --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe \
+  --pcr=0 --jwtIssuedAtJitter=5 \
+  --v=20 -alsologtostderr
+
 ```
 
 Similarly for a `TokenClient`, 
 
 ```bash
-gcloud beta compute  instances create   tokenclient   \
- --zone=$zone --machine-type=f1-micro    --network=tcnetwork  \
+gcloud compute  instances create   tokenclient   \
+ --zone=$zone --machine-type=n1-standard-1   --network=tcnetwork  \
  --subnet=tcsubnet     --address $tcIP   --tags tokenclient  \
  --service-account $tc_service_account_email \
- --scopes=cloud-platform,userinfo-email   --image cos-stable-81-12871-119-0  \
+ --scopes=cloud-platform,userinfo-email \
  --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring \
  --image=debian-10-buster-v20200805 --image-project=debian-cloud  \
  --project $tc_project_id
@@ -455,5 +472,17 @@ gcloud compute  firewall-rules create allow-ssh --allow=tcp:22 --network=tcnetwo
 
 ```bash
 ## Note, 149534119989 is the projectID where the tokenclien'ts TLS secrets are saved
-go run src/client/client.go  --address 34.67.171.121:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenservice --useMTLS --useSecrets --tlsClientCert projects/149534119989/secrets/tls_crt --tlsClientKey projects/149534119989/secrets/tls_key --tlsCertChain projects/149534119989/secrets/tls-ca --v=20 -alsologtostderr
+go run src/client/client.go  \
+  --address 34.67.171.121:50051 \
+  --useMTLS \
+  --servername tokenservice.esodemoapp2.com \
+  --tsAudience https://tokenservice \
+  --useSecrets \
+  --tlsClientCert projects/149534119989/secrets/tls_crt \
+  --tlsClientKey projects/149534119989/secrets/tls_key \
+  --tlsCertChain projects/149534119989/secrets/tls-ca \
+  --useTPM \
+  --doAttestation \
+  --exchangeSigningKey \
+  --v=20 -alsologtostderr
  ```

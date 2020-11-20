@@ -7,8 +7,10 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2
-	github.com/google/go-tpm v0.2.1-0.20191106030929-f0607eac7f8a
-	github.com/google/go-tpm-tools v0.1.3-0.20200303025303-b83096c36b80
+
+	github.com/google/go-tpm v0.3.1 // indirect
+	github.com/google/go-tpm-tools v0.2.0 // indirect
+
 	github.com/google/tink/go v1.4.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/lestrrat/go-jwx v0.0.0-20180221005942-b7d4802280ae // indirect

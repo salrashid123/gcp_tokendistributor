@@ -36,7 +36,7 @@ variable "collection_id" {
 
 variable "ts_image_hash" {
   type    = string
-  default = "docker.io/salrashid123/tokenserver@sha256:edafc58fca595e17d26b41d79760b292ddf16083e76fb7215d12df1d65fab132"
+  default = "docker.io/salrashid123/tokenserver@sha256:770cbfbc9ca49cc115a31936baf6cee63ba6c371ae27ace50d64deb8965c1965"
 }
 
 variable "gae_location_id" {
@@ -80,7 +80,7 @@ variable "tls_client_key" {
 }
 variable "tc_image_hash" {
   type    = string
-  default = "docker.io/salrashid123/tokenclient@sha256:4e94992868f38d51b0ad85fd0e4649f818c754111eb73afb236c505024599f6f"  
+  default = "docker.io/salrashid123/tokenclient@sha256:cdb4f0eb28738ad32c5e7796773a4a6e8754ffcf2cb0b9e8469fd1385b1235d7"  
 }
 variable "sni_servername" {
   type    = string

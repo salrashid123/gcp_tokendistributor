@@ -146,7 +146,7 @@ You should see the new project details and IP address allocated/assigned for the
 
 Deploy the TokenService with defaults.  The command below will deploy an _unconfigured_ TokenServer with a static IP address (`TF_VAR_ts_address`)
 
-```
+```bash
 terraform apply --target=module.ts_deploy -auto-approve
 ```
 
@@ -163,6 +163,9 @@ The terraform script `alice/deploy/main.tf` uses the default options described b
 | **`-tsAudience`** | The audience value for the tokenServer (default: `"https://tokenserver"`) |
 | **`-validatePeerIP`** | Extract the PeerIP address for the TokenClient from the TLS Session and compare with provisioned value. |
 | **`-validatePeerSN`** | Extract the SSL Serial Number and compare to provisioned value |
+| **`-useTPM`** | Enable TPM based Remote Attestation flows (default: `false`) |
+| **`-expectedPCRValue`** | ExpectedPCRValue from Quote/Verify (default: `PCR 0:  fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
+| **`-pcr`** | PCR Bank to use for quote/verify (default: `0`) |
 | **`-firestoreProjectId`** | ProjectID where the FireStore database is hosted. |
 | **`-firestoreCollectionName`** | Name of the collection where provisioned values are saved (default: `foo`) |
 | **`-jwtIssuedAtJitter`** | Validate the IssuedAt timestamp.  If issuedAt+jwtIssueAtJitter > now(), then reject (default: `1`) |
@@ -285,6 +288,9 @@ The terraform script `bob/deploy/main.tf` uses the default options described bel
 | **`-sniServerName`** | SNI ServerName for the TLS connection (default: `tokenservice.esodemoapp2.com`; valid only for mTLS) |
 | **`-serviceAccount`** | Path to GCP ServiceAccount JSON file to use to authenticate to authenticate to FireStore and GCE API (default: not used) |
 | **`-firestoreProjectId`** | ProjectID where the FireStore database is hosted. |
+| **`-useTPM`** | Enable TPM operations |
+| **`-doAttestation`** | Start offer to Make/Activate Credential flow |
+| **`-exchangeSigningKey`** | Offer RSA Signing Key (requires --doAttestation) |
 | **`-tokenServerServiceAccount`** | Service Account for the TokenServer  |
 | **`-maxLoop`** | Number of attempts the TokenClient will make to acquire a token (default: `360`) |
 | **`-pollWaitSeconds`** | Number of seconds to wait between attempts (default: `10s`)|
@@ -421,6 +427,9 @@ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id
 | **`-secretsFile`** | Path to Secrets JSON file |
 | **`-peerAddress`** | Expected IP address of the TokenClient |
 | **`-peerSerialNumber`** | Expected mTLS Serial number sent by TokenClient |
+| **`-useTPM`** | Enable TPM operations |
+| **`-attestationPCR`** | PCR Bank to use for Attestation (default: `0`) |
+| **`-attestationPCRValue`** | PCR Bank value Attestation (default: `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
 
 The output of the provisioning step will prompt Alice to confirm that the image startup script and metadata looks valid.
 
@@ -431,7 +440,9 @@ The output also shows the unique `Fingerprint` of the VM `2020/07/22 09:47:32 Im
 ```bash
 $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id  \
-    --secretsFile=secrets.json
+    --secretsFile=secrets.json \
+    --useTPM --attestationPCR=0 --attestationPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+
 2020/09/08 16:03:27 tc-e381ee09  us-central1-a  4616733414634708048
 2020/09/08 16:03:27 Found  VM instanceID "4616733414634708048"
 2020/09/08 16:03:27 Image Data: #cloud-config
@@ -749,6 +760,66 @@ WHERE AEAD.DECRYPT_STRING(FROM_BASE64(@keyset1),
   "somedata") = "liger";'
 ```
 
+
+### TPM Quote/Verify and Unrestricted Signing Key
+
+The default protocol included in this repo also performs three optional TPM based flows:
+
+* `Quote/Verify`
+  This allows the TokenClient to issue an Attestation Key which the TokenServer can save. THis Key can be used to repeatedly verify PCR values resident on the Token Client
+
+* `Restricted Signing Key (Attestation Key based signing)`:
+   Use the Attestation Key to sign some data. The TPM will only sign data that has been Hashed by the TPM itself.
+
+* `Unrestricted Signing Key`
+   Normally, the AK cannot sign any arbitrary data (it is a restricted key). Instead, the TokenClient can generate a new RSA key on the TPM where the private key is always on the tpm. Once thats done, the AK can sign it and return the public part to the Token Server. Since the Endorsement Key and Attestation key were now associated together, the new unrestricted key can also be indirectly associated with that specific TokenClient. The TokenClient can now sign for any arbitrary data, send it to the TokenServer which can verify its authenticity by using the public key previously sent
+
+These flows are enabled by the TokenClient by starting up by setting
+
+- TokenClient: `--useTPM --doAttestation --exchangeSigningKey`
+| Option | Description |
+|:------------|-------------|
+| **`-useTPM`** | Enable TPM operations |
+| **`-doAttestation`** | Start offer to Make/Activate Credential flow |
+| **`-exchangeSigningKey`** | Offer RSA Signing Key (requires --doAttestation) |
+
+- TokenServer `--useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0` 
+
+| Option | Description |
+|:------------|-------------|
+| **`-useTPM`** | Enable TPM operations |
+| **`-expectedPCRValue`** | ExpectedPCRValue from Quote/Verify (default: `PCR 0:  fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
+| **`-pcr`** | PCR Bank to use for quote/verify (default: `0`) |
+
+- Provisioner `--useTPM --attestationPCR=0 --attestationPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`
+
+| Option | Description |
+|:------------|-------------|
+| **`-useTPM`** | Enable TPM operations |
+| **`-attestationPCR`** | PCR Bank to use for Attestation (default: `0`) |
+| **`-attestationPCRValue`** | PCR Bank value Attestation (default: `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
+
+![images/quoteverify.png](images/quoteverify.png)
+
+If these options are enabled, the tokenserver will have an RSA key that is attested and bound to the TokenClient.  The TokenClient can then sign arbitrary data using its vTPM. The TokenServer will have the public portion of that key to cryptographically verify.
+
+On TokenClient
+![images/tc_unrestricted.png](images/tc_unrestricted.png)
+
+On TokenServer
+![images/ts_unrestricted.png](images/ts_unrestricted.png)
+
+### Logs
+
+The following files details the full end-to-end logs:
+
+- TokenClient
+- [logs/client_log.md](logs/client_log.md)
+
+- TokenServer
+- [logs/server_log.md](logs/server_log.md)
+
+
 ### Appendix
 
 #### No externalIP
@@ -762,8 +833,6 @@ Further enhancements can be to use
 * [VPC-SC](https://cloud.google.com/vpc-service-controls):  This will ensure only requests originating from whitelisted projects and origin IPs are allowed API access to Alices GCS objects.  However, cross-orginzation VPC-SC isn't something i think is possible at the mment.  If Bob sets up a NAT egress endpoint, Alice can define a VPC prerimeter to include that egress
 
 * [Organizational Policy](https://cloud.google.com/resource-manager/docs/organization-policy/org-policy-constraints): Bob's orgianzation can have restrictions on the type of VM and specifications Bob can start (eg, ShieldedVM, OSLogin).  
-
-* `IAM Tuning`: You can tune the access on both Alice and Bob side further using the IAM controls available.  For more information, see [this repo](https://github.com/salrashid123/restricted_security_gce)
 
 * [IAM Conditions](https://cloud.google.com/iam/docs/conditions-overview):  You can enable IAM conditions on any of the GCP resources in question. Since Alice and Bob are using GCP, you can place a condition on when the TokenService or on the GCS bucket or on Alice's ability to view the VM or logging metadata.
 

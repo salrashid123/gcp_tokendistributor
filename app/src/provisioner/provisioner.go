@@ -45,6 +45,8 @@ type ServiceEntry struct {
 	ProvidedAt         time.Time      `firestore:"provided_at"`
 	PeerAddress        string         `firestore:"peer_address"`
 	PeerSerialNumber   string         `firestore:"peer_serial_number"`
+	PCR                int64          `firestore:"pcr"`
+	PCRValue           string         `firestore:"pcr_value,omitempty"`
 }
 
 const (
@@ -55,8 +57,11 @@ var (
 	fireStoreProjectId      = flag.String("fireStoreProjectId", "", "ProjectID for Firestore")
 	firestoreCollectionName = flag.String("firestoreCollectionName", "", "firestoreCollectionName where the sealedData is Stored")
 
-	pcrsValues      = flag.String("pcrValues", "", "SHA256 PCR Values to seal against 23:=foo,20=bar.")
-	encryptToTPM    = flag.String("encryptToTPM", "", "Data to seal with EkPub of target VM")
+	pcrsValues          = flag.String("pcrValues", "", "SHA256 PCR Values to seal against 23:=foo,20=bar.")
+	encryptToTPM        = flag.String("encryptToTPM", "", "Data to seal with EkPub of target VM")
+	attestationPCR      = flag.Int64("attestationPCR", 0, "The PCR bank for Attestation (default:0)")
+	attestationPCRValue = flag.String("attestationPCRValue", "fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe", "expectedPCRValue")
+
 	clientProjectId = flag.String("clientProjectId", "", "clientProjectId for VM")
 	clientVMZone    = flag.String("clientVMZone", "", "clientVMZone for VM")
 	clientVMId      = flag.String("clientVMId", "", "clientVMId for VM")
@@ -68,6 +73,7 @@ var (
 	// SerialNumber=5 happens to be the value inside `bob/certs/tokenclient.crt`
 	peerSerialNumber = flag.String("peerSerialNumber", "5", "Client Certificate Serial Number Serial Number: 5 (0x5) ")
 	pcrMap           = map[uint32][]byte{}
+	useTPM           = flag.Bool("useTPM", false, "Enable TPM operations")
 )
 
 func main() {
@@ -210,8 +216,9 @@ func main() {
 		ImageFingerprint:   cresp.Fingerprint,
 		Secrets:            protoMessages,
 
-		ProvidedAt: time.Now(),
-
+		ProvidedAt:       time.Now(),
+		PCR:              *attestationPCR,
+		PCRValue:         *attestationPCRValue,
 		PeerAddress:      *peerAddress,
 		PeerSerialNumber: *peerSerialNumber,
 	}
@@ -230,6 +237,64 @@ func main() {
 	dsnap.DataTo(&c)
 	log.Printf("Document data: %#v\n", c.InstanceID)
 
+}
+
+func createSigningKeyImportBlob(ekPubPEM string, rsaKeyPEM string) (sealedOutput []byte, retErr error) {
+
+	block, _ := pem.Decode([]byte(ekPubPEM))
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return []byte(""), err
+	}
+
+	ekPub := pub.(crypto.PublicKey)
+
+	privBlock, _ := pem.Decode([]byte(rsaKeyPEM))
+	signingKey, err := x509.ParsePKCS1PrivateKey(privBlock.Bytes)
+	if err != nil {
+		return []byte(""), err
+	}
+
+	// todo: seal to PCR value
+	var pcrs *tpmpb.Pcrs
+	if *pcrsValues != "" {
+		entries := strings.Split(*pcrsValues, ",")
+		pcrMap = make(map[uint32][]byte)
+		for _, e := range entries {
+			parts := strings.Split(e, "=")
+			u, err := strconv.ParseUint(parts[0], 10, 64)
+			if err != nil {
+				return []byte(""), err
+			}
+
+			hv, err := hex.DecodeString(parts[1])
+			if err != nil {
+				return []byte(""), err
+			}
+			pcrMap[uint32(u)] = hv
+
+			rr := hex.Dump(hv)
+			log.Printf("PCR key: %v\n", uint32(u))
+			log.Printf("PCR Values: %v\n", rr)
+
+		}
+		log.Printf("PCR Values: %v\n", pcrMap)
+	}
+
+	pcrs = &tpmpb.Pcrs{Hash: tpmpb.HashAlgo_SHA256, Pcrs: pcrMap}
+
+	blob, err := server.CreateSigningKeyImportBlob(ekPub, signingKey, pcrs)
+	if err != nil {
+		return []byte(""), err
+	}
+
+	dd, err := proto.Marshal(blob)
+	if err != nil {
+		return []byte(""), err
+	}
+
+	//return base64.RawStdEncoding.EncodeToString(dd), nil
+	return dd, nil
 }
 
 func createImportBlob(ekPubPEM string, aesKey string) (sealedOutput []byte, retErr error) {
