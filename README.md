@@ -542,7 +542,15 @@ The TokenClient would have acquired the secret key and then performed the option
 
 ![images/tccomplete.png](images/tccomplete.png)
 
-
+```log
+2020-11-21T03:03:01.593707258Z I1121 03:03:01.593640       1 client.go:378]      Tink AEAD Decrypted Text foo
+2020-11-21T03:03:01.593367341Z I1121 03:03:01.593276       1 client.go:371]      Tink AEAD encrypted text AWrGuDmEm1pTNeyZ+zAaGtmdIib7zNSBpS/qLJac8DQ850VG
+2020-11-21T03:03:01.592495689Z I1121 03:03:01.591794       1 client.go:347]      Decoding as Tink
+2020-11-21T03:03:01.592473778Z I1121 03:03:01.591751       1 client.go:334]      Received  Data: name:"secret2" type:TINK data:"\x08\xb9\xf0\x9a\xd6\x06\x12d\nX\n0type.googleapis.com/google.crypto.tink.AesGcmKey\x12\"\x1a \x0eӡ\xcc\x02\x9b~\xff\xde\xf4^\x10d\x91\xb2\x84\xa9\xf9\xad\n\x02\xaf\x8a`B\xaa(~]V\xa0\xb8\x18\x01\x10\x01\x18\xb9\xf0\x9a\xd6\x06 \x01"
+2020-11-21T03:03:01.592465864Z I1121 03:03:01.591740       1 client.go:337]      Decoding as RAW fooobar
+2020-11-21T03:03:01.592419639Z I1121 03:03:01.591694       1 client.go:334]      Received  Data: name:"secret1" data:"fooobar"
+2020-11-21T03:03:01.591811689Z I1121 03:03:01.591663       1 client.go:329]      Received  toResponse: 10cd4b47-2ba6-11eb-b228-0242ac110002
+```
 #### Firestore
 
 Each clientVM unique vm_id is saved in TokenServer's Firestore database.  Note, the secret is *NOT* encrypted.  Ensure you secure access to FireStore
