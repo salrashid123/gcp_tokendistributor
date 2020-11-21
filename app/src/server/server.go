@@ -343,18 +343,18 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 			glog.V(2).Infof("     Derived Image Hash from metadata %s", initScriptHash)
 		}
 	}
-	/*
-			if initScriptHash != c.InitScriptHash {
-				glog.Errorf("   -------->  Error Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash)
-				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash))
-			}
 
-		if c.InitScriptHash == "" {
-			glog.Errorf("   *********** NOTE: initscript is empty (non-COS VM or never set)...")
-			// optionally just continue here if debugging
-			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script is empty"))
-		}
-	*/
+	if initScriptHash != c.InitScriptHash {
+		glog.Errorf("   -------->  Error Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash)
+		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash))
+	}
+
+	if c.InitScriptHash == "" {
+		glog.Errorf("   *********** NOTE: initscript is empty (non-COS VM or never set)...")
+		// optionally just continue here if debugging
+		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script is empty"))
+	}
+
 	if cresp.Fingerprint != c.ImageFingerprint {
 		glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
 		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
@@ -412,7 +412,7 @@ func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.Ma
 		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to Recall Shielded Identity %v", err))
 	}
 
-	glog.V(10).Infof("     Acquired PublickKey from GCP API: \n%s", r.EncryptionKey.EkPub)
+	glog.V(10).Infof("     Acquired PublicKey from GCP API: \n%s", r.EncryptionKey.EkPub)
 
 	glog.V(10).Infof("     Decoding ekPub from client")
 	ekPub, err := tpm2.DecodePublic(in.EkPub)
@@ -595,8 +595,46 @@ func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice
 	glog.V(5).Infof("     SigningKey %s\n", in.Signingkey)
 	glog.V(5).Infof("     SigningKey Attestation %s\n", base64.StdEncoding.EncodeToString(in.Attestation))
 	glog.V(5).Infof("     SigningKey Signature %s\n", base64.StdEncoding.EncodeToString(in.Signature))
-	// TODO: use EK to verify Attestation and Signature
-	// https://github.com/salrashid123/tpm2/tree/master/sign_certify_ak
+
+	if _, ok := registry[idToken.Google.ComputeEngine.InstanceID]; !ok {
+		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Could not find instanceID in registry %v"))
+	}
+	akPub := registry[idToken.Google.ComputeEngine.InstanceID].AkPubCert
+
+	glog.V(5).Infof("     Read and Decode (attestion)")
+	att, err := tpm2.DecodeAttestationData(in.Attestation)
+	if err != nil {
+		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("DecodeAttestationData failed: %v", err))
+	}
+	glog.V(5).Infof("     Attestation att.AttestedCertifyInfo.QualifiedName: %s", hex.EncodeToString(att.AttestedCertifyInfo.QualifiedName.Digest.Value))
+
+	sigL := tpm2.SignatureRSA{
+		HashAlg:   tpm2.AlgSHA256,
+		Signature: in.Signature,
+	}
+
+	// Verify signature of Attestation by using the PEM Public key for AK
+	glog.V(5).Infof("     Decoding PublicKey for AK ========")
+
+	block, _ := pem.Decode(akPub)
+	if block == nil {
+		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to decode akPubPEM %v", err))
+	}
+
+	r, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to create rsa Key from PEM %v", err))
+	}
+	rsaPub := *r.(*rsa.PublicKey)
+
+	hsh := crypto.SHA256.New()
+	hsh.Write(in.Attestation)
+
+	if err := rsa.VerifyPKCS1v15(&rsaPub, crypto.SHA256, hsh.Sum(nil), sigL.Signature); err != nil {
+		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("     VerifyPKCS1v15 failed: %v", err))
+	}
+	glog.V(5).Infof("     Attestation of Signing Key Verified")
+
 	ver := true
 
 	glog.V(2).Infof("     Returning ProvideSigningKeyResponse ========")
@@ -619,8 +657,10 @@ func verifyQuote(uid string, nonce string, attestation []byte, sigBytes []byte) 
 		return fmt.Errorf("TPM Operation not supported")
 	}
 
-	nn := registry[uid]
-	akPub := nn.AkPub
+	if _, ok := registry[uid]; !ok {
+		return fmt.Errorf("Could not find instanceID in registry %v")
+	}
+	akPub := registry[uid].AkPub
 
 	glog.V(10).Infof("     Read and Decode (attestion)")
 	att, err := tpm2.DecodeAttestationData(attestation)

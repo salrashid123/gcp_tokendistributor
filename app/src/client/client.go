@@ -401,7 +401,7 @@ func main() {
 					}
 
 					// First create attestation keys
-					akName, ekPub, akPub, err := createKeys()
+					akName, ekPub, akPub, akPubPEM, err := createKeys()
 					if err != nil {
 						glog.Errorf("ERROR:     Unable to generate EK/AK: %v", err)
 						return
@@ -413,6 +413,7 @@ func main() {
 						AkName:    akName,
 						EkPub:     ekPub,
 						AkPub:     akPub,
+						AkPubCert: akPubPEM,
 					}
 
 					v := pb.NewVerifierClient(conn)
@@ -652,17 +653,17 @@ func quote(reqPCR int, secret string) (attestation []byte, signature []byte, ret
 }
 
 // Create Attestation keys
-func createKeys() (n string, ekPub []byte, akPub []byte, retErr error) {
+func createKeys() (n string, ekPub []byte, akPub []byte, akPubPEM []byte, retErr error) {
 
 	glog.V(5).Infof("     --> CreateKeys()")
 	if !*useTPM {
 		glog.Errorf("TPM use not enabled\n")
-		return "", []byte(""), []byte(""), errors.New("TPM use not enabled")
+		return "", []byte(""), []byte(""), []byte(""), errors.New("TPM use not enabled")
 	}
 	pcrList := []int{*pcr}
 	pcrval, err := tpm2.ReadPCR(rwc, *pcr, tpm2.AlgSHA256)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Unable to  ReadPCR : %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to  ReadPCR : %v", err)
 	}
 	glog.V(10).Infof("    Current PCR %v Value %d ", *pcr, hex.EncodeToString(pcrval))
 
@@ -673,25 +674,25 @@ func createKeys() (n string, ekPub []byte, akPub []byte, retErr error) {
 
 	ekh, _, err := tpm2.CreatePrimary(rwc, tpm2.HandleEndorsement, pcrSelection23, emptyPassword, emptyPassword, defaultEKTemplate)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Error creating EK: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Error creating EK: %v", err)
 	}
 	defer tpm2.FlushContext(rwc, ekh)
 
 	// reread the pub eventhough tpm2.CreatePrimary* gives pub
 	tpmEkPub, name, _, err := tpm2.ReadPublic(rwc, ekh)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Error ReadPublic failed: %s", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Error ReadPublic failed: %s", err)
 	}
 
 	p, err := tpmEkPub.Key()
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Error tpmEkPub.Key() failed: %s", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Error tpmEkPub.Key() failed: %s", err)
 	}
 	glog.V(10).Infof("     tpmEkPub: \n%v", p)
 
 	b, err := x509.MarshalPKIXPublicKey(p)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Unable to convert ekpub: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to convert ekpub: %v", err)
 	}
 
 	ekPubPEM := pem.EncodeToMemory(
@@ -705,7 +706,7 @@ func createKeys() (n string, ekPub []byte, akPub []byte, retErr error) {
 
 	ekPubBytes, err := tpmEkPub.Encode()
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Load failed for ekPubBytes: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Load failed for ekPubBytes: %v", err)
 	}
 
 	glog.V(10).Infof("     CreateKeyUsingAuth")
@@ -720,26 +721,26 @@ func createKeys() (n string, ekPub []byte, akPub []byte, retErr error) {
 		tpm2.AlgNull,
 		tpm2.AlgSHA256)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Unable to create StartAuthSession : %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to create StartAuthSession : %v", err)
 	}
 	defer tpm2.FlushContext(rwc, sessCreateHandle)
 
 	if _, err := tpm2.PolicySecret(rwc, tpm2.HandleEndorsement, tpm2.AuthCommand{Session: tpm2.HandlePasswordSession, Attributes: tpm2.AttrContinueSession}, sessCreateHandle, nil, nil, nil, 0); err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Unable to create PolicySecret: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to create PolicySecret: %v", err)
 	}
 
 	authCommandCreateAuth := tpm2.AuthCommand{Session: sessCreateHandle, Attributes: tpm2.AttrContinueSession}
 
 	akPriv, akPub, creationData, creationHash, creationTicket, err := tpm2.CreateKeyUsingAuth(rwc, ekh, pcrSelection23, authCommandCreateAuth, emptyPassword, defaultKeyParams)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("CreateKey failed: %s", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("CreateKey failed: %s", err)
 	}
 	glog.V(10).Infof("     akPub: %v,", hex.EncodeToString(akPub))
 	glog.V(10).Infof("     akPriv: %v,", hex.EncodeToString(akPriv))
 
 	cr, err := tpm2.DecodeCreationData(creationData)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Unable to  DecodeCreationData : %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to  DecodeCreationData : %v", err)
 	}
 
 	glog.V(10).Infof("     CredentialData.ParentName.Digest.Value %v", hex.EncodeToString(cr.ParentName.Digest.Value))
@@ -749,22 +750,22 @@ func createKeys() (n string, ekPub []byte, akPub []byte, retErr error) {
 	glog.V(10).Infof("     ContextSave (ek)")
 	ekhBytes, err := tpm2.ContextSave(rwc, ekh)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("ContextSave failed for ekh: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("ContextSave failed for ekh: %v", err)
 	}
 	err = ioutil.WriteFile(ekFile, ekhBytes, 0644)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("ContextSave failed for ekh: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("ContextSave failed for ekh: %v", err)
 	}
 	tpm2.FlushContext(rwc, ekh)
 
 	glog.V(10).Infof("     ContextLoad (ek)")
 	ekhBytes, err = ioutil.ReadFile(ekFile)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("ContextLoad failed for ekh: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("ContextLoad failed for ekh: %v", err)
 	}
 	ekh, err = tpm2.ContextLoad(rwc, ekhBytes)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("ContextLoad failed for ekh: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("ContextLoad failed for ekh: %v", err)
 	}
 	defer tpm2.FlushContext(rwc, ekh)
 	glog.V(10).Infof("     LoadUsingAuth")
@@ -779,19 +780,19 @@ func createKeys() (n string, ekPub []byte, akPub []byte, retErr error) {
 		tpm2.AlgNull,
 		tpm2.AlgSHA256)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Unable to create StartAuthSession : %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to create StartAuthSession : %v", err)
 	}
 	defer tpm2.FlushContext(rwc, loadSession)
 
 	if _, err := tpm2.PolicySecret(rwc, tpm2.HandleEndorsement, tpm2.AuthCommand{Session: tpm2.HandlePasswordSession, Attributes: tpm2.AttrContinueSession}, loadSession, nil, nil, nil, 0); err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Unable to create PolicySecret: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to create PolicySecret: %v", err)
 	}
 
 	authCommandLoad := tpm2.AuthCommand{Session: loadSession, Attributes: tpm2.AttrContinueSession}
 
 	keyHandle, keyName, err := tpm2.LoadUsingAuth(rwc, ekh, authCommandLoad, akPub, akPriv)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Load failed: %s", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Load failed: %s", err)
 	}
 	defer tpm2.FlushContext(rwc, keyHandle)
 	kn := hex.EncodeToString(keyName)
@@ -799,39 +800,39 @@ func createKeys() (n string, ekPub []byte, akPub []byte, retErr error) {
 
 	akPublicKey, _, _, err := tpm2.ReadPublic(rwc, keyHandle)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Error tpmEkPub.Key() failed: %s", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Error tpmEkPub.Key() failed: %s", err)
 	}
 
 	ap, err := akPublicKey.Key()
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("tpmEkPub.Key() failed: %s", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("tpmEkPub.Key() failed: %s", err)
 	}
 	akBytes, err := x509.MarshalPKIXPublicKey(ap)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Unable to convert ekpub: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Unable to convert ekpub: %v", err)
 	}
 
-	akPubPEM := pem.EncodeToMemory(
+	rakPubPEM := pem.EncodeToMemory(
 		&pem.Block{
 			Type:  "PUBLIC KEY",
 			Bytes: akBytes,
 		},
 	)
-	glog.V(10).Infof("     akPubPEM: \n%v", string(akPubPEM))
+	glog.V(10).Infof("     akPubPEM: \n%v", string(rakPubPEM))
 
 	glog.V(10).Infof("     Write (akPub) ========")
 	err = ioutil.WriteFile(akPubFile, akPub, 0644)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Save failed for akPub: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Save failed for akPub: %v", err)
 	}
 	glog.V(10).Infof("     Write (akPriv) ========")
 	err = ioutil.WriteFile(akPrivFile, akPriv, 0644)
 	if err != nil {
-		return "", []byte(""), []byte(""), fmt.Errorf("Save failed for akPriv: %v", err)
+		return "", []byte(""), []byte(""), []byte(""), fmt.Errorf("Save failed for akPriv: %v", err)
 	}
 
 	glog.V(5).Infof("     <-- CreateKeys()")
-	return kn, ekPubBytes, akPub, nil
+	return kn, ekPubBytes, akPub, rakPubPEM, nil
 }
 
 func activateCredential(uid string, credBlob []byte, encryptedSecret []byte) (n string, retErr error) {
