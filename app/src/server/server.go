@@ -450,10 +450,10 @@ func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.Ma
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
-	nonces[in.RequestId] = string(b)
-	//nonces[idToken.Google.ComputeEngine.InstanceID] = string(b)
 
-	credBlob, encryptedSecret, err := makeCredential(nonces[in.RequestId], in.EkPub, in.AkPub)
+	nonces[idToken.Google.ComputeEngine.InstanceID] = string(b)
+
+	credBlob, encryptedSecret, err := makeCredential(nonces[idToken.Google.ComputeEngine.InstanceID], in.EkPub, in.AkPub)
 	if err != nil {
 		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to makeCredential"))
 	}
@@ -488,7 +488,7 @@ func (s *verifierserver) ActivateCredential(ctx context.Context, in *tokenservic
 	var id string
 	id = idToken.Google.ComputeEngine.InstanceID
 
-	err := verifyQuote(id, nonces[in.RequestId], in.Attestation, in.Signature)
+	err := verifyQuote(id, nonces[id], in.Attestation, in.Signature)
 	if err != nil {
 		glog.Errorf("     Quote Verification Failed Quote: %v", err)
 		return &tokenservice.ActivateCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Quote Verification Failed Quote: %v", err))
