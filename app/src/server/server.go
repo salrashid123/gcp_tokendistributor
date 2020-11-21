@@ -635,6 +635,38 @@ func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice
 	}
 	glog.V(5).Infof("     Attestation of Signing Key Verified")
 
+	ablock, _ := pem.Decode(in.Signingkey)
+	if ablock == nil {
+		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("     Unable to decode Signingkey"))
+	}
+
+	rra, err := x509.ParsePKIXPublicKey(ablock.Bytes)
+	if err != nil {
+		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("     Unable to ParsePKIXPublicKey rsa Key from PEM %v", err))
+	}
+	arsaPub := *rra.(*rsa.PublicKey)
+
+	params := tpm2.Public{
+		Type:    tpm2.AlgRSA,
+		NameAlg: tpm2.AlgSHA256,
+		Attributes: tpm2.FlagFixedTPM | tpm2.FlagFixedParent | tpm2.FlagSensitiveDataOrigin |
+			tpm2.FlagUserWithAuth | tpm2.FlagSign,
+		AuthPolicy: []byte{},
+		RSAParameters: &tpm2.RSAParams{
+			Sign: &tpm2.SigScheme{
+				Alg:  tpm2.AlgRSASSA,
+				Hash: tpm2.AlgSHA256,
+			},
+			KeyBits:    2048,
+			ModulusRaw: arsaPub.N.Bytes(),
+		},
+	}
+	ok, err := att.AttestedCertifyInfo.Name.MatchesPublic(params)
+	if err != nil {
+		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("     AttestedCertifyInfo.MatchesPublic(%v) failed: %v", att, err))
+	}
+	glog.V(2).Infof("     Attestation MatchesPublic %v", ok)
+
 	ver := true
 
 	glog.V(2).Infof("     Returning ProvideSigningKeyResponse ========")

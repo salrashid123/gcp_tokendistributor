@@ -382,6 +382,9 @@ func main() {
 					}
 
 				}
+				// TODO: either acquire new idtoken since these additional steps may exceed the TokenServers
+				//       default value of jwtIssuedAtJitter=1.   Either refresh the token here or
+				//       set a larger value on the TokenServer for jwtIssuedAtJitter=7
 				if *doAttestation && *useTPM {
 
 					totalHandles := 0
