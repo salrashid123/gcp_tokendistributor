@@ -213,7 +213,144 @@ func authUnaryInterceptor(
 			return nil, grpc.Errorf(codes.Unauthenticated, "IssuedAt Identity document timestamp too old")
 		}
 
+		instanceID := doc.Google.ComputeEngine.InstanceID
+		glog.V(10).Infof("     Looking up Firestore Collection %s for instanceID %s", *firestoreCollectionName, instanceID)
+
+		fsclient, err := firestore.NewClient(ctx, *firestoreProjectId)
+		if err != nil {
+			glog.Errorf("ERROR:  Could not create new Firestore Client %v", err)
+			return nil, grpc.Errorf(codes.PermissionDenied, "Unable to create Firestore Client")
+		}
+		dsnap, err := fsclient.Collection(*firestoreCollectionName).Doc(instanceID).Get(ctx)
+		if err != nil {
+			glog.Errorf("ERROR:  Could not find instanceID new Firestore Client %s", instanceID)
+			return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("InstanceID not Found  %v", err))
+		}
+
+		var c ServiceEntry
+		err = dsnap.DataTo(&c)
+		if err != nil {
+			glog.Errorf("ERROR:  Could not find convert ServiceEntry for %s", instanceID)
+			return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Could not find convert ServiceEntry  %v", err))
+		}
+
+		glog.V(20).Infof("     TLS Client cert Peer IP and SerialNumber")
+		peer, ok := peer.FromContext(ctx)
+		if ok {
+			peerIPPort, _, err := net.SplitHostPort(peer.Addr.String())
+			if err != nil {
+				glog.Errorf("ERROR:  Could not Remote IP %s", instanceID)
+				return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Could not Remote IP   %v", err))
+			}
+			if *validatePeerIP && (c.PeerAddress != peerIPPort) {
+				glog.Errorf("ERROR:  Unregistered  Peer address: %s", peer.Addr.String())
+				return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Unregistered  Peer address  %v", peer.Addr.String()))
+			} else {
+				glog.V(20).Infof("    Verified PeerIP %s\n", peer.Addr.String())
+			}
+			if *useMTLS {
+				tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
+				v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
+				sn := tlsInfo.State.VerifiedChains[0][0].SerialNumber
+				if *validatePeerSN && (sn.String() != c.PeerSerialNumber) {
+					glog.Errorf("ERROR:  Unregistered  Client Certificate SN: %s", sn.String())
+					return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Unregistered  Peer address  %v", sn.String()))
+				}
+				glog.V(20).Infof("     Client Peer Address [%v] - Subject[%v] - SerialNumber [%v] Validated\n", peer.Addr.String(), v, sn)
+			}
+		} else {
+			glog.Errorf("ERROR:  Could not extract peerInfo from TLS")
+			return nil, grpc.Errorf(codes.PermissionDenied, "ERROR:  Could not extract peerInfo from TLS")
+		}
+
+		glog.V(2).Infof("     Looking up InstanceID using GCE APIs for instanceID %s", instanceID)
+
+		computeService, err := compute.NewService(ctx)
+		if err != nil {
+			glog.Errorf("ERROR:  Could not create Compute Engine API %v", err)
+			return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Could not create ComputeClient %v", err))
+		}
+
+		cresp, err := computeService.Instances.Get(c.ClientProject, c.ClientZone, instanceID).Do()
+		if err != nil {
+			glog.Errorf("ERROR:  Could not find instanceID Using GCE API %s", instanceID)
+			return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("InstanceID not Found using GCE API %v", err))
+		}
+		//  For any of these parameters we just recalled using the GCE API, you can compare that to the values
+		//  saved into Firestore.  For example, compare w/ PublicIP, Fingerprint VM Boot Disk we LGTMd at provisioning time
+		//  with the live values here.
+		glog.V(20).Infof("     Found  VM instanceID %#v\n", strconv.FormatUint(cresp.Id, 10))
+		glog.V(20).Infof("     Found  VM CreationTimestamp %#v\n", cresp.CreationTimestamp)
+		glog.V(20).Infof("     Found  VM Fingerprint %#v\n", cresp.Fingerprint)
+		glog.V(20).Infof("     Found  VM CpuPlatform %#v\n", cresp.CpuPlatform)
+
+		for _, sa := range cresp.ServiceAccounts {
+			glog.V(20).Infof("     Found  VM ServiceAccount %#v\n", sa.Email)
+		}
+
+		for _, ni := range cresp.NetworkInterfaces {
+			for _, ac := range ni.AccessConfigs {
+				if ac.Type == "ONE_TO_ONE_NAT" {
+					glog.V(20).Infof("     Found Registered External IP Address: %s", ac.NatIP)
+					// optionally cross check with ac.NatIP,c.PeerAddress,peerIPPort  (they should all be the same if the tokenclient doesn't use a NAT gateway..)
+					//  ac.NATIP:  this is the public ip of the tokenclient as viewed by the GCE API
+					//  c.PeerAddress:  this is the public ip of the tokenclient that we provisioned
+					//  peerIP:  this is the ip address as viewed by the socket connection
+				}
+			}
+		}
+
+		for _, d := range cresp.Disks {
+			if d.Boot {
+				glog.V(20).Infof("     Found  VM Boot Disk Source %#v\n", d.Source)
+				u, err := url.Parse(d.Source)
+				if err != nil {
+					glog.Errorf("   -------->  ERROR:  Could not Parse Disk URL [%s] [%s]", d.Source, err)
+					return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("ERROR:  Could not find Disk URL [%s] [%s]", d.Source, err))
+				}
+				// yeah, i don't know of a better way to parse a GCP ResourceURL...
+				// compute/v1/projects/mineral-minutia-820/zones/us-central1-a/disks/tpm-a
+				vals := strings.Split(u.Path, "/")
+				if len(vals) == 9 {
+					dresp, err := computeService.Disks.Get(vals[4], vals[6], vals[8]).Do()
+					if err != nil {
+						glog.Errorf("   -------->  ERROR:  Could not find Disk [%s] [%s]", u.Path, err)
+						return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("ERROR:  Could not find Disk [%s] [%s]", u.Path, err))
+					}
+					glog.V(20).Infof("    Found Disk Image %s", dresp.SourceImage)
+				}
+
+			}
+		}
+
+		var initScriptHash string
+		for _, m := range cresp.Metadata.Items {
+			if m.Key == "user-data" {
+				hasher := sha256.New()
+				hasher.Write([]byte(*m.Value))
+				initScriptHash = base64.StdEncoding.EncodeToString(hasher.Sum(nil))
+				glog.V(20).Infof("     Derived Image Hash from metadata %s", initScriptHash)
+			}
+		}
+
+		if initScriptHash != c.InitScriptHash {
+			glog.Errorf("   -------->  Error Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash)
+			return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Error:  Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash))
+		}
+
+		if c.InitScriptHash == "" {
+			glog.Errorf("   *********** NOTE: initscript is empty (non-COS VM or never set)...")
+			// optionally just continue here if debugging
+			return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Error:  Init Script is empty"))
+		}
+
+		if cresp.Fingerprint != c.ImageFingerprint {
+			glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
+			return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
+		}
+
 		newCtx := context.WithValue(ctx, contextKey("idtoken"), doc)
+		newCtx = context.WithValue(newCtx, contextKey("serivceEntry"), c)
 		newCtx = context.WithValue(newCtx, contextKey("subject"), doc.Subject)
 		newCtx = context.WithValue(newCtx, contextKey("email"), doc.Email)
 		newCtx = context.WithValue(newCtx, contextKey("instanceID"), doc.Google.ComputeEngine.InstanceID)
@@ -224,141 +361,13 @@ func authUnaryInterceptor(
 
 func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*tokenservice.TokenResponse, error) {
 
+	glog.V(10).Infof("======= GetToken ---> %s", in.RequestId)
 	subject := ctx.Value(contextKey("subject")).(string)
 	email := ctx.Value(contextKey("email")).(string)
 	instanceID := ctx.Value(contextKey("instanceID")).(string)
+	c := ctx.Value(contextKey("serivceEntry")).(ServiceEntry)
+
 	glog.V(2).Infof("     Got rpc: RequestID %s for subject %s and email %s for instanceID %s\n", in.RequestId, subject, email, instanceID)
-
-	glog.V(2).Infof("     Looking up Firestore Collection %s for instanceID %s", *firestoreCollectionName, instanceID)
-
-	fsclient, err := firestore.NewClient(ctx, *firestoreProjectId)
-	if err != nil {
-		glog.Errorf("ERROR:  Could not create new Firestore Client %v", err)
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.Internal, "Unable to create Firestore Client")
-	}
-	dsnap, err := fsclient.Collection(*firestoreCollectionName).Doc(instanceID).Get(ctx)
-	if err != nil {
-		glog.Errorf("ERROR:  Could not find instanceID new Firestore Client %s", instanceID)
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("InstanceID not Found  %v", err))
-	}
-
-	var c ServiceEntry
-	dsnap.DataTo(&c)
-
-	glog.V(2).Infof("     TLS Client cert Peer IP and SerialNumber")
-	peer, ok := peer.FromContext(ctx)
-	if ok {
-		peerIPPort, _, err := net.SplitHostPort(peer.Addr.String())
-		if err != nil {
-			glog.Errorf("ERROR:  Could not Remote IP %s", instanceID)
-			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Could not Remote IP   %v", err))
-		}
-		if *validatePeerIP && (c.PeerAddress != peerIPPort) {
-			glog.Errorf("ERROR:  Unregistered  Peer address: %s", peer.Addr.String())
-			return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Unregistered  Peer address  %v", peer.Addr.String()))
-		} else {
-			glog.V(2).Infof("    Verified PeerIP %s\n", peer.Addr.String())
-		}
-		if *useMTLS {
-			tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
-			v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
-			sn := tlsInfo.State.VerifiedChains[0][0].SerialNumber
-			if *validatePeerSN && (sn.String() != c.PeerSerialNumber) {
-				glog.Errorf("ERROR:  Unregistered  Client Certificate SN: %s", sn.String())
-				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Unregistered  Peer address  %v", sn.String()))
-			}
-			glog.V(2).Infof("     Client Peer Address [%v] - Subject[%v] - SerialNumber [%v] Validated\n", peer.Addr.String(), v, sn)
-		}
-	} else {
-		glog.Errorf("ERROR:  Could not extract peerInfo from TLS")
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, "ERROR:  Could not extract peerInfo from TLS")
-	}
-
-	glog.V(2).Infof("     Looking up InstanceID using GCE APIs for instanceID %s", instanceID)
-
-	computeService, err := compute.NewService(ctx)
-	if err != nil {
-		glog.Errorf("ERROR:  Could not create Compute Engine API %v", err)
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Could not create ComputeClient %v", err))
-	}
-
-	cresp, err := computeService.Instances.Get(c.ClientProject, c.ClientZone, instanceID).Do()
-	if err != nil {
-		glog.Errorf("ERROR:  Could not find instanceID Using GCE API %s", instanceID)
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("InstanceID not Found using GCE API %v", err))
-	}
-	//  For any of these parameters we just recalled using the GCE API, you can compare that to the values
-	//  saved into Firestore.  For example, compare w/ PublicIP, Fingerprint VM Boot Disk we LGTMd at provisioning time
-	//  with the live values here.
-	glog.V(2).Infof("     Found  VM instanceID %#v\n", strconv.FormatUint(cresp.Id, 10))
-	glog.V(2).Infof("     Found  VM CreationTimestamp %#v\n", cresp.CreationTimestamp)
-	glog.V(2).Infof("     Found  VM Fingerprint %#v\n", cresp.Fingerprint)
-	glog.V(2).Infof("     Found  VM CpuPlatform %#v\n", cresp.CpuPlatform)
-
-	for _, sa := range cresp.ServiceAccounts {
-		glog.V(2).Infof("     Found  VM ServiceAccount %#v\n", sa.Email)
-	}
-
-	for _, ni := range cresp.NetworkInterfaces {
-		for _, ac := range ni.AccessConfigs {
-			if ac.Type == "ONE_TO_ONE_NAT" {
-				glog.V(2).Infof("     Found Registered External IP Address: %s", ac.NatIP)
-				// optionally cross check with ac.NatIP,c.PeerAddress,peerIPPort  (they should all be the same if the tokenclient doesn't use a NAT gateway..)
-				//  ac.NATIP:  this is the public ip of the tokenclient as viewed by the GCE API
-				//  c.PeerAddress:  this is the public ip of the tokenclient that we provisioned
-				//  peerIP:  this is the ip address as viewed by the socket connection
-			}
-		}
-	}
-
-	for _, d := range cresp.Disks {
-		if d.Boot {
-			glog.V(2).Infof("     Found  VM Boot Disk Source %#v\n", d.Source)
-			u, err := url.Parse(d.Source)
-			if err != nil {
-				glog.Errorf("   -------->  ERROR:  Could not Parse Disk URL [%s] [%s]", d.Source, err)
-				return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("ERROR:  Could not find Disk URL [%s] [%s]", d.Source, err))
-			}
-			// yeah, i don't know of a better way to parse a GCP ResourceURL...
-			// compute/v1/projects/mineral-minutia-820/zones/us-central1-a/disks/tpm-a
-			vals := strings.Split(u.Path, "/")
-			if len(vals) == 9 {
-				dresp, err := computeService.Disks.Get(vals[4], vals[6], vals[8]).Do()
-				if err != nil {
-					glog.Errorf("   -------->  ERROR:  Could not find Disk [%s] [%s]", u.Path, err)
-					return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("ERROR:  Could not find Disk [%s] [%s]", u.Path, err))
-				}
-				glog.V(2).Infof("    Found Disk Image %s", dresp.SourceImage)
-			}
-
-		}
-	}
-
-	var initScriptHash string
-	for _, m := range cresp.Metadata.Items {
-		if m.Key == "user-data" {
-			hasher := sha256.New()
-			hasher.Write([]byte(*m.Value))
-			initScriptHash = base64.StdEncoding.EncodeToString(hasher.Sum(nil))
-			glog.V(2).Infof("     Derived Image Hash from metadata %s", initScriptHash)
-		}
-	}
-
-	if initScriptHash != c.InitScriptHash {
-		glog.Errorf("   -------->  Error Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash)
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script does not match got [%s]  expected [%s]", initScriptHash, c.InitScriptHash))
-	}
-
-	if c.InitScriptHash == "" {
-		glog.Errorf("   *********** NOTE: initscript is empty (non-COS VM or never set)...")
-		// optionally just continue here if debugging
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  Init Script is empty"))
-	}
-
-	if cresp.Fingerprint != c.ImageFingerprint {
-		glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
-		return &tokenservice.TokenResponse{}, grpc.Errorf(codes.NotFound, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
-	}
 
 	respID, err := uuid.NewUUID()
 	if err != nil {
@@ -376,7 +385,7 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 	// 	log.Printf("An error has occurred: %s", err)
 	// }
 	// log.Printf(resp.UpdateTime.String())
-
+	glog.V(10).Infof("<<<--- GetToken ======= %s", in.RequestId)
 	return &tokenservice.TokenResponse{
 		ResponseID:   respID.String(),
 		InResponseTo: in.RequestId,
@@ -387,13 +396,12 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 
 func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.MakeCredentialRequest) (*tokenservice.MakeCredentialResponse, error) {
 
-	glog.V(2).Infof("======= MakeCredential ========")
-	glog.V(5).Infof("     client provided uid: %s", in.RequestId)
+	glog.V(10).Infof("======= MakeCredential ======== %s", in.RequestId)
 	glog.V(10).Infof("     Got AKName %s", in.AkName)
 	glog.V(10).Infof("     Registry size %d\n", len(registry))
 
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
-	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
+	glog.V(10).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 
 	if *useTPM == false {
 		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
@@ -441,7 +449,7 @@ func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.Ma
 		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("EkPub mismatchKey"))
 	}
 
-	glog.V(2).Infof("     Verified EkPub from GCE API matches ekPub from Client")
+	glog.V(10).Infof("     Verified EkPub from GCE API matches ekPub from Client")
 
 	registry[idToken.Google.ComputeEngine.InstanceID] = *in
 
@@ -457,7 +465,7 @@ func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.Ma
 	if err != nil {
 		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to makeCredential"))
 	}
-	glog.V(2).Infof("     Returning MakeCredentialResponse ========")
+	glog.V(10).Infof("     Returning MakeCredentialResponse ======== %s", in.RequestId)
 	respID, err := uuid.NewUUID()
 	if err != nil {
 		return &tokenservice.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to Create UUID"))
@@ -473,8 +481,7 @@ func (s *verifierserver) MakeCredential(ctx context.Context, in *tokenservice.Ma
 
 func (s *verifierserver) ActivateCredential(ctx context.Context, in *tokenservice.ActivateCredentialRequest) (*tokenservice.ActivateCredentialResponse, error) {
 
-	glog.V(2).Infof("======= ActivateCredential ========")
-	glog.V(5).Infof("     client provided uid: %s", in.RequestId)
+	glog.V(10).Infof("======= ActivateCredential ======== %s", in.RequestId)
 	glog.V(10).Infof("     Secret %s", in.Secret)
 
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
@@ -498,7 +505,7 @@ func (s *verifierserver) ActivateCredential(ctx context.Context, in *tokenservic
 		delete(nonces, in.RequestId)
 	}
 
-	glog.V(2).Infof("     Returning ActivateCredentialResponse ========")
+	glog.V(10).Infof("     Returning ActivateCredentialResponse ======== %s", in.RequestId)
 	respID, err := uuid.NewUUID()
 	if err != nil {
 		return &tokenservice.ActivateCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Failed to create UUID: %v", err))
@@ -511,13 +518,12 @@ func (s *verifierserver) ActivateCredential(ctx context.Context, in *tokenservic
 }
 
 func (s *verifierserver) OfferQuote(ctx context.Context, in *tokenservice.OfferQuoteRequest) (*tokenservice.OfferQuoteResponse, error) {
-	glog.V(2).Infof("======= OfferQuote ========")
-	glog.V(5).Infof("     client provided uid: %s", in.RequestId)
+	glog.V(10).Infof("======= OfferQuote ========  %s", in.RequestId)
 
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
-	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
+	glog.V(10).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 	if *useTPM == false {
-		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
+		glog.V(10).Infof("     TPM Usage not enabled, exiting ")
 		return &tokenservice.OfferQuoteResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
 	}
 
@@ -526,7 +532,7 @@ func (s *verifierserver) OfferQuote(ctx context.Context, in *tokenservice.OfferQ
 
 	id = idToken.Google.ComputeEngine.InstanceID
 
-	glog.V(2).Infof("     Returning OfferQuoteResponse ========")
+	glog.V(10).Infof("     Returning OfferQuoteResponse ======== %s", in.RequestId)
 	nonces[id] = nonce
 	respID, err := uuid.NewUUID()
 	if err != nil {
@@ -541,10 +547,9 @@ func (s *verifierserver) OfferQuote(ctx context.Context, in *tokenservice.OfferQ
 }
 
 func (s *verifierserver) ProvideQuote(ctx context.Context, in *tokenservice.ProvideQuoteRequest) (*tokenservice.ProvideQuoteResponse, error) {
-	glog.V(2).Infof("======= ProvideQuote ========")
-	glog.V(5).Infof("     client provided uid: %s", in.RequestId)
+	glog.V(10).Infof("======= ProvideQuote ======== %s", in.RequestId)
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
-	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
+	glog.V(10).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 
 	if *useTPM == false {
 		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
@@ -557,7 +562,7 @@ func (s *verifierserver) ProvideQuote(ctx context.Context, in *tokenservice.Prov
 
 	val, ok := nonces[id]
 	if !ok {
-		glog.V(2).Infof("Unable to find nonce request for uid")
+		glog.V(10).Infof("Unable to find nonce request for uid")
 	} else {
 		delete(nonces, id)
 		err := verifyQuote(id, val, in.Attestation, in.Signature)
@@ -568,7 +573,7 @@ func (s *verifierserver) ProvideQuote(ctx context.Context, in *tokenservice.Prov
 		}
 	}
 
-	glog.V(2).Infof("     Returning ProvideQuoteResponse ========")
+	glog.V(10).Infof("     Returning ProvideQuoteResponse ======== %s", in.RequestId)
 	respID, err := uuid.NewUUID()
 	if err != nil {
 		return &tokenservice.ProvideQuoteResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Could not create UUID"))
@@ -581,32 +586,32 @@ func (s *verifierserver) ProvideQuote(ctx context.Context, in *tokenservice.Prov
 }
 
 func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice.ProvideSigningKeyRequest) (*tokenservice.ProvideSigningKeyResponse, error) {
-	glog.V(2).Infof("======= ProvideSigningKey ========")
-	glog.V(5).Infof("     client provided uid: %s", in.RequestId)
+	glog.V(10).Infof("======= ProvideSigningKey ======== %s", in.RequestId)
+	glog.V(10).Infof("     client provided uid: %s", in.RequestId)
 
 	idToken := ctx.Value(contextKey("idtoken")).(gcpIdentityDoc)
-	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
+	glog.V(10).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 
 	if *useTPM == false {
 		glog.V(2).Infof("     TPM Usage not enabled, exiting ")
 		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("TPM Not Supported"))
 	}
 
-	glog.V(5).Infof("     SigningKey %s\n", in.Signingkey)
-	glog.V(5).Infof("     SigningKey Attestation %s\n", base64.StdEncoding.EncodeToString(in.Attestation))
-	glog.V(5).Infof("     SigningKey Signature %s\n", base64.StdEncoding.EncodeToString(in.Signature))
+	glog.V(20).Infof("     SigningKey %s\n", in.Signingkey)
+	glog.V(20).Infof("     SigningKey Attestation %s\n", base64.StdEncoding.EncodeToString(in.Attestation))
+	glog.V(20).Infof("     SigningKey Signature %s\n", base64.StdEncoding.EncodeToString(in.Signature))
 
 	if _, ok := registry[idToken.Google.ComputeEngine.InstanceID]; !ok {
 		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Could not find instanceID in registry %v"))
 	}
 	akPub := registry[idToken.Google.ComputeEngine.InstanceID].AkPubCert
 
-	glog.V(5).Infof("     Read and Decode (attestion)")
+	glog.V(20).Infof("     Read and Decode (attestion)")
 	att, err := tpm2.DecodeAttestationData(in.Attestation)
 	if err != nil {
 		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("DecodeAttestationData failed: %v", err))
 	}
-	glog.V(5).Infof("     Attestation att.AttestedCertifyInfo.QualifiedName: %s", hex.EncodeToString(att.AttestedCertifyInfo.QualifiedName.Digest.Value))
+	glog.V(20).Infof("     Attestation att.AttestedCertifyInfo.QualifiedName: %s", hex.EncodeToString(att.AttestedCertifyInfo.QualifiedName.Digest.Value))
 
 	sigL := tpm2.SignatureRSA{
 		HashAlg:   tpm2.AlgSHA256,
@@ -614,7 +619,7 @@ func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice
 	}
 
 	// Verify signature of Attestation by using the PEM Public key for AK
-	glog.V(5).Infof("     Decoding PublicKey for AK ========")
+	glog.V(10).Infof("     Decoding PublicKey for AK ======== %s", in.RequestId)
 
 	block, _ := pem.Decode(akPub)
 	if block == nil {
@@ -633,7 +638,7 @@ func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice
 	if err := rsa.VerifyPKCS1v15(&rsaPub, crypto.SHA256, hsh.Sum(nil), sigL.Signature); err != nil {
 		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("     VerifyPKCS1v15 failed: %v", err))
 	}
-	glog.V(5).Infof("     Attestation of Signing Key Verified")
+	glog.V(20).Infof("     Attestation of Signing Key Verified")
 
 	ablock, _ := pem.Decode(in.Signingkey)
 	if ablock == nil {
@@ -665,11 +670,11 @@ func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice
 	if err != nil {
 		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("     AttestedCertifyInfo.MatchesPublic(%v) failed: %v", att, err))
 	}
-	glog.V(2).Infof("     Attestation MatchesPublic %v", ok)
+	glog.V(20).Infof("     Attestation MatchesPublic %v", ok)
 
 	ver := true
 
-	glog.V(2).Infof("     Returning ProvideSigningKeyResponse ========")
+	glog.V(10).Infof("     Returning ProvideSigningKeyResponse ======== %s", in.RequestId)
 	respID, err := uuid.NewUUID()
 	if err != nil {
 		return &tokenservice.ProvideSigningKeyResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Could not create UUID"))
@@ -682,7 +687,7 @@ func (s *verifierserver) ProvideSigningKey(ctx context.Context, in *tokenservice
 }
 
 func verifyQuote(uid string, nonce string, attestation []byte, sigBytes []byte) (retErr error) {
-	glog.V(2).Infof("     --> Starting verifyQuote()")
+	glog.V(20).Infof("     --> Starting verifyQuote()")
 
 	if *useTPM == false {
 		glog.Errorf("    TPM Usage not enabled, exiting")
@@ -701,9 +706,9 @@ func verifyQuote(uid string, nonce string, attestation []byte, sigBytes []byte) 
 		return fmt.Errorf("DecodeAttestationData(%v) failed: %v", attestation, err)
 	}
 
-	glog.V(5).Infof("     Attestation ExtraData (nonce): %s ", string(att.ExtraData))
-	glog.V(5).Infof("     Attestation PCR#: %v ", att.AttestedQuoteInfo.PCRSelection.PCRs)
-	glog.V(5).Infof("     Attestation Hash: %v ", hex.EncodeToString(att.AttestedQuoteInfo.PCRDigest))
+	glog.V(20).Infof("     Attestation ExtraData (nonce): %s ", string(att.ExtraData))
+	glog.V(20).Infof("     Attestation PCR#: %v ", att.AttestedQuoteInfo.PCRSelection.PCRs)
+	glog.V(20).Infof("     Attestation Hash: %v ", hex.EncodeToString(att.AttestedQuoteInfo.PCRDigest))
 
 	if nonce != string(att.ExtraData) {
 		glog.Errorf("     Nonce Value mismatch Got: (%s) Expected: (%v)", string(att.ExtraData), nonce)
@@ -720,10 +725,10 @@ func verifyQuote(uid string, nonce string, attestation []byte, sigBytes []byte) 
 	}
 	hash := sha256.Sum256(decoded)
 
-	glog.V(5).Infof("     Expected PCR Value:           --> %s", *expectedPCRValue)
-	glog.V(5).Infof("     sha256 of Expected PCR Value: --> %x", hash)
+	glog.V(20).Infof("     Expected PCR Value:           --> %s", *expectedPCRValue)
+	glog.V(20).Infof("     sha256 of Expected PCR Value: --> %x", hash)
 
-	glog.V(2).Infof("     Decoding PublicKey for AK ========")
+	glog.V(20).Infof("     Decoding PublicKey for AK ========")
 	p, err := tpm2.DecodePublic(akPub)
 	if err != nil {
 		return fmt.Errorf("DecodePublic failed: %v", err)
@@ -742,15 +747,15 @@ func verifyQuote(uid string, nonce string, attestation []byte, sigBytes []byte) 
 	if nonce != string(att.ExtraData) {
 		return fmt.Errorf("Unexpected secret Value expected: %v  Got %v", nonce, string(att.ExtraData))
 	}
-	glog.V(2).Infof("     Attestation Signature Verified ")
-	glog.V(2).Infof("     <-- End verifyQuote()")
+	glog.V(20).Infof("     Attestation Signature Verified ")
+	glog.V(20).Infof("     <-- End verifyQuote()")
 	return nil
 }
 
 func makeCredential(sec string, ekPubBytes []byte, akPubBytes []byte) (credBlob []byte, encryptedSecret []byte, retErr error) {
 
-	glog.V(2).Infof("     --> Starting makeCredential()")
-	glog.V(10).Infof("     Read (ekPub) from request")
+	glog.V(20).Infof("     --> Starting makeCredential()")
+	glog.V(20).Infof("     Read (ekPub) from request")
 
 	if *useTPM == false {
 		glog.Errorf("    TPM Usage not enabled, exiting")
@@ -768,7 +773,7 @@ func makeCredential(sec string, ekPubBytes []byte, akPubBytes []byte) (credBlob 
 	}
 	defer tpm2.FlushContext(rwc, ekh)
 
-	glog.V(10).Infof("     Read (akPub) from request")
+	glog.V(20).Infof("     Read (akPub) from request")
 
 	tPub, err := tpm2.DecodePublic(akPubBytes)
 	if err != nil {
@@ -790,7 +795,7 @@ func makeCredential(sec string, ekPubBytes []byte, akPubBytes []byte) (credBlob 
 			Bytes: akBytes,
 		},
 	)
-	glog.V(10).Infof("     Decoded AkPub: \n%v", string(akPubPEM))
+	glog.V(20).Infof("     Decoded AkPub: \n%v", string(akPubPEM))
 
 	if tPub.MatchesTemplate(defaultKeyParams) {
 		glog.V(10).Infof("     AK Default parameter match template")
@@ -802,18 +807,18 @@ func makeCredential(sec string, ekPubBytes []byte, akPubBytes []byte) (credBlob 
 		return []byte(""), []byte(""), fmt.Errorf("Error loadingExternal AK %v", err)
 	}
 	defer tpm2.FlushContext(rwc, h)
-	glog.V(10).Infof("     Loaded AK KeyName %s", hex.EncodeToString(keyName))
+	glog.V(20).Infof("     Loaded AK KeyName %s", hex.EncodeToString(keyName))
 
-	glog.V(5).Infof("     MakeCredential Start")
+	glog.V(20).Infof("     MakeCredential Start")
 	credential := []byte(sec)
 	credBlob, encryptedSecret0, err := tpm2.MakeCredential(rwc, ekh, credential, keyName)
 	if err != nil {
 		glog.Errorf("ERROR in Make Credential %v", err)
 		return []byte(""), []byte(""), fmt.Errorf("MakeCredential failed: %v", err)
 	}
-	glog.V(10).Infof("     credBlob %s", hex.EncodeToString(credBlob))
-	glog.V(10).Infof("     encryptedSecret0 %s", hex.EncodeToString(encryptedSecret0))
-	glog.V(2).Infof("     <-- End makeCredential()")
+	glog.V(20).Infof("     credBlob %s", hex.EncodeToString(credBlob))
+	glog.V(20).Infof("     encryptedSecret0 %s", hex.EncodeToString(encryptedSecret0))
+	glog.V(20).Infof("     <-- End makeCredential()")
 	return credBlob, encryptedSecret0, nil
 }
 
@@ -963,6 +968,9 @@ func main() {
 		time.Sleep(1 * time.Second)
 		os.Exit(0)
 	}()
+	flag.VisitAll(func(f *flag.Flag) {
+		fmt.Printf("     Startup args:  %s:  %v\n", f.Name, f.Value)
+	})
 	glog.V(2).Infof("Starting TokenService..")
 	s.Serve(lis)
 }

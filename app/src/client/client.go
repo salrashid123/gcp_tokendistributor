@@ -147,6 +147,9 @@ var (
 func main() {
 
 	flag.Parse()
+	flag.VisitAll(func(f *flag.Flag) {
+		fmt.Printf("     Startup args:  %s:  %v\n", f.Name, f.Value)
+	})
 	var wg sync.WaitGroup
 
 	var tlsConfig tls.Config
@@ -300,7 +303,7 @@ func main() {
 				c := pb.NewTokenServiceClient(conn)
 
 				var customMetadata = metadata.MD{
-					"key": []string{"value"},
+					"client_workload": []string{"some_workload_id"},
 				}
 
 				ctx = metadata.NewOutgoingContext(context.Background(), customMetadata)
