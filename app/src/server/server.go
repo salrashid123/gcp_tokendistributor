@@ -495,6 +495,11 @@ func (s *verifierserver) ActivateCredential(ctx context.Context, in *tokenservic
 	var id string
 	id = idToken.Google.ComputeEngine.InstanceID
 
+	if nonces[id] != in.Secret {
+		glog.Errorf("     ActivateCredential failed:  provided Secret does not match expected Nonce")
+		return &tokenservice.ActivateCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("ActivateCredential failed:  provided Secret does not match expected Nonce"))
+	}
+
 	err := verifyQuote(id, nonces[id], in.Attestation, in.Signature)
 	if err != nil {
 		glog.Errorf("     Quote Verification Failed Quote: %v", err)
@@ -738,6 +743,18 @@ func verifyQuote(uid string, nonce string, attestation []byte, sigBytes []byte) 
 	hsh.Write(attestation)
 	if err := rsa.VerifyPKCS1v15(&rsaPub, crypto.SHA256, hsh.Sum(nil), sigL.Signature); err != nil {
 		return fmt.Errorf("VerifyPKCS1v15 failed: %v", err)
+	}
+
+	var pcrMatch bool
+	pcrMatch = false
+	for _, a := range att.AttestedQuoteInfo.PCRSelection.PCRs {
+		if a == *pcr {
+			pcrMatch = true
+			break
+		}
+	}
+	if !pcrMatch {
+		return fmt.Errorf("Unexpected PCR bank returned in AttestedQuoteInfo expected: %d  Got %v", *pcr, att.AttestedQuoteInfo.PCRSelection.PCRs)
 	}
 
 	if fmt.Sprintf("%x", hash) != hex.EncodeToString(att.AttestedQuoteInfo.PCRDigest) {
