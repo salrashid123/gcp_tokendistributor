@@ -14,7 +14,7 @@ export billing_account=your_billing_id
 ##  if you have your own project you can set the value of `ts_project_id` and proceed and skip the line
 ##  where a new project is setup
 export ts_project_name=tokenserver
-export random_id=`head /dev/urandom | tr -dc a-z0-9 | head -c 4 ; echo ''`
+export random_id=`head /dev/urandom | tr -dc a-z0-9 | head -c 6 ; echo ''`
 export ts_project_id=ts-$random_id
 export ts_sni=tokenservice.esodemoapp2.com
 
@@ -187,14 +187,14 @@ export org_id=your_org_id
 export billing_account=your_billing_id
 
 export tc_project_name=tokenclient
-export random_id=`head /dev/urandom | tr -dc a-z0-9 | head -c 4 ; echo ''`
+export random_id=`head /dev/urandom | tr -dc a-z0-9 | head -c 6 ; echo ''`
 export tc_project_id=tc-$random_id
 export ts_sni=tokenservice.esodemoapp2.com
 export ts_audience=https://tokenservice
 
 ## Make sure these env vars from Alice are set
 ## ts_provisioner_email is the email address of the user/service account that will run the provisioner
-
+export ts_provisioner_email=<user_to_run_provisioner>
 echo $ts_service_account_email
 echo $tsIP
 echo $ts_provisioner_email
@@ -394,6 +394,8 @@ go run src/provisioner/provisioner.go \
   --firestoreCollectionName foo     --clientProjectId $tc_project_id --clientVMZone us-central1-a \
   --clientVMId $tc_instanceID \
   --useTPM \
+  --peerSerialNumber=5 \
+  --peerAddress=$tcIP \
   --attestationPCR=0 \
   --attestationPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe  \
   --secretsFile=secrets.json
@@ -447,7 +449,7 @@ go run src/server/server.go \
   --firestoreProjectId ts-x3qw \
   --firestoreCollectionName foo \
   --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe \
-  --pcr=0 --jwtIssuedAtJitter=5 \
+  --pcr=0  --validatePeerIP --validatePeerSN --jwtIssuedAtJitter=5 \
   --v=20 -alsologtostderr
 
 ```

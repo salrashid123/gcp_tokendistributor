@@ -149,7 +149,9 @@ func (s *healthServer) Check(ctx context.Context, in *healthpb.HealthCheckReques
 	if in.Service == "" {
 		return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_SERVING}, nil
 	}
+	// TODO: check if the service is running or not...no reason they shoudn't be
 	s.statusMap["tokenservice.TokenServiceServer"] = healthpb.HealthCheckResponse_SERVING
+	s.statusMap["tokenservice.VerifierServer"] = healthpb.HealthCheckResponse_SERVING
 	status, ok := s.statusMap[in.Service]
 	if !ok {
 		return &healthpb.HealthCheckResponse{Status: healthpb.HealthCheckResponse_UNKNOWN}, grpc.Errorf(codes.NotFound, "unknown service")
