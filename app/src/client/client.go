@@ -33,6 +33,7 @@ import (
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/alts"
 	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
@@ -54,16 +55,16 @@ type grpcTokenSource struct {
 }
 
 var (
-	address        = flag.String("address", "", "host:port of gRPC server")
-	tsAudience     = flag.String("tsAudience", "https://tokenservice", "Audience for the token")
-	tlsCertChain   = flag.String("tlsCertChain", "", "root CA Certificate for TLS")
-	tlsClientCert  = flag.String("tlsClientCert", "", "ClientCertificate Cert for TLS")
-	tlsClientKey   = flag.String("tlsClientKey", "", "ClientCertificate Key for TLS")
-	useSecrets     = flag.Bool("useSecrets", false, "Use Google Secrets Manager for TLS Keys")
-	sniServerName  = flag.String("servername", "tokenservice.esodemoapp2.com", "SNIServer Name assocaited with the server")
-	serviceAccount = flag.String("serviceAccount", "/path/to/svc.json", "Path to the service account JSOn file")
-	useMTLS        = flag.Bool("useMTLS", false, "Use mTLS")
-
+	address                   = flag.String("address", "", "host:port of gRPC server")
+	tsAudience                = flag.String("tsAudience", "https://tokenservice", "Audience for the token")
+	tlsCertChain              = flag.String("tlsCertChain", "tls-ca.crt", "root CA Certificate for TLS")
+	tlsClientCert             = flag.String("tlsClientCert", "tokenclient.crt", "ClientCertificate Cert for TLS")
+	tlsClientKey              = flag.String("tlsClientKey", "tokenclient.key", "ClientCertificate Key for TLS")
+	useSecrets                = flag.Bool("useSecrets", false, "Use Google Secrets Manager for TLS Keys")
+	sniServerName             = flag.String("servername", "tokenservice.esodemoapp2.com", "SNIServer Name assocaited with the server")
+	serviceAccount            = flag.String("serviceAccount", "/path/to/svc.json", "Path to the service account JSOn file")
+	useMTLS                   = flag.Bool("useMTLS", false, "Use mTLS")
+	useALTS                   = flag.Bool("useALTS", false, "Use ALTS")
 	tokenServerServiceAccount = flag.String("tokenServerServiceAccount", "", "ServiceAccount for ALTS TokenService")
 	maxLoop                   = flag.Int("maxLoop", 360, "Number of reattempts to contact the TokenServer")
 	pollWaitSeconds           = flag.Int("pollWaitSeconds", 10, "Number of seconds delay bettween retries")
@@ -158,96 +159,109 @@ func main() {
 	rootCAs := x509.NewCertPool()
 	var clientCerts tls.Certificate
 
-	if *useSecrets {
+	if *useALTS && *useMTLS {
+		glog.Fatal("must specify either --useALTS or --useMTLS")
+	}
 
-		glog.V(10).Infof("     Getting certs from Secrets Manager")
-
-		ctx := context.Background()
-
-		client, err := secretmanager.NewClient(ctx)
-		if err != nil {
-			glog.Fatalf("Error creating Secrets Client")
-		}
-
-		tlsCACert_name := fmt.Sprintf("%s/versions/latest", *tlsCertChain)
-		tlsCACert_req := &secretmanagerpb.AccessSecretVersionRequest{
-			Name: tlsCACert_name,
-		}
-
-		tlsCACert_result, err := client.AccessSecretVersion(ctx, tlsCACert_req)
-		if err != nil {
-			glog.Fatalf("failed to access  tlsCertChain secret version: %v", err)
-		}
-		pem := tlsCACert_result.Payload.Data
-		if !rootCAs.AppendCertsFromPEM(pem) {
-			glog.Fatalf("ERROR no root CA certs parsed from file ")
-		}
-
-		if *useMTLS {
-			glog.V(10).Infof("     Loading mTLS certs from Secrets")
-			tlsCert_name := fmt.Sprintf("%s/versions/latest", *tlsClientCert)
-			tlsCert_req := &secretmanagerpb.AccessSecretVersionRequest{
-				Name: tlsCert_name,
-			}
-
-			tlsCert_result, err := client.AccessSecretVersion(ctx, tlsCert_req)
-			if err != nil {
-				glog.Fatalf("Error: failed to access tlsCert secret version: %v", err)
-			}
-			certPem := tlsCert_result.Payload.Data
-
-			tlsKey_name := fmt.Sprintf("%s/versions/latest", *tlsClientKey)
-			tlsKey_req := &secretmanagerpb.AccessSecretVersionRequest{
-				Name: tlsKey_name,
-			}
-
-			tlsKey_result, err := client.AccessSecretVersion(ctx, tlsKey_req)
-			if err != nil {
-				glog.Fatalf("Error: failed to access tlsKey secret version: %v", err)
-			}
-			keyPem := tlsKey_result.Payload.Data
-
-			clientCerts, err = tls.X509KeyPair(certPem, keyPem)
-			if err != nil {
-				glog.Fatalf("Error: could not load TLS Certificate chain: %s", err)
-			}
-		}
-
+	if *useALTS {
+		glog.V(2).Infof("     Using ALTS")
+		ce = alts.NewClientCreds(&alts.ClientOptions{
+			TargetServiceAccounts: []string{*tokenServerServiceAccount},
+		})
 	} else {
-		var err error
+		if *useSecrets {
+			glog.V(10).Infof("     Getting certs from Secrets Manager")
 
-		if *useMTLS {
-			glog.V(10).Infof("     Loading mTLS certs from File")
-			clientCerts, err = tls.LoadX509KeyPair(
-				*tlsClientCert,
-				*tlsClientKey,
-			)
+			ctx := context.Background()
+
+			client, err := secretmanager.NewClient(ctx)
+			if err != nil {
+				glog.Fatalf("Error creating Secrets Client")
+			}
+
+			tlsCACert_name := fmt.Sprintf("%s/versions/latest", *tlsCertChain)
+			tlsCACert_req := &secretmanagerpb.AccessSecretVersionRequest{
+				Name: tlsCACert_name,
+			}
+
+			tlsCACert_result, err := client.AccessSecretVersion(ctx, tlsCACert_req)
+			if err != nil {
+				glog.Fatalf("failed to access  tlsCertChain secret version: %v", err)
+			}
+			pem := tlsCACert_result.Payload.Data
+			if !rootCAs.AppendCertsFromPEM(pem) {
+				glog.Fatalf("ERROR no root CA certs parsed from file ")
+			}
+			if *useMTLS {
+				glog.V(10).Infof("     Loading mTLS certs from Secrets")
+				tlsCert_name := fmt.Sprintf("%s/versions/latest", *tlsClientCert)
+				tlsCert_req := &secretmanagerpb.AccessSecretVersionRequest{
+					Name: tlsCert_name,
+				}
+
+				tlsCert_result, err := client.AccessSecretVersion(ctx, tlsCert_req)
+				if err != nil {
+					glog.Fatalf("Error: failed to access tlsCert secret version: %v", err)
+				}
+				certPem := tlsCert_result.Payload.Data
+
+				tlsKey_name := fmt.Sprintf("%s/versions/latest", *tlsClientKey)
+				tlsKey_req := &secretmanagerpb.AccessSecretVersionRequest{
+					Name: tlsKey_name,
+				}
+
+				tlsKey_result, err := client.AccessSecretVersion(ctx, tlsKey_req)
+				if err != nil {
+					glog.Fatalf("Error: failed to access tlsKey secret version: %v", err)
+				}
+				keyPem := tlsKey_result.Payload.Data
+
+				clientCerts, err = tls.X509KeyPair(certPem, keyPem)
+				if err != nil {
+					glog.Fatalf("Error: could not load TLS Certificate chain: %s", err)
+				}
+			}
+		} else {
+
+			var err error
+
+			if *useMTLS {
+				glog.V(10).Infof("     Loading mTLS certs from File")
+				clientCerts, err = tls.LoadX509KeyPair(
+					*tlsClientCert,
+					*tlsClientKey,
+				)
+			}
+			pem, err := ioutil.ReadFile(*tlsCertChain)
+			if err != nil {
+				glog.Fatalf("ERROR failed to load root CA certificates  error=%v", err)
+			}
+			if !rootCAs.AppendCertsFromPEM(pem) {
+				glog.Fatalf("ERROR no root CA certs parsed from file ")
+			}
+
 		}
-		pem, err := ioutil.ReadFile(*tlsCertChain)
-		if err != nil {
-			glog.Fatalf("ERROR failed to load root CA certificates  error=%v", err)
-		}
-		if !rootCAs.AppendCertsFromPEM(pem) {
-			glog.Fatalf("ERROR no root CA certs parsed from file ")
-		}
+
 	}
 
 	if *useMTLS {
 		glog.V(10).Infof("     Enabling mTLS")
 		tlsConfig = tls.Config{
 			ServerName:   *sniServerName,
-			ClientAuth:   tls.RequireAndVerifyClientCert,
 			Certificates: []tls.Certificate{clientCerts},
 			RootCAs:      rootCAs,
 		}
+		ce = credentials.NewTLS(&tlsConfig)
+	} else if *useALTS {
+		glog.V(10).Infof("     Enabling ALTS")
 	} else {
 		glog.V(10).Infof("     Enabling TLS")
 		tlsConfig = tls.Config{
 			ServerName: *sniServerName,
 			RootCAs:    rootCAs,
 		}
+		ce = credentials.NewTLS(&tlsConfig)
 	}
-	ce = credentials.NewTLS(&tlsConfig)
 
 	if *useTPM {
 		var err error
@@ -327,6 +341,18 @@ func main() {
 				if err != nil {
 					glog.Errorf("Error:   GetToken() from TokenService: %v", err)
 					return
+				}
+
+				if *useALTS {
+					ai, err := alts.AuthInfoFromPeer(&p)
+					if err != nil {
+						glog.Errorf("ERROR:  Unable to get client AuthInfoFromPeer = _, %v: \n", err)
+						return
+					} else {
+						glog.V(2).Infof("     AuthInfo PeerServiceAccount: %v\n", ai.PeerServiceAccount())
+						glog.V(2).Infof("     AuthInfo LocalServiceAccount: %v\n", ai.LocalServiceAccount())
+						// TODO: compare tokenServerServiceAccount values here with the one in args
+					}
 				}
 
 				glog.V(20).Infof("     Received  toResponse: %s\n", r.InResponseTo)

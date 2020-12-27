@@ -12,7 +12,12 @@ container_image(
     name = "tokenserver",
     base = "@alpine_linux_amd64//image",
     entrypoint = ["/server"],
-    files = [":server"],
+    files = [
+        ":server",
+        "//certs:tls-ca.crt",
+        "//certs:tokenservice.crt",
+        "//certs:tokenservice.key",
+    ],
 )
 
 go_library(

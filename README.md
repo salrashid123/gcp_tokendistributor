@@ -92,7 +92,7 @@ If you do not want to use terraform, the `gcloud_setup/` folder contains command
 
 Alice and Bob will both need:
 
-* [terraform](terraform.io)
+* [terraform](terraform.io) version *`0.12.29`*
 * `go 1.14`
 * Permissions to create GCP Projects
 * `gcloud` CLI
@@ -122,6 +122,7 @@ gcloud auth application-default login
 export TF_VAR_org_id=673208782222
 export TF_VAR_billing_account=000C16-9779B5-12345
 
+# requires terraform == 0.12.29 for docker provider
 terraform init  
 
 terraform apply --target=module.ts_setup -auto-approve
@@ -156,10 +157,11 @@ The terraform script `alice/deploy/main.tf` uses the default options described b
 |:------------|-------------|
 | **`-grpcport`** | host:port for the grpcServer(s) listener (default `:50051`|
 | **`-useMTLS`** | Use mTLS. |
-| **`-useSecrets`** | Use GCP Secret Manager for mTLS Certificates  |
-| **`-tlsCert`** | TLS Certificate file for mTLS; specify either file or Secret Manager Path  |
-| **`-tlsKey`** | TLS CertiKeyficate file for mTLS; specify either file or Secret Manager Path |
-| **`-tlsCertChain`** | TLS Certificate Chain file for mTLS; specify either file or Secret Manager Path  |
+| **`-useALTS`** | Use ALTS. |
+| **`-useSecrets`** | Use GCP Secret Manager for mTLS Certificates  (not valid if useALTS is set) |
+| **`-tlsCert`** | TLS Certificate file for mTLS; specify either file or Secret Manager Path  (not valid if useALTS is set) |
+| **`-tlsKey`** | TLS CertiKeyficate file for mTLS; specify either file or Secret Manager Path (not valid if useALTS is set)) |
+| **`-tlsCertChain`** | TLS Certificate Chain file for mTLS; specify either file or Secret Manager Path (not valid if useALTS is set) |
 | **`-tsAudience`** | The audience value for the tokenServer (default: `"https://tokenserver"`) |
 | **`-validatePeerIP`** | Extract the PeerIP address for the TokenClient from the TLS Session and compare with provisioned value. |
 | **`-validatePeerSN`** | Extract the SSL Serial Number and compare to provisioned value |
@@ -280,18 +282,19 @@ The terraform script `bob/deploy/main.tf` uses the default options described bel
 |:------------|-------------|
 | **`-address`** | host:port for the TokenServer |
 | **`-useMTLS`** | Use mTLS instead of TLS. |
+| **`-useALTS`** | Use ALTS. |
 | **`-tsAudience`** | Audience value to assign when generating and `id_token`.  Must match what the TokenServer expects (default: `"https://tokenservice"`) |
-| **`-useSecrets`** | Use GCP Secret Manager for mTLS Certificates  |
-| **`-tlsClientCert`** | TLS Certificate file for mTLS; specify either file or Secret Manager Path |
-| **`-tlsClientKey`** | TLS CertiKeyficate file for mTLS; specify either file or Secret Manager Path  |
-| **`-tlsCertChain`** | TLS Certificate Chain file for mTLS; specify either file or Secret Manager Path  |
+| **`-useSecrets`** | Use GCP Secret Manager for mTLS Certificates (not valid if useALTS is set) |
+| **`-tlsClientCert`** | TLS Certificate file for mTLS; specify either file or Secret Manager Path (not valid if useALTS is set) |
+| **`-tlsClientKey`** | TLS CertiKeyficate file for mTLS; specify either file or Secret Manager Path  (not valid if useALTS is set) |
+| **`-tlsCertChain`** | TLS Certificate Chain file for mTLS; specify either file or Secret Manager Path (not valid if useALTS is set) |
 | **`-sniServerName`** | SNI ServerName for the TLS connection (default: `tokenservice.esodemoapp2.com`; valid only for mTLS) |
 | **`-serviceAccount`** | Path to GCP ServiceAccount JSON file to use to authenticate to authenticate to FireStore and GCE API (default: not used) |
 | **`-firestoreProjectId`** | ProjectID where the FireStore database is hosted. |
 | **`-useTPM`** | Enable TPM operations |
 | **`-doAttestation`** | Start offer to Make/Activate Credential flow |
 | **`-exchangeSigningKey`** | Offer RSA Signing Key (requires --doAttestation) |
-| **`-tokenServerServiceAccount`** | Service Account for the TokenServer  |
+| **`-tokenServerServiceAccount`** | Service Account for the TokenServer  (valid only if useALTS is set) |
 | **`-maxLoop`** | Number of attempts the TokenClient will make to acquire a token (default: `360`) |
 | **`-pollWaitSeconds`** | Number of seconds to wait between attempts (default: `10s`)|
 
@@ -557,6 +560,17 @@ Each clientVM unique vm_id is saved in TokenServer's Firestore database.  Note, 
 
 ![images/ts_firestore.png](images/ts_firestore.png)
 
+#### mTLS or ALTS
+
+Both alice and bob must decide upfront if they wish to use mTLS or ALTS (Application Layer Transport Security) for encryption and in the case of ALTS, supplemental authentication.  ALTS only works on GCP at the moment so mTLS is applicable if Alice runs the TokenServer onprem.   The default value is mTLS in this example.
+
+the `main.tf` files for both Alice and Bob have the cloud-init configuration for ALTS commented out.  To use alts, redeploy the service on both ends using the commented versions.
+
+- For reference, see [grpc_alts](https://github.com/salrashid123/grpc_alts)
+
+If mTLS is uses, the issue of key distribution and security of the TLS keys becomes an issue.  The TLS aspect here is used for confidentiality mostly since API requests are always authenticated (using bob's oidc token) and the raw RSA/AES keys that do get transmitted are encrypted such that it can only get decrypted by the TokenClient's vTPM.
+
+To enable any of the mTLS variation or to use ALTS, see the config samples in the appendix
 
 #### Deterministic Builds using Bazel
 
@@ -885,6 +899,40 @@ openssl x509 -in alice/certs/tokenservice.crt -noout -text
 ```
 
 If you want to use a different DNS SAN value or create a CA from scratch, see [Create Root CA Key and cert](https://github.com/salrashid123/ca_scratchpad).
+
+#### Configuration Samples for Startup
+
+- TokenServer
+
+```bash
+# Default: mTLS useSecrets
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0 --validatePeerIP --validatePeerSN --useMTLS --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr
+
+# mTLS with fileSecrets
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0 --validatePeerIP --validatePeerSN --useMTLS --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr
+
+# TLS with fileSecrets
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0 --validatePeerIP  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr
+
+# ALTS
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0 --validatePeerIP  --useALTS --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr          
+
+```
+
+- TokenClient
+```bash
+# Default: mTLS useSecrets
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/${var.project_id}/tokenclient@${var.image_hash} --address ${var.ts_address}:50051 --servername ${var.sni_servername} --tsAudience ${var.ts_audience} --useMTLS --useSecrets  --tlsClientCert projects/${var.project_number}/secrets/tls_crt --tlsClientKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca --useTPM --doAttestation --exchangeSigningKey --v=25 -alsologtostderr
+
+# mTLS with fileSecrets
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/${var.project_id}/tokenclient@${var.image_hash} --address ${var.ts_address}:50051 --servername ${var.sni_servername} --tsAudience ${var.ts_audience} --useMTLS --useTPM --doAttestation --exchangeSigningKey --v=25 -alsologtostderr 
+
+# TLS with fileSecrets
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/${var.project_id}/tokenclient@${var.image_hash} --address ${var.ts_address}:50051 --servername ${var.sni_servername} --tsAudience ${var.ts_audience} --useTPM --doAttestation --exchangeSigningKey --v=25 -alsologtostderr 
+
+# ALTS
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/${var.project_id}/tokenclient@${var.image_hash} --address ${var.ts_address}:50051 --servername ${var.sni_servername} --tsAudience ${var.ts_audience} --useALTS --useTPM --doAttestation --exchangeSigningKey --v=25 -alsologtostderr       
+```
 
 #### Automated Testing
 

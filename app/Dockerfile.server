@@ -25,6 +25,9 @@ RUN export GOBIN=/app/bin && go install src/server/server.go
 
 FROM gcr.io/distroless/base
 COPY --from=build /app/bin /
+COPY --from=build /app/certs/tls-ca.crt .
+COPY --from=build /app/certs/tokenservice.crt .
+COPY --from=build /app/certs/tokenservice.key .
 
 EXPOSE 50051
 

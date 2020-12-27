@@ -36,7 +36,7 @@ variable "collection_id" {
 
 variable "ts_image_hash" {
   type    = string
-  default = "docker.io/salrashid123/tokenserver@sha256:4d6622b69d68e205c437c6d344d877eb05974eb503962882c898a873ba7abfb4"
+  default = "docker.io/salrashid123/tokenserver@sha256:5f2fa7d99f9ab1272305befea8d8810c609ff2e383b6e1e3acf22ca6a6f16a07"
 }
 
 variable "gae_location_id" {
@@ -49,15 +49,15 @@ variable "allowedclientsubnet" {
 }
 variable "tls_server_ca" {
   type    = string
-  default = "alice/certs/tls-ca.crt"
+  default = "app/certs/tls-ca.crt"
 }
 variable "tls_server_crt" {
   type    = string
-  default = "alice/certs/tokenservice.crt"
+  default = "app/certs/tokenservice.crt"
 }
 variable "tls_server_key" {
   type    = string
-  default = "alice/certs/tokenservice.key"
+  default = "app/certs/tokenservice.key"
 }
 
 # Token Client
@@ -68,19 +68,19 @@ variable "tc_project_name" {
 }
 variable "tls_client_ca" {
   type    = string
-  default = "bob/certs/tls-ca.crt"
+  default = "app/certs/tls-ca.crt"
 }
 variable "tls_client_crt" {
   type    = string
-  default = "bob/certs/tokenclient.crt"
+  default = "app/certs/tokenclient.crt"
 }
 variable "tls_client_key" {
   type    = string
-  default = "bob/certs/tokenclient.key"
+  default = "app/certs/tokenclient.key"
 }
 variable "tc_image_hash" {
   type    = string
-  default = "docker.io/salrashid123/tokenclient@sha256:28558acfe1e734a5fa9f3738bb4de4ae5710f4bb28d41665d45c204aede76a4f"  
+  default = "docker.io/salrashid123/tokenclient@sha256:32f6f33ba3d4f5595b5b4ac9fa82b00ff06810d6059bef8ee940e1ff4c9fb877"  
 }
 variable "sni_servername" {
   type    = string
