@@ -17,7 +17,7 @@ resource "null_resource" "submit" {
 data "google_container_registry_image" "tokenclient_url" {
   name = "tokenclient"
   tag  = "latest"
-  project = "${var.project_id}"
+  project = var.project_id
   depends_on = [null_resource.submit]  
 }
 

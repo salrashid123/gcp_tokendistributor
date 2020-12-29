@@ -92,7 +92,7 @@ If you do not want to use terraform, the `gcloud_setup/` folder contains command
 
 Alice and Bob will both need:
 
-* [terraform](terraform.io) version *`0.12.29`*
+* [terraform](terraform.io) version *`0.13 +`*
 * `go 1.14`
 * Permissions to create GCP Projects
 * `gcloud` CLI
@@ -122,7 +122,7 @@ gcloud auth application-default login
 export TF_VAR_org_id=673208782222
 export TF_VAR_billing_account=000C16-9779B5-12345
 
-# requires terraform == 0.12.29 for docker provider
+# requires terraform == 0.13+ for docker provider
 terraform init  
 
 terraform apply --target=module.ts_setup -auto-approve

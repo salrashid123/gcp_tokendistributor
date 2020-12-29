@@ -1,6 +1,9 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '--tag=gcr.io/$PROJECT_ID/tokenserver', '-f', 'Dockerfile.server', '.']
+images: ['gcr.io/$PROJECT_ID/tokenserver']
+
+# steps:
 # - name: gcr.io/cloud-builders/bazel@sha256:77d42f9b252c6b159416b5651dd69a7861d0f2ffbea05bc5b6482caf846ec9f4
 #   id:   bazelbuild
 #   args: ['run', '--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64', 'src/server:tokenserver']
@@ -8,4 +11,4 @@ steps:
 #   args: ['tag', 'bazel/src/server:tokenserver', 'gcr.io/$PROJECT_ID/tokenserver']    
 #   waitFor:
 #   - bazelbuild
-images: ['gcr.io/$PROJECT_ID/tokenserver']
+# images: ['gcr.io/$PROJECT_ID/tokenserver']
