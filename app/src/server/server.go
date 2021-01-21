@@ -224,6 +224,7 @@ func authUnaryInterceptor(
 			glog.Errorf("ERROR:  Could not create new Firestore Client %v", err)
 			return nil, grpc.Errorf(codes.PermissionDenied, "Unable to create Firestore Client")
 		}
+		defer fsclient.Close()
 		dsnap, err := fsclient.Collection(*firestoreCollectionName).Doc(instanceID).Get(ctx)
 		if err != nil {
 			glog.Errorf("ERROR:  Could not find instanceID new Firestore Client %s", instanceID)
