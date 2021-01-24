@@ -201,7 +201,11 @@ func authUnaryInterceptor(
 	md, _ := metadata.FromIncomingContext(ctx)
 	if len(md["authorization"]) > 0 {
 		reqToken := md["authorization"][0]
-		splitToken := strings.Split(reqToken, "Bearer")
+		// "Bearer"  should be capitalized https://tools.ietf.org/html/rfc6750#section-2.1
+		splitToken := strings.Split(reqToken, "Bearer ")
+		if len(splitToken) != 2 {
+			return nil, grpc.Errorf(codes.Unauthenticated, "Authorization Bearer token malformed")
+		}
 		reqToken = strings.TrimSpace(splitToken[1])
 		doc, err := verifyGoogleIDToken(ctx, *tsAudience, reqToken)
 		if err != nil {
