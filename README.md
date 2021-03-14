@@ -177,9 +177,9 @@ Note: if you would rather use an existing project for either the Client or Serve
 **Provide Bob the values of `ts_address` and `ts_service_account` variables anytime later**
 
 ```bash
-export TF_VAR_ts_project_id=`terraform output -state=terraform.tfstate ts_project_id`
-export TF_VAR_ts_service_account=`terraform output -state=terraform.tfstate ts_service_account`
-export TF_VAR_ts_address=`terraform output -state=terraform.tfstate ts_address`
+export TF_VAR_ts_project_id=`terraform output -raw -state=terraform.tfstate ts_project_id`
+export TF_VAR_ts_service_account=`terraform output -raw -state=terraform.tfstate ts_service_account`
+export TF_VAR_ts_address=`terraform output -raw -state=terraform.tfstate ts_address`
 
 echo
 echo "Provide the following to Bob"
@@ -252,12 +252,12 @@ Make sure the env vars are set (`TF_VAR_project_id` would be the the TokenClient
 
 >> this step is really important <<<
 
-`TF_VAR_ts_provisioner` is the email/serviceAccount that will run the provisioning application.  This is needed so that Bob can allow the provisioning application to read the GCE metadata. For example, if Alice herself is running the privisoning app, it'd be `export TF_VAR_ts_provisioner=alice@domain.com`
+`TF_VAR_ts_provisioner` is the email/serviceAccount that will run the provisioning application.  This is needed so that Bob can allow the provisioning application to read the GCE metadata. For example, if Alice herself is running the privisoning app, it'd be `export TF_VAR_ts_provisioner=alice@domain.com`.  The configuration below is assuming the user running terraform is the approver itself.
 
 ```bash
 export TF_VAR_ts_service_account=<value given by Alice>
 export TF_VAR_ts_address=<value given by Alice>
-export TF_VAR_ts_provisioner=<value given by Alice>
+export TF_VAR_ts_provisioner=`gcloud config get-value core/account`
 
 echo $TF_VAR_ts_service_account
 echo $TF_VAR_ts_address
@@ -314,9 +314,9 @@ You should see an output like:
 Note the `tc_instance_id` and `tc_project_id`. 
 
 ```bash
-export TF_VAR_tc_project_id=`terraform output -state=terraform.tfstate tc_project_id`
-export TF_VAR_tc_instance_id=`terraform output -state=terraform.tfstate tc_instance_id`
-export TF_VAR_tc_address=`terraform output -state=terraform.tfstate tc_address`
+export TF_VAR_tc_project_id=`terraform output -raw -state=terraform.tfstate tc_project_id`
+export TF_VAR_tc_instance_id=`terraform output -raw -state=terraform.tfstate tc_instance_id`
+export TF_VAR_tc_address=`terraform output -raw -state=terraform.tfstate tc_address`
 
 echo
 echo "Provide the following to Alice:"
@@ -358,7 +358,7 @@ As Alice,
 export TF_VAR_tc_project_id=`<value given by Bob>`
 export TF_VAR_tc_instance_id=`<value given by Bob>`
 export TF_VAR_tc_address=`<value given by Bob>`
-export TF_VAR_ts_project_id=`terraform output -state=terraform.tfstate ts_project_id`
+export TF_VAR_ts_project_id=`terraform output -raw -state=terraform.tfstate ts_project_id`
 
 
 echo $TF_VAR_tc_project_id
