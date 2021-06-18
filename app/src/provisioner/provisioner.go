@@ -60,7 +60,7 @@ var (
 	pcrsValues          = flag.String("pcrValues", "", "SHA256 PCR Values to seal against 23:=foo,20=bar.")
 	encryptToTPM        = flag.String("encryptToTPM", "", "Data to seal with EkPub of target VM")
 	attestationPCR      = flag.Int64("attestationPCR", 0, "The PCR bank for Attestation (default:0)")
-	attestationPCRValue = flag.String("attestationPCRValue", "fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe", "expectedPCRValue")
+	attestationPCRValue = flag.String("attestationPCRValue", "24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f", "expectedPCRValue")
 
 	clientProjectId = flag.String("clientProjectId", "", "clientProjectId for VM")
 	clientVMZone    = flag.String("clientVMZone", "", "clientVMZone for VM")
@@ -158,8 +158,8 @@ func main() {
 
 		te, err := createImportBlob(mresp.EncryptionKey.EkPub, *encryptToTPM)
 		log.Printf("Encrypted Data %v", base64.StdEncoding.EncodeToString(te))
-		//  --sealToPCR=0 --sealToPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
-		//  --sealToPCR=23 --sealToPCRValue=DB56114E00FDD4C1F85C892BF35AC9A89289AAECB1EBD0A96CDE606A748B5D71
+		//  --sealToPCR=0 --sealToPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f
+		//  --sealToPCR=23 --sealToPCRValue=f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b
 		return
 	}
 

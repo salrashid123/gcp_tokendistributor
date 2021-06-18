@@ -120,7 +120,7 @@ var (
 	pcr              = flag.Int("pcr", 0, "PCR Value to use for attestation")
 	registry         = make(map[string]tokenservice.MakeCredentialRequest)
 	nonces           = make(map[string]string)
-	expectedPCRValue = flag.String("expectedPCRValue", "fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe", "ExpectedPCRValue from Quote/Verify")
+	expectedPCRValue = flag.String("expectedPCRValue", "24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f", "ExpectedPCRValue from Quote/Verify")
 	handleNames      = map[string][]tpm2.HandleType{
 		"all":       []tpm2.HandleType{tpm2.HandleTypeLoadedSession, tpm2.HandleTypeSavedSession, tpm2.HandleTypeTransient},
 		"loaded":    []tpm2.HandleType{tpm2.HandleTypeLoadedSession},
@@ -272,13 +272,18 @@ func authUnaryInterceptor(
 			} else if *useMTLS {
 				glog.V(20).Infof("     Using mTLS Client cert Peer IP and SerialNumber")
 				tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
-				v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
-				sn := tlsInfo.State.VerifiedChains[0][0].SerialNumber
-				if *validatePeerSN && (sn.String() != c.PeerSerialNumber) {
-					glog.Errorf("ERROR:  Unregistered  Client Certificate SN: %s", sn.String())
-					return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Unregistered  Peer address  %v", sn.String()))
+				if len(tlsInfo.State.VerifiedChains) > 0 && len(tlsInfo.State.VerifiedChains[0]) > 0 {
+					v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
+					sn := tlsInfo.State.VerifiedChains[0][0].SerialNumber
+					if *validatePeerSN && (sn.String() != c.PeerSerialNumber) {
+						glog.Errorf("ERROR:  Unregistered  Client Certificate SN: %s", sn.String())
+						return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Unregistered  Peer address  %v", sn.String()))
+					}
+					glog.V(20).Infof("     Client Peer Address [%v] - Subject[%v] - SerialNumber [%v] Validated\n", peer.Addr.String(), v, sn)
+				} else {
+					glog.Error("ERROR:  Could not parse Peer Certificate")
+					return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Could not parse Peer Certificate"))
 				}
-				glog.V(20).Infof("     Client Peer Address [%v] - Subject[%v] - SerialNumber [%v] Validated\n", peer.Addr.String(), v, sn)
 			}
 		} else {
 			glog.Errorf("ERROR:  Could not extract peerInfo from TLS")

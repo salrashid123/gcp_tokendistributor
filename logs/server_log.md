@@ -1,156 +1,259 @@
+### Sample TokenServer log
+(in reverse order)
+
+
 ```logs
-2020-11-21T03:03:03.551181863Z I1121 03:03:03.550907       1 server.go:672]      Returning ProvideSigningKeyResponse ========
-2020-11-21T03:03:03.551167613Z I1121 03:03:03.550891       1 server.go:668]      Attestation MatchesPublic true
-2020-11-21T03:03:03.551148813Z I1121 03:03:03.550819       1 server.go:636]      Attestation of Signing Key Verified
-2020-11-21T03:03:03.549576808Z I1121 03:03:03.549333       1 server.go:617]      Decoding PublicKey for AK ========
-2020-11-21T03:03:03.549571778Z I1121 03:03:03.549324       1 server.go:609]      Attestation att.AttestedCertifyInfo.QualifiedName: 69ac27ac11da317dbee9a76c941e24bc751ad78a142ad020d09f8ad0c5e0ce34
-2020-11-21T03:03:03.549566938Z I1121 03:03:03.549291       1 server.go:604]      Read and Decode (attestion)
-2020-11-21T03:03:03.549560248Z I1121 03:03:03.549278       1 server.go:597]      SigningKey Signature E661FrR1MBOj5WuDiimmNDUHvbjBbe1igHZSNwT3VXl6hgcaEEIXhAYRnhy+uVlOeFO0BTEKWRJ2pS5j4eNPUdXLbpi9u/X3Nh/eaatpvLpL1+326mo4CEklmBW89JMFSh8s/KkBnXqXlPZrt/gRBxkhImV5YZs/fCYnsbRcDKsEWpsrOpoSH0U36uNHIto/c9bQiyl9BJiQt9z3+t7Yyz3SyHGx2V1EPaCbtTnNJovGlhZpFTbwKDXXISiA8pBjiLdlwFRp4Ta5uwwPDgsnP6Vaen+eFP4gfNoYGpBP2w2NMykgPhNmggLOMnZkVBQva3KwpbO4rtgjy2bwYWAXaA==
-2020-11-21T03:03:03.549553548Z I1121 03:03:03.549262       1 server.go:596]      SigningKey Attestation /1RDR4AXACIAC85te683+jFOYqkMOir17FnTg1O+d7rVB/rvPyyO7TAnAAAAAAAAAAFPBAAAAAkAAAAAASAWBREAFigAACIAC0F0YJikdth/0MmBY8DQaoAVICqOvg6Thgupboy80gBjACIAC2msJ6wR2jF9vumnbJQeJLx1GteKFCrQINCfitDF4M40
-2020-11-21T03:03:03.549547608Z 
-2020-11-21T03:03:03.549542998Z -----END PUBLIC KEY-----
-2020-11-21T03:03:03.549537958Z KQIDAQAB
-2020-11-21T03:03:03.549532458Z dPyTWFhgmal1hhtcjOvN5/xFumLD24nCb+5CyX78KARAq3GnFSnow9lLPtAPu7Qp
-2020-11-21T03:03:03.549527218Z 3eQffI5uMVTIG5muhifw0E7B3D5JQBz0T9j7AcCssbciw3S7oqrLEDzBsc12WfJj
-2020-11-21T03:03:03.549522348Z XOKkP1KH7nJVDIncEaxaxV8po16TH7O5zZQGe0RXhrk5ahmlo8GEw5E9A84ItOCL
-2020-11-21T03:03:03.549517288Z 9ketfNjdQH9XuBXeg2136qV7rzAqz7RcW4Cn9ZX5tJLtuck/7A9t9WYyXTwR1vuN
-2020-11-21T03:03:03.549512058Z f42UheD1KkbRZIcfrgkzGWfH0PHpzzP7QkKOfbCnQA4sMLVBTCv9GMq1EdgkSViH
-2020-11-21T03:03:03.549506648Z MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwCOh2qNW59nNw81PIfo4
-2020-11-21T03:03:03.549501118Z I1121 03:03:03.549248       1 server.go:595]      SigningKey -----BEGIN PUBLIC KEY-----
-2020-11-21T03:03:03.549495288Z I1121 03:03:03.549241       1 server.go:588]      From InstanceID 8030049439212453353
-2020-11-21T03:03:03.549477308Z I1121 03:03:03.549233       1 server.go:585]      client provided uid: 42045bef-e12e-488f-a1d8-7ba5405fe6b1
-2020-11-21T03:03:03.549460788Z I1121 03:03:03.549215       1 server.go:584] ======= ProvideSigningKey ========
-2020-11-21T03:03:03.548998859Z E1121 03:03:03.548913       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:03:03.548316652Z I1121 03:03:03.548116       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
-2020-11-21T03:03:03.390080695Z I1121 03:03:03.389737       1 server.go:571]      Returning ProvideQuoteResponse ========
-2020-11-21T03:03:03.390069115Z I1121 03:03:03.389729       1 server.go:746]      <-- End verifyQuote()
-2020-11-21T03:03:03.390063965Z I1121 03:03:03.389712       1 server.go:745]      Attestation Signature Verified 
-2020-11-21T03:03:03.390051225Z I1121 03:03:03.389571       1 server.go:726]      Decoding PublicKey for AK ========
-2020-11-21T03:03:03.390045565Z I1121 03:03:03.389561       1 server.go:724]      sha256 of Expected PCR Value: --> 00e0758c418aff8b359dbcf0fb9af040ca15e973b02e5630b5dca1775c7e130a
-2020-11-21T03:03:03.390040565Z I1121 03:03:03.389552       1 server.go:723]      Expected PCR Value:           --> fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
-2020-11-21T03:03:03.390035595Z I1121 03:03:03.389541       1 server.go:706]      Attestation Hash: 00e0758c418aff8b359dbcf0fb9af040ca15e973b02e5630b5dca1775c7e130a 
-2020-11-21T03:03:03.390030795Z I1121 03:03:03.389525       1 server.go:705]      Attestation PCR#: [0] 
-2020-11-21T03:03:03.390025965Z I1121 03:03:03.389512       1 server.go:704]      Attestation ExtraData (nonce): 851ed301-138c-4c49-866a-3528dbc19cb9 
-2020-11-21T03:03:03.390021215Z I1121 03:03:03.389475       1 server.go:697]      Read and Decode (attestion)
-2020-11-21T03:03:03.390015215Z I1121 03:03:03.389466       1 server.go:685]      --> Starting verifyQuote()
-2020-11-21T03:03:03.389998976Z I1121 03:03:03.389437       1 server.go:547]      From InstanceID 8030049439212453353
-2020-11-21T03:03:03.389203678Z I1121 03:03:03.389085       1 server.go:545]      client provided uid: 42045bef-e12e-488f-a1d8-7ba5405fe6b1
-2020-11-21T03:03:03.388778920Z I1121 03:03:03.388666       1 server.go:544] ======= ProvideQuote ========
-2020-11-21T03:03:03.388761Z E1121 03:03:03.388554       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:03:03.388175741Z I1121 03:03:03.387923       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
-2020-11-21T03:03:03.352540305Z I1121 03:03:03.352389       1 server.go:529]      Returning OfferQuoteResponse ========
-2020-11-21T03:03:03.352535234Z I1121 03:03:03.352340       1 server.go:518]      From InstanceID 8030049439212453353
-2020-11-21T03:03:03.352528855Z I1121 03:03:03.352332       1 server.go:515]      client provided uid: 42045bef-e12e-488f-a1d8-7ba5405fe6b1
-2020-11-21T03:03:03.352499474Z I1121 03:03:03.352319       1 server.go:514] ======= OfferQuote ========
-2020-11-21T03:03:03.352058565Z E1121 03:03:03.351951       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:03:03.351173967Z I1121 03:03:03.351009       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
-2020-11-21T03:03:03.348284846Z I1121 03:03:03.348009       1 server.go:501]      Returning ActivateCredentialResponse ========
-2020-11-21T03:03:03.348278776Z I1121 03:03:03.348001       1 server.go:496]      Verified Quote
-2020-11-21T03:03:03.348263656Z I1121 03:03:03.347974       1 server.go:746]      <-- End verifyQuote()
-2020-11-21T03:03:03.347738768Z I1121 03:03:03.347664       1 server.go:745]      Attestation Signature Verified 
-2020-11-21T03:03:03.347241139Z I1121 03:03:03.347168       1 server.go:726]      Decoding PublicKey for AK ========
-2020-11-21T03:03:03.346959560Z I1121 03:03:03.346862       1 server.go:724]      sha256 of Expected PCR Value: --> 00e0758c418aff8b359dbcf0fb9af040ca15e973b02e5630b5dca1775c7e130a
-2020-11-21T03:03:03.346628391Z I1121 03:03:03.346553       1 server.go:723]      Expected PCR Value:           --> fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
-2020-11-21T03:03:03.346314882Z I1121 03:03:03.346219       1 server.go:706]      Attestation Hash: 00e0758c418aff8b359dbcf0fb9af040ca15e973b02e5630b5dca1775c7e130a 
-2020-11-21T03:03:03.345970902Z I1121 03:03:03.345890       1 server.go:705]      Attestation PCR#: [0] 
-2020-11-21T03:03:03.345671203Z I1121 03:03:03.345578       1 server.go:704]      Attestation ExtraData (nonce): xKQFDaFpLS 
-2020-11-21T03:03:03.345322015Z I1121 03:03:03.345258       1 server.go:697]      Read and Decode (attestion)
-2020-11-21T03:03:03.345004896Z I1121 03:03:03.344903       1 server.go:685]      --> Starting verifyQuote()
-2020-11-21T03:03:03.344669947Z I1121 03:03:03.344605       1 server.go:481]      From InstanceID 8030049439212453353
-2020-11-21T03:03:03.344390688Z I1121 03:03:03.344295       1 server.go:478]      Secret xKQFDaFpLS
-2020-11-21T03:03:03.344039199Z I1121 03:03:03.343952       1 server.go:477]      client provided uid: 42045bef-e12e-488f-a1d8-7ba5405fe6b1
-2020-11-21T03:03:03.343755699Z I1121 03:03:03.343662       1 server.go:476] ======= ActivateCredential ========
-2020-11-21T03:03:03.342890632Z E1121 03:03:03.342804       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:03:03.342848922Z I1121 03:03:03.342582       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
-2020-11-21T03:03:02.271340793Z I1121 03:03:02.271222       1 server.go:460]      Returning MakeCredentialResponse ========
-2020-11-21T03:03:02.269789477Z I1121 03:03:02.269564       1 server.go:816]      <-- End makeCredential()
-2020-11-21T03:03:02.269756848Z I1121 03:03:02.269548       1 server.go:815]      encryptedSecret0 8d9eb9b160b43db7686615c3a3699ae5895841bd6bc8bec3baed27d532d4b9db1704a12738ffedf90584a3e34e2abf7850e03e03a9ba1f9081d88608ef6ae41241be46bc9ee447280f282e0f2dd4436118d155964834d58b948041d92d478d11bc3c12e4b81bdaa72f1e6a4c774e6bb7ba1691358adcfa8b512fea143738d5e5f01c1d8ac8a698affebdeaa4c44d5ebf85ee73aa3ffa0cd7ca3fbf6af0bc9b82a5b80af0a08344d66137c2f3609b709c4b0f99fc0655f21dfb7f9bca44f1ad406cb277bc9a8e2887d6580d97217ef20bb040be0e46ca15724a9b05f591ca3ce34d27d5fb5a82534943824f11dbd53a35b51cad2a49e378054eff5962f4d65124
-2020-11-21T03:03:02.269694617Z I1121 03:03:02.269501       1 server.go:814]      credBlob 00201c787cac876c44af38c34b7b9be73c5086cf6e8d570ca2d874ad389fbd82ba0fe9dff3a6345124773bdf668d
-2020-11-21T03:03:02.265224840Z I1121 03:03:02.265068       1 server.go:807]      MakeCredential Start
-2020-11-21T03:03:02.265188710Z I1121 03:03:02.265033       1 server.go:805]      Loaded AK KeyName 000b514bdd0fbb324daced8b40d94eeeffe856c2f8ad85dc11b44b1ce0fc98da45d7
-2020-11-21T03:03:02.261515181Z I1121 03:03:02.261301       1 server.go:796]      AK Default parameter match template
-2020-11-21T03:03:02.261510402Z -----END PUBLIC KEY-----
-2020-11-21T03:03:02.261504962Z TQIDAQAB
-2020-11-21T03:03:02.261500131Z 5UNGQri/IPLGFphpxVEV5NSuQV4eByqvQs3cHjUaNJcQOF3rgjphaPS639o0jVDH
-2020-11-21T03:03:02.261495522Z +3ApdGC9x8lGwJ34YSFeOZUgtnsMcTvEChGLZYal/hMnVJJ/L+9NsmwzwPWjVfie
-2020-11-21T03:03:02.261490981Z xObSnCwDr1C4E656M3dl5Xq+u+goL34p1yI6/yF4eI5txXu+SII3vrZ5ZAWz8RID
-2020-11-21T03:03:02.261486371Z iGhBZhYZVqRdK9uySufCkGHPBWelcE8ZeSZMqE8r2vFAuOUe3oO7xLDoEykrKJ3O
-2020-11-21T03:03:02.261481771Z loGv8NAcGIM1AN4bGIDZHyh9XuBrUMUscbfOgbPx/HCufkBnbA1DXlKDLpKY+q3h
-2020-11-21T03:03:02.261476912Z MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0TcB+op9+5bPkjMV9oay
-2020-11-21T03:03:02.261471992Z -----BEGIN PUBLIC KEY-----
-2020-11-21T03:03:02.261464392Z I1121 03:03:02.261277       1 server.go:793]      Decoded AkPub: 
-2020-11-21T03:03:02.261413682Z I1121 03:03:02.261178       1 server.go:771]      Read (akPub) from request
-2020-11-21T03:03:02.203732678Z I1121 03:03:02.202861       1 server.go:753]      Read (ekPub) from request
-2020-11-21T03:03:02.203727748Z I1121 03:03:02.202818       1 server.go:752]      --> Starting makeCredential()
-2020-11-21T03:03:02.203723318Z I1121 03:03:02.202803       1 server.go:444]      Verified EkPub from GCE API matches ekPub from Client
-2020-11-21T03:03:02.203718868Z -----END PUBLIC KEY-----
-2020-11-21T03:03:02.203714228Z PQIDAQAB
-2020-11-21T03:03:02.203709399Z bwxJUkfYN5QyuEXtMGDD/Y/aZSf0gSdOFjIipGmmCwZMRMBKHLjr1E3WBMUhHEzs
-2020-11-21T03:03:02.203704839Z c87G7vHuMtyGWUbEY7NyyFGQBWvwX05qUBHGQ1Bon+GItSOxQaynEl0sESrrCrVP
-2020-11-21T03:03:02.203700529Z 97Eq5rYy7T7zogmYZFRzIsQWdGpzvLXc3Y3xnJ2mWYVGv5Ky2OULV0gZRXIqIKrN
-2020-11-21T03:03:02.203695939Z 0ENlpKCSFaO976LYprgbinuKdmoBLnK0eePSUZfyFqzpgtOcPUHT5pFeJlXMWVxL
-2020-11-21T03:03:02.203691059Z 3DhcoEtEULGr33ScoLb/mnxwKrNEANO0pmNZ7S5Kx01T/kdZEdHNcLb855vSIlM5
-2020-11-21T03:03:02.203670129Z MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz06n5KxZ/L+mK4Ky9Ee4
-2020-11-21T03:03:02.203651609Z -----BEGIN PUBLIC KEY-----
-2020-11-21T03:03:02.203635209Z I1121 03:03:02.202783       1 server.go:438]      EKPubPEM: 
-2020-11-21T03:03:02.202633562Z I1121 03:03:02.202283       1 server.go:417]      Decoding ekPub from client
-2020-11-21T03:03:02.202629042Z -----END PUBLIC KEY-----
-2020-11-21T03:03:02.202624421Z PQIDAQAB
-2020-11-21T03:03:02.202619362Z bwxJUkfYN5QyuEXtMGDD/Y/aZSf0gSdOFjIipGmmCwZMRMBKHLjr1E3WBMUhHEzs
-2020-11-21T03:03:02.202602661Z c87G7vHuMtyGWUbEY7NyyFGQBWvwX05qUBHGQ1Bon+GItSOxQaynEl0sESrrCrVP
-2020-11-21T03:03:02.202597682Z 97Eq5rYy7T7zogmYZFRzIsQWdGpzvLXc3Y3xnJ2mWYVGv5Ky2OULV0gZRXIqIKrN
-2020-11-21T03:03:02.202593092Z 0ENlpKCSFaO976LYprgbinuKdmoBLnK0eePSUZfyFqzpgtOcPUHT5pFeJlXMWVxL
-2020-11-21T03:03:02.202588442Z 3DhcoEtEULGr33ScoLb/mnxwKrNEANO0pmNZ7S5Kx01T/kdZEdHNcLb855vSIlM5
-2020-11-21T03:03:02.202582602Z MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz06n5KxZ/L+mK4Ky9Ee4
-2020-11-21T03:03:02.202576052Z -----BEGIN PUBLIC KEY-----
-2020-11-21T03:03:02.202527551Z I1121 03:03:02.202244       1 server.go:415]      Acquired PublicKey from GCP API: 
-2020-11-21T03:03:01.984777429Z I1121 03:03:01.984703       1 server.go:396]      From InstanceID 8030049439212453353
-2020-11-21T03:03:01.984761858Z I1121 03:03:01.984669       1 server.go:393]      Registry size 0
-2020-11-21T03:03:01.984433529Z I1121 03:03:01.984308       1 server.go:392]      Got AKName 000b514bdd0fbb324daced8b40d94eeeffe856c2f8ad85dc11b44b1ce0fc98da45d7
-2020-11-21T03:03:01.984286321Z I1121 03:03:01.984106       1 server.go:391]      client provided uid: 42045bef-e12e-488f-a1d8-7ba5405fe6b1
-2020-11-21T03:03:01.984273780Z I1121 03:03:01.984095       1 server.go:390] ======= MakeCredential ========
-2020-11-21T03:03:01.984193010Z E1121 03:03:01.984050       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:03:01.983416673Z I1121 03:03:01.983140       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
-2020-11-21T03:03:01.591925191Z I1121 03:03:01.591323       1 server.go:343]      Derived Image Hash from metadata w2d8AkY9UHODEvADIsUenCxD/Rl08Up6Z2adynF0jpI=
-2020-11-21T03:03:01.591475623Z I1121 03:03:01.591266       1 server.go:331]     Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
-2020-11-21T03:03:01.422926590Z I1121 03:03:01.422713       1 server.go:316]      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-a681c707/zones/us-central1-a/disks/tokenclient"
-2020-11-21T03:03:01.422921270Z I1121 03:03:01.422701       1 server.go:305]      Found Registered External IP Address: 34.121.169.149
-2020-11-21T03:03:01.422915760Z I1121 03:03:01.422688       1 server.go:299]      Found  VM ServiceAccount "tokenclient@tc-a681c707.iam.gserviceaccount.com"
-2020-11-21T03:03:01.422906040Z I1121 03:03:01.422676       1 server.go:296]      Found  VM CpuPlatform "Intel Haswell"
-2020-11-21T03:03:01.422882401Z I1121 03:03:01.422660       1 server.go:295]      Found  VM Fingerprint "SHfLAXmCLh8="
-2020-11-21T03:03:01.422874001Z I1121 03:03:01.422647       1 server.go:294]      Found  VM CreationTimestamp "2020-11-20T19:01:27.539-08:00"
-2020-11-21T03:03:01.422819791Z I1121 03:03:01.422606       1 server.go:293]      Found  VM instanceID "8030049439212453353"
-2020-11-21T03:03:01.235226724Z I1121 03:03:01.235043       1 server.go:277]      Looking up InstanceID using GCE APIs for instanceID 8030049439212453353
-2020-11-21T03:03:01.235220983Z I1121 03:03:01.235011       1 server.go:270]      Client Peer Address [34.121.169.149:48956] - Subject[tokenclienta@otherdomain.com] - SerialNumber [5] Validated
-2020-11-21T03:03:01.235214053Z I1121 03:03:01.234978       1 server.go:260]     Verified PeerIP 34.121.169.149:48956
-2020-11-21T03:03:01.235172903Z I1121 03:03:01.234937       1 server.go:248]      TLS Client cert Peer IP and SerialNumber
-2020-11-21T03:03:01.156744721Z I1121 03:03:01.155812       1 server.go:232]      Looking up Firestore Collection foo for instanceID 8030049439212453353
-2020-11-21T03:03:01.156735410Z I1121 03:03:01.155802       1 server.go:230]      Got rpc: RequestID 10cd4b47-2ba6-11eb-b228-0242ac110002 for subject 114965907114681223971 and email tokenclient@tc-a681c707.iam.gserviceaccount.com for instanceID 8030049439212453353
-2020-11-21T03:03:01.156677490Z E1121 03:03:01.155769       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:03:01.154699357Z I1121 03:03:01.154463       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
-2020-11-21T03:02:51.238735697Z E1121 03:02:51.238561       1 server.go:241] ERROR:  Could not find instanceID new Firestore Client 8030049439212453353
-2020-11-21T03:02:51.155533027Z I1121 03:02:51.155349       1 server.go:232]      Looking up Firestore Collection foo for instanceID 8030049439212453353
-2020-11-21T03:02:51.155521757Z I1121 03:02:51.155340       1 server.go:230]      Got rpc: RequestID 0ad6b8f1-2ba6-11eb-b228-0242ac110002 for subject 114965907114681223971 and email tokenclient@tc-a681c707.iam.gserviceaccount.com for instanceID 8030049439212453353
-2020-11-21T03:02:51.155479867Z E1121 03:02:51.155317       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:02:51.155294579Z I1121 03:02:51.155116       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
-2020-11-21T03:02:41.225613677Z E1121 03:02:41.225498       1 server.go:241] ERROR:  Could not find instanceID new Firestore Client 8030049439212453353
-2020-11-21T03:02:41.155291915Z I1121 03:02:41.155243       1 server.go:232]      Looking up Firestore Collection foo for instanceID 8030049439212453353
-2020-11-21T03:02:41.155014195Z I1121 03:02:41.154918       1 server.go:230]      Got rpc: RequestID 04e14369-2ba6-11eb-b228-0242ac110002 for subject 114965907114681223971 and email tokenclient@tc-a681c707.iam.gserviceaccount.com for instanceID 8030049439212453353
-2020-11-21T03:02:41.154795506Z E1121 03:02:41.154739       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:02:41.154297478Z I1121 03:02:41.154139       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
-2020-11-21T03:02:31.229461236Z E1121 03:02:31.229253       1 server.go:241] ERROR:  Could not find instanceID new Firestore Client 8030049439212453353
-2020-11-21T03:02:31.153601362Z I1121 03:02:31.153322       1 server.go:232]      Looking up Firestore Collection foo for instanceID 8030049439212453353
-2020-11-21T03:02:31.153593731Z I1121 03:02:31.153310       1 server.go:230]      Got rpc: RequestID feeb0099-2ba5-11eb-b228-0242ac110002 for subject 114965907114681223971 and email tokenclient@tc-a681c707.iam.gserviceaccount.com for instanceID 8030049439212453353
-2020-11-21T03:02:31.153559392Z E1121 03:02:31.153253       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:02:31.149848823Z I1121 03:02:31.149653       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
-2020-11-21T03:02:21.230978751Z E1121 03:02:21.230789       1 server.go:241] ERROR:  Could not find instanceID new Firestore Client 8030049439212453353
-2020-11-21T03:02:21.154445566Z I1121 03:02:21.154314       1 server.go:232]      Looking up Firestore Collection foo for instanceID 8030049439212453353
-2020-11-21T03:02:21.154437705Z I1121 03:02:21.154280       1 server.go:230]      Got rpc: RequestID f8f59300-2ba5-11eb-b228-0242ac110002 for subject 114965907114681223971 and email tokenclient@tc-a681c707.iam.gserviceaccount.com for instanceID 8030049439212453353
-2020-11-21T03:02:21.154416515Z E1121 03:02:21.154235       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:02:21.153363289Z I1121 03:02:21.153171       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
-2020-11-21T03:02:11.256013622Z E1121 03:02:11.255762       1 server.go:241] ERROR:  Could not find instanceID new Firestore Client 8030049439212453353
-2020-11-21T03:02:11.158436295Z I1121 03:02:11.157763       1 server.go:232]      Looking up Firestore Collection foo for instanceID 8030049439212453353
-2020-11-21T03:02:11.158414735Z I1121 03:02:11.157746       1 server.go:230]      Got rpc: RequestID f2ff84b3-2ba5-11eb-b228-0242ac110002 for subject 114965907114681223971 and email tokenclient@tc-a681c707.iam.gserviceaccount.com for instanceID 8030049439212453353
-2020-11-21T03:02:11.156328972Z E1121 03:02:11.155900       1 server.go:183]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-a681c707.iam.gserviceaccount.com]
-2020-11-21T03:02:11.156059023Z I1121 03:02:11.155603       1 server.go:170]      Found OIDC KeyID  dedc012d07f52aedfd5f97784e1bcbe23c19724d
+I0618 14:03:04.162539       1 server.go:709]      Returning ProvideSigningKeyResponse ======== d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:04.162524       1 server.go:705]      Attestation MatchesPublic true
+I0618 14:03:04.162412       1 server.go:673]      Attestation of Signing Key Verified
+I0618 14:03:04.157883       1 server.go:654]      Decoding PublicKey for AK ======== d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:04.157854       1 server.go:646]      Attestation att.AttestedCertifyInfo.QualifiedName: 3354525f71413005b32310b7f89cda41ddcae6f58875d4514c6f7b56f9a9f030
+I0618 14:03:04.155688       1 server.go:641]      Read and Decode (attestion)
+I0618 14:03:04.155641       1 server.go:634]      SigningKey Signature PrgLULe1KIgoEEVfufaSXSNEXC8vdzJIRVp0wYYp80pfg08Q/0vPrc8r9ANFHogWuMC2E16rpne8Bqyvv5ijEy9IOvVNP9dMyftBwPGYcosGXO+mT8S5AiTa4XXWlf6+lywx9k2MApjsKKewwKw7m2HiaoRmrmeSrABhHeX3fgcuTpxuEZN5ymVTA4m6FaO2M9dXfnmf1vNN6aGub/ryKO0keD+7CxgQ2mHS0DncWsiH5BhsCMobYylvAwo66IVOsruR5Fta4y/vokbM6kBWnMMSThaAlBh/PNMlNKOyc773+jexJD9bGL7Agy2u8xYB7/I8m4LdMcSXMqWZF4TEBg==
+I0618 14:03:04.155501       1 server.go:633]      SigningKey Attestation /1RDR4AXACIAC2kZf8zS+8Uze0YD/SFxOWzL4QhTQSsq4J3skbGQDVYXAAAAAAAAAAGByQAAAAkAAAAAASAWBREAFigAACIAC0EGPfl8ZoddNbJ2D6lO1hEuBAJT3Yqc00d9xHrsdsqRACIACzNUUl9xQTAFsyMQt/ic2kHdyub1iHXUUUxve1b5qfAw
+-----END PUBLIC KEY-----
+aQIDAQAB
+B7yX0Jufpdr/vyLY4B6jXUHyWVdmx7OvbH5bsx5rx3Q63yk4RIk8saCnMOo6bBNL
+YIhmMj/Ktce50BtMpzlYgYJ69VrrCBKnYg92Uhutc/mr50OBClArJ5bpjPz0q3/s
+kOKOpEunt8kYAv3p3HruIdA3r9OZ8d0cuayH2wVNW32uX5BBj0TiEeS1loFS8Ajd
+Z8krJJved4n+Ex281AakEA+tHtRDj9PLjSZYOeuLlQYT609K5sjP47+SMCRHLqK0
++mgn/poWQayOBdaYLHurwVSbZOgiD5wm9LPRFF50ccokSwsRlaFce4WRcGvaGs4a
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5+ce3F9mgC3R3TWwvDHh
+I0618 14:03:04.155472       1 server.go:632]      SigningKey -----BEGIN PUBLIC KEY-----
+I0618 14:03:04.155464       1 server.go:625]      From InstanceID 221808688638269893
+I0618 14:03:04.155455       1 server.go:622]      client provided uid: d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:04.155447       1 server.go:621] ======= ProvideSigningKey ======== d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:04.155431       1 server.go:359]      Derived Image Hash from metadata 2l1+GgcAz2uXy4eiVc+5EnzYEGpP1cLXzEuSNB1OVyQ=
+I0618 14:03:04.155371       1 server.go:347]     Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
+I0618 14:03:03.990470       1 server.go:332]      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-78966d6a/zones/us-central1-a/disks/tokenclient"
+I0618 14:03:03.990444       1 server.go:321]      Found Registered External IP Address: 35.225.46.21
+I0618 14:03:03.990396       1 server.go:315]      Found  VM ServiceAccount "tokenclient@tc-78966d6a.iam.gserviceaccount.com"
+I0618 14:03:03.990366       1 server.go:312]      Found  VM CpuPlatform "Intel Haswell"
+I0618 14:03:03.990350       1 server.go:311]      Found  VM Fingerprint "ZQBUvABlSnM="
+I0618 14:03:03.990306       1 server.go:310]      Found  VM CreationTimestamp "2021-06-18T07:01:16.023-07:00"
+I0618 14:03:03.990269       1 server.go:309]      Found  VM instanceID "221808688638269893"
+I0618 14:03:03.838445       1 server.go:293]      Looking up InstanceID using GCE APIs for instanceID 221808688638269893
+I0618 14:03:03.838418       1 server.go:282]      Client Peer Address [35.225.46.21:33382] - Subject[tokenclienta@otherdomain.com] - SerialNumber [5] Validated
+I0618 14:03:03.838357       1 server.go:273]      Using mTLS Client cert Peer IP and SerialNumber
+I0618 14:03:03.837961       1 server.go:257]     Verified PeerIP 35.225.46.21:33382
+I0618 14:03:03.837724       1 server.go:245]      TLS Peer IP Check
+I0618 14:03:03.791145       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:03:03.791111       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:03:03.790349       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+I0618 14:03:03.479252       1 server.go:608]      Returning ProvideQuoteResponse ======== d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:03.479243       1 server.go:795]      <-- End verifyQuote()
+I0618 14:03:03.479216       1 server.go:794]      Attestation Signature Verified 
+I0618 14:03:03.478524       1 server.go:763]      Decoding PublicKey for AK ========
+I0618 14:03:03.478506       1 server.go:761]      sha256 of Expected PCR Value: --> 2ba7022b59f2158786ea3ea29a7ad12ff0c6c9d6682da6555d8926075b643b1f
+I0618 14:03:03.478471       1 server.go:760]      Expected PCR Value:           --> 24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f
+I0618 14:03:03.478449       1 server.go:743]      Attestation Hash: 2ba7022b59f2158786ea3ea29a7ad12ff0c6c9d6682da6555d8926075b643b1f 
+I0618 14:03:03.478362       1 server.go:742]      Attestation PCR#: [0] 
+I0618 14:03:03.478344       1 server.go:741]      Attestation ExtraData (nonce): 2a11a844-2c97-4069-b5ba-b6db5597f9b1 
+I0618 14:03:03.478307       1 server.go:734]      Read and Decode (attestion)
+I0618 14:03:03.478298       1 server.go:722]      --> Starting verifyQuote()
+I0618 14:03:03.478286       1 server.go:584]      From InstanceID 221808688638269893
+I0618 14:03:03.478253       1 server.go:582] ======= ProvideQuote ======== d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:03.477276       1 server.go:359]      Derived Image Hash from metadata 2l1+GgcAz2uXy4eiVc+5EnzYEGpP1cLXzEuSNB1OVyQ=
+I0618 14:03:03.477204       1 server.go:347]     Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
+I0618 14:03:03.328320       1 server.go:332]      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-78966d6a/zones/us-central1-a/disks/tokenclient"
+I0618 14:03:03.328307       1 server.go:321]      Found Registered External IP Address: 35.225.46.21
+I0618 14:03:03.328293       1 server.go:315]      Found  VM ServiceAccount "tokenclient@tc-78966d6a.iam.gserviceaccount.com"
+I0618 14:03:03.328279       1 server.go:312]      Found  VM CpuPlatform "Intel Haswell"
+I0618 14:03:03.328249       1 server.go:311]      Found  VM Fingerprint "ZQBUvABlSnM="
+I0618 14:03:03.327881       1 server.go:310]      Found  VM CreationTimestamp "2021-06-18T07:01:16.023-07:00"
+I0618 14:03:03.327843       1 server.go:309]      Found  VM instanceID "221808688638269893"
+I0618 14:03:03.201966       1 server.go:293]      Looking up InstanceID using GCE APIs for instanceID 221808688638269893
+I0618 14:03:03.201541       1 server.go:282]      Client Peer Address [35.225.46.21:33382] - Subject[tokenclienta@otherdomain.com] - SerialNumber [5] Validated
+I0618 14:03:03.201084       1 server.go:273]      Using mTLS Client cert Peer IP and SerialNumber
+I0618 14:03:03.200537       1 server.go:257]     Verified PeerIP 35.225.46.21:33382
+I0618 14:03:03.199809       1 server.go:245]      TLS Peer IP Check
+I0618 14:03:03.154425       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:03:03.154397       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:03:03.154140       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+I0618 14:03:03.119582       1 server.go:567]      Returning OfferQuoteResponse ======== d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:03.119566       1 server.go:556]      From InstanceID 221808688638269893
+I0618 14:03:03.119547       1 server.go:553] ======= OfferQuote ========  d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:03.119405       1 server.go:359]      Derived Image Hash from metadata 2l1+GgcAz2uXy4eiVc+5EnzYEGpP1cLXzEuSNB1OVyQ=
+I0618 14:03:03.119246       1 server.go:347]     Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
+I0618 14:03:02.966455       1 server.go:332]      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-78966d6a/zones/us-central1-a/disks/tokenclient"
+I0618 14:03:02.966016       1 server.go:321]      Found Registered External IP Address: 35.225.46.21
+I0618 14:03:02.965932       1 server.go:315]      Found  VM ServiceAccount "tokenclient@tc-78966d6a.iam.gserviceaccount.com"
+I0618 14:03:02.965913       1 server.go:312]      Found  VM CpuPlatform "Intel Haswell"
+I0618 14:03:02.965859       1 server.go:311]      Found  VM Fingerprint "ZQBUvABlSnM="
+I0618 14:03:02.965825       1 server.go:310]      Found  VM CreationTimestamp "2021-06-18T07:01:16.023-07:00"
+I0618 14:03:02.965239       1 server.go:309]      Found  VM instanceID "221808688638269893"
+I0618 14:03:02.802702       1 server.go:293]      Looking up InstanceID using GCE APIs for instanceID 221808688638269893
+I0618 14:03:02.802522       1 server.go:282]      Client Peer Address [35.225.46.21:33382] - Subject[tokenclienta@otherdomain.com] - SerialNumber [5] Validated
+I0618 14:03:02.802393       1 server.go:273]      Using mTLS Client cert Peer IP and SerialNumber
+I0618 14:03:02.802223       1 server.go:257]     Verified PeerIP 35.225.46.21:33382
+I0618 14:03:02.801995       1 server.go:245]      TLS Peer IP Check
+I0618 14:03:02.742881       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:03:02.742847       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:03:02.742320       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+I0618 14:03:02.739288       1 server.go:540]      Returning ActivateCredentialResponse ======== d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:02.739278       1 server.go:535]      Verified Quote
+I0618 14:03:02.739250       1 server.go:795]      <-- End verifyQuote()
+I0618 14:03:02.739219       1 server.go:794]      Attestation Signature Verified 
+I0618 14:03:02.737636       1 server.go:763]      Decoding PublicKey for AK ========
+I0618 14:03:02.737571       1 server.go:761]      sha256 of Expected PCR Value: --> 2ba7022b59f2158786ea3ea29a7ad12ff0c6c9d6682da6555d8926075b643b1f
+I0618 14:03:02.737516       1 server.go:760]      Expected PCR Value:           --> 24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f
+I0618 14:03:02.737435       1 server.go:743]      Attestation Hash: 2ba7022b59f2158786ea3ea29a7ad12ff0c6c9d6682da6555d8926075b643b1f 
+I0618 14:03:02.737366       1 server.go:742]      Attestation PCR#: [0] 
+I0618 14:03:02.737298       1 server.go:741]      Attestation ExtraData (nonce): LSjFbcXoEF 
+I0618 14:03:02.737247       1 server.go:734]      Read and Decode (attestion)
+I0618 14:03:02.737232       1 server.go:722]      --> Starting verifyQuote()
+I0618 14:03:02.737179       1 server.go:515]      From InstanceID 221808688638269893
+I0618 14:03:02.737162       1 server.go:512]      Secret LSjFbcXoEF
+I0618 14:03:02.737149       1 server.go:511] ======= ActivateCredential ======== d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:02.737114       1 server.go:359]      Derived Image Hash from metadata 2l1+GgcAz2uXy4eiVc+5EnzYEGpP1cLXzEuSNB1OVyQ=
+I0618 14:03:02.737059       1 server.go:347]     Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
+I0618 14:03:02.581078       1 server.go:332]      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-78966d6a/zones/us-central1-a/disks/tokenclient"
+I0618 14:03:02.581032       1 server.go:321]      Found Registered External IP Address: 35.225.46.21
+I0618 14:03:02.581018       1 server.go:315]      Found  VM ServiceAccount "tokenclient@tc-78966d6a.iam.gserviceaccount.com"
+I0618 14:03:02.581005       1 server.go:312]      Found  VM CpuPlatform "Intel Haswell"
+I0618 14:03:02.580993       1 server.go:311]      Found  VM Fingerprint "ZQBUvABlSnM="
+I0618 14:03:02.580977       1 server.go:310]      Found  VM CreationTimestamp "2021-06-18T07:01:16.023-07:00"
+I0618 14:03:02.580938       1 server.go:309]      Found  VM instanceID "221808688638269893"
+I0618 14:03:02.436717       1 server.go:293]      Looking up InstanceID using GCE APIs for instanceID 221808688638269893
+I0618 14:03:02.436692       1 server.go:282]      Client Peer Address [35.225.46.21:33382] - Subject[tokenclienta@otherdomain.com] - SerialNumber [5] Validated
+I0618 14:03:02.436664       1 server.go:273]      Using mTLS Client cert Peer IP and SerialNumber
+I0618 14:03:02.436642       1 server.go:257]     Verified PeerIP 35.225.46.21:33382
+I0618 14:03:02.436601       1 server.go:245]      TLS Peer IP Check
+I0618 14:03:02.373185       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:03:02.373155       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:03:02.372635       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+I0618 14:03:01.303550       1 server.go:495]      Returning MakeCredentialResponse ======== d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:01.301097       1 server.go:865]      <-- End makeCredential()
+I0618 14:03:01.301030       1 server.go:864]      encryptedSecret0 0e6c8441380a6d1efd15bd4af55718531f28e53a0bdbe2a185553998f1ed61894df62ad217ea9313be3effa81fcd7c30f09c65738b00f91a700f97461f7a5df9e35f851029f04af4b3089877543dc3b8728dc4412a155db4e16201d2395dc775b49d35207db35a7cc86bd2a8ac2c2b6f9b9f1c66520d4aff1f6abc8c1e7213f6e73fdc7afac784c50cf9a8c9a14d6aacd87a1af9e1c02745fe3c870c1d8cb395b4ce70df7da3e3d67820ffdbb91491cc6179f4924dcdfc6441b4a31c2a9b241d112c822e451ccf8202a03cce6abbc2fdafbc95d441103b9772704c17168de154634007c23a59a2c829a88a21472d05f5a23f13d8ca0b6b56ef9e0f8c4f56b3aa
+I0618 14:03:01.300998       1 server.go:863]      credBlob 00207a890b11c20fd56d6a31214c9b8c70c19e05cdabda263d11f6b4cfefbfa949a1068e380b4ee7dfee3cb55d2a
+I0618 14:03:01.297764       1 server.go:856]      MakeCredential Start
+I0618 14:03:01.297734       1 server.go:854]      Loaded AK KeyName 000bf0d0b4890652316cd2a46445b17e34ca909e05edb508a522c59cf4c13aeca0cf
+I0618 14:03:01.294865       1 server.go:845]      AK Default parameter match template
+-----END PUBLIC KEY-----
+mwIDAQAB
+EKvXAPE2tryvCNrToAdv4FxVq6YosqNU49vCeJLrJ5kgTnH5bW8pqOucqAhd9OmM
+9+q9CSCQ3pztQIQHhiJ8Uojb8UeVkXkgWfBF2XFDrU5M4+DZwUjK0GD+77jMKEJM
+3TQnbQK8N2HehOrVBCLf8Cyf6AitzAioOLDlZ4yApmwKvWoI5CvqmiPrT6yzC/bW
+HsH+n72RlqEl3vzz0kEyyhERnm6Gd4Kr8LkDHX1HQ1m5WGMGNa4W6SHhCGu866pf
+kJf0ns+W/0voi4k2rC1e3u+Ahqf4j8jWlGe14xOmwS/JQWNGgz7wUIoUJr1ihXNt
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsw9T6q74bUsuOuJJn+ou
+-----BEGIN PUBLIC KEY-----
+I0618 14:03:01.294825       1 server.go:842]      Decoded AkPub: 
+I0618 14:03:01.294717       1 server.go:820]      Read (akPub) from request
+I0618 14:03:01.283701       1 server.go:802]      Read (ekPub) from request
+I0618 14:03:01.283695       1 server.go:801]      --> Starting makeCredential()
+I0618 14:03:01.283675       1 server.go:479]      Verified EkPub from GCE API matches ekPub from Client
+-----END PUBLIC KEY-----
++wIDAQAB
+X/cB2y9/xKQR3KZk0Bs3yxz/bPLaljlaD/ImQYoy3Pb4CtLO0k12XWdLhkoiGyeH
+1bdHBumeFIIfl/vpSW2svlMWHYtRMqCsMqJ/9TqP736J9KmhUVxSpHKXGNmT9gc5
+OvH/RC2C0b0U9iGXvwuGOvdqCrYPHubrMMbu1wGtf1rbft7dF1dlp6PSnjNEpR99
+R6fPwLRHkKuYieYhwiaaNuB86VWXOmgkLYQHGTuOFSBSkdo92MlHn104NqQpemwZ
+aNkm/cTiCmk5WCbi8cSZf4mkdCVFsGLu7hyaaIE/BvB51yksLsgqgEQpAFULeWAM
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0M0WINcvrPwfK4GGPfXK
+-----BEGIN PUBLIC KEY-----
+I0618 14:03:01.283658       1 server.go:473]      EKPubPEM: 
+I0618 14:03:01.283421       1 server.go:452]      Decoding ekPub from client
+-----END PUBLIC KEY-----
++wIDAQAB
+X/cB2y9/xKQR3KZk0Bs3yxz/bPLaljlaD/ImQYoy3Pb4CtLO0k12XWdLhkoiGyeH
+1bdHBumeFIIfl/vpSW2svlMWHYtRMqCsMqJ/9TqP736J9KmhUVxSpHKXGNmT9gc5
+OvH/RC2C0b0U9iGXvwuGOvdqCrYPHubrMMbu1wGtf1rbft7dF1dlp6PSnjNEpR99
+R6fPwLRHkKuYieYhwiaaNuB86VWXOmgkLYQHGTuOFSBSkdo92MlHn104NqQpemwZ
+aNkm/cTiCmk5WCbi8cSZf4mkdCVFsGLu7hyaaIE/BvB51yksLsgqgEQpAFULeWAM
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0M0WINcvrPwfK4GGPfXK
+-----BEGIN PUBLIC KEY-----
+I0618 14:03:01.283312       1 server.go:450]      Acquired PublicKey from GCP API: 
+I0618 14:03:01.102252       1 server.go:431]      From InstanceID 221808688638269893
+I0618 14:03:01.102241       1 server.go:428]      Registry size 0
+I0618 14:03:01.102222       1 server.go:427]      Got AKName 000bf0d0b4890652316cd2a46445b17e34ca909e05edb508a522c59cf4c13aeca0cf
+I0618 14:03:01.102197       1 server.go:426] ======= MakeCredential ======== d136c38d-0d5f-4fab-ba8b-3528b9b36a80
+I0618 14:03:01.100906       1 server.go:359]      Derived Image Hash from metadata 2l1+GgcAz2uXy4eiVc+5EnzYEGpP1cLXzEuSNB1OVyQ=
+I0618 14:03:01.100830       1 server.go:347]     Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
+I0618 14:03:00.914042       1 server.go:332]      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-78966d6a/zones/us-central1-a/disks/tokenclient"
+I0618 14:03:00.913947       1 server.go:321]      Found Registered External IP Address: 35.225.46.21
+I0618 14:03:00.913933       1 server.go:315]      Found  VM ServiceAccount "tokenclient@tc-78966d6a.iam.gserviceaccount.com"
+I0618 14:03:00.913733       1 server.go:312]      Found  VM CpuPlatform "Intel Haswell"
+I0618 14:03:00.913720       1 server.go:311]      Found  VM Fingerprint "ZQBUvABlSnM="
+I0618 14:03:00.913705       1 server.go:310]      Found  VM CreationTimestamp "2021-06-18T07:01:16.023-07:00"
+I0618 14:03:00.913664       1 server.go:309]      Found  VM instanceID "221808688638269893"
+I0618 14:03:00.741929       1 server.go:293]      Looking up InstanceID using GCE APIs for instanceID 221808688638269893
+I0618 14:03:00.741908       1 server.go:282]      Client Peer Address [35.225.46.21:33382] - Subject[tokenclienta@otherdomain.com] - SerialNumber [5] Validated
+I0618 14:03:00.741878       1 server.go:273]      Using mTLS Client cert Peer IP and SerialNumber
+I0618 14:03:00.741854       1 server.go:257]     Verified PeerIP 35.225.46.21:33382
+I0618 14:03:00.741817       1 server.go:245]      TLS Peer IP Check
+I0618 14:03:00.685070       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:03:00.684989       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:03:00.684245       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+I0618 14:03:00.394654       1 server.go:415] <<<--- GetToken ======= e3dc87b8-d03d-11eb-a9de-0242ac110002
+I0618 14:03:00.394313       1 server.go:397]      Got rpc: RequestID e3dc87b8-d03d-11eb-a9de-0242ac110002 for subject 115989203236638951508 and email tokenclient@tc-78966d6a.iam.gserviceaccount.com for instanceID 221808688638269893
+I0618 14:03:00.394228       1 server.go:391] ======= GetToken ---> e3dc87b8-d03d-11eb-a9de-0242ac110002
+I0618 14:03:00.394161       1 server.go:359]      Derived Image Hash from metadata 2l1+GgcAz2uXy4eiVc+5EnzYEGpP1cLXzEuSNB1OVyQ=
+I0618 14:03:00.394087       1 server.go:347]     Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
+I0618 14:03:00.229149       1 server.go:332]      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-78966d6a/zones/us-central1-a/disks/tokenclient"
+I0618 14:03:00.228936       1 server.go:321]      Found Registered External IP Address: 35.225.46.21
+I0618 14:03:00.228863       1 server.go:315]      Found  VM ServiceAccount "tokenclient@tc-78966d6a.iam.gserviceaccount.com"
+I0618 14:03:00.228841       1 server.go:312]      Found  VM CpuPlatform "Intel Haswell"
+I0618 14:03:00.228823       1 server.go:311]      Found  VM Fingerprint "ZQBUvABlSnM="
+I0618 14:03:00.228778       1 server.go:310]      Found  VM CreationTimestamp "2021-06-18T07:01:16.023-07:00"
+I0618 14:03:00.228731       1 server.go:309]      Found  VM instanceID "221808688638269893"
+I0618 14:03:00.091970       1 server.go:293]      Looking up InstanceID using GCE APIs for instanceID 221808688638269893
+I0618 14:03:00.091934       1 server.go:282]      Client Peer Address [35.225.46.21:33382] - Subject[tokenclienta@otherdomain.com] - SerialNumber [5] Validated
+I0618 14:03:00.091906       1 server.go:273]      Using mTLS Client cert Peer IP and SerialNumber
+I0618 14:03:00.091881       1 server.go:257]     Verified PeerIP 35.225.46.21:33382
+I0618 14:03:00.091843       1 server.go:245]      TLS Peer IP Check
+I0618 14:02:59.944696       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:02:59.944672       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:02:59.944515       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+E0618 14:02:49.982667       1 server.go:234] ERROR:  Could not find instanceID new Firestore Client 221808688638269893
+I0618 14:02:49.943165       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:02:49.943006       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:02:49.942551       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+E0618 14:02:39.986307       1 server.go:234] ERROR:  Could not find instanceID new Firestore Client 221808688638269893
+I0618 14:02:39.941381       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:02:39.941222       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:02:39.940791       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+E0618 14:02:30.023309       1 server.go:234] ERROR:  Could not find instanceID new Firestore Client 221808688638269893
+I0618 14:02:29.941079       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:02:29.941039       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:02:29.940068       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+E0618 14:02:20.027713       1 server.go:234] ERROR:  Could not find instanceID new Firestore Client 221808688638269893
+I0618 14:02:19.946913       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:02:19.945239       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:02:19.944615       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+E0618 14:02:10.038833       1 server.go:234] ERROR:  Could not find instanceID new Firestore Client 221808688638269893
+I0618 14:02:09.947777       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:02:09.947680       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:02:09.944216       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+E0618 14:02:00.170253       1 server.go:234] ERROR:  Could not find instanceID new Firestore Client 221808688638269893
+I0618 14:01:59.949841       1 server.go:224]      Looking up Firestore Collection foo for instanceID 221808688638269893
+E0618 14:01:59.946866       1 server.go:186]      OIDC doc has Audience [https://tokenserver]   Issuer [https://accounts.google.com] and SubjectEmail [tokenclient@tc-78966d6a.iam.gserviceaccount.com]
+I0618 14:01:59.946593       1 server.go:173]      Found OIDC KeyID  19fe2a7b6795239606ca0a750794a7bd9fd95961
+     Startup args:  vmodule:  
+     Startup args:  validatePeerSN:  true
+     Startup args:  validatePeerIP:  true
+     Startup args:  v:  20
+     Startup args:  useTPM:  true
+     Startup args:  useSecrets:  true
+     Startup args:  useMTLS:  true
+     Startup args:  useALTS:  false
+     Startup args:  tsAudience:  https://tokenserver
+     Startup args:  tlsKey:  projects/870060232564/secrets/tls_key
+     Startup args:  tlsCertChain:  projects/870060232564/secrets/tls-ca
+     Startup args:  tlsCert:  projects/870060232564/secrets/tls_crt
+     Startup args:  stderrthreshold:  2
+     Startup args:  pcr:  0
+     Startup args:  logtostderr:  false
+     Startup args:  log_dir:  
+     Startup args:  log_backtrace_at:  :0
+     Startup args:  jwtIssuedAtJitter:  5
+     Startup args:  grpcport:  0.0.0.0:50051
+     Startup args:  firestoreProjectId:  ts-3950a2df
+     Startup args:  firestoreCollectionName:  foo
+     Startup args:  expectedPCRValue:  24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f
+     Startup args:  alsologtostderr:  true
+I0618 13:50:50.555947       1 server.go:1038] Starting TokenService..
+I0618 13:50:50.543025       1 server.go:984]      Enable mTLS...
+I0618 13:50:50.395153       1 server.go:916]      Getting certs from Secrets Manager
+
 ```

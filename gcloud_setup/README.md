@@ -397,7 +397,7 @@ go run src/provisioner/provisioner.go \
   --peerSerialNumber=5 \
   --peerAddress=$tcIP \
   --attestationPCR=0 \
-  --attestationPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe  \
+  --attestationPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f  \
   --secretsFile=secrets.json
 ```
 
@@ -448,7 +448,7 @@ go run src/server/server.go \
   --tlsCertChain projects/58992830672/secrets/tls-ca  \
   --firestoreProjectId ts-x3qw \
   --firestoreCollectionName foo \
-  --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe \
+  --expectedPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f \
   --pcr=0  --validatePeerIP --validatePeerSN --jwtIssuedAtJitter=5 \
   --v=20 -alsologtostderr
 

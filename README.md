@@ -135,11 +135,11 @@ You should see the new project details and IP address allocated/assigned for the
 ```bash
     Outputs:
 
-    ts_address = 35.239.242.219
-    ts_image_hash = sha256:edafc58fca595e17d26b41d79760b292ddf16083e76fb7215d12df1d65fab132
-    ts_project_id = ts-de7f98d5
+    ts_address = 34.67.176.155
+    ts_image_hash = sha256:35787231c1915eda89e5df83fa0ba9e7b014db1aad030b5c1bdc7fac8cbf87d1
+    ts_project_id = ts-3950a2df
     ts_project_number = 973084368812
-    ts_service_account = tokenserver@ts-de7f98d5.iam.gserviceaccount.com
+    ts_service_account = tokenserver@ts-3950a2df.iam.gserviceaccount.com
 ```
 
 
@@ -166,7 +166,7 @@ The terraform script `alice/deploy/main.tf` uses the default options described b
 | **`-validatePeerIP`** | Extract the PeerIP address for the TokenClient from the TLS Session and compare with provisioned value. |
 | **`-validatePeerSN`** | Extract the SSL Serial Number and compare to provisioned value |
 | **`-useTPM`** | Enable TPM based Remote Attestation flows (default: `false`) |
-| **`-expectedPCRValue`** | ExpectedPCRValue from Quote/Verify (default: `PCR 0:  fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
+| **`-expectedPCRValue`** | ExpectedPCRValue from Quote/Verify (default: `PCR 0:  24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f`) |
 | **`-pcr`** | PCR Bank to use for quote/verify (default: `0`) |
 | **`-firestoreProjectId`** | ProjectID where the FireStore database is hosted. |
 | **`-firestoreCollectionName`** | Name of the collection where provisioned values are saved (default: `foo`) |
@@ -193,10 +193,10 @@ In this case its
 
 ```bash
 $ echo $TF_VAR_ts_service_account
-  tokenserver@ts-de7f98d5.iam.gserviceaccount.com
+  tokenserver@ts-3950a2df.iam.gserviceaccount.com
 
 $ echo $TF_VAR_ts_address
-  35.239.36.219
+  34.67.176.155
 ```
 
 ### Start TokenClient Infrastructure (Bob)
@@ -231,11 +231,11 @@ The command will create a new GCP project, enable GCP api services, create a ser
 ```bash
     Outputs:
 
-    tc_address = 35.193.246.123
-    tc_image_hash = sha256:4e94992868f38d51b0ad85fd0e4649f818c754111eb73afb236c505024599f6f
-    tc_project_id = tc-16a39413
+    tc_address = 35.225.46.21
+    tc_image_hash = sha256:defa799ced1518c1e55d515b20fbfe542e2e10bb2ef8daed154dbbc63226c003
+    tc_project_id = tc-78966d6a
     tc_project_number = 538014872919
-    tc_service_account = tokenclient@tc-16a39413.iam.gserviceaccount.com
+    tc_service_account = tokenclient@tc-78966d6a.iam.gserviceaccount.com
 ```
 
 ### Deploy TokenClient (Bob)
@@ -302,13 +302,13 @@ You should see an output like:
 
 ```bash
       Outputs:
-      tc_address = 35.193.246.123
-      tc_image_hash = sha256:4e94992868f38d51b0ad85fd0e4649f818c754111eb73afb236c505024599f6f
-      tc_instance_id = 7953211237324536786
-      tc_project_id = tc-16a39413
+      tc_address = 35.225.46.21
+      tc_image_hash = sha256:defa799ced1518c1e55d515b20fbfe542e2e10bb2ef8daed154dbbc63226c003
+      tc_instance_id = 221808688638269893
+      tc_project_id = tc-78966d6a
       tc_project_number = 538014872919
-      tc_service_account = tokenclient@tc-16a39413.iam.gserviceaccount.com
-      ts_project_id = ts-48e50fad
+      tc_service_account = tokenclient@tc-78966d6a.iam.gserviceaccount.com
+      ts_project_id = ts-3950a2df
 ```
 
 Note the `tc_instance_id` and `tc_project_id`. 
@@ -432,7 +432,7 @@ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id
 | **`-peerSerialNumber`** | Expected mTLS Serial number sent by TokenClient |
 | **`-useTPM`** | Enable TPM operations |
 | **`-attestationPCR`** | PCR Bank to use for Attestation (default: `0`) |
-| **`-attestationPCRValue`** | PCR Bank value Attestation (default: `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
+| **`-attestationPCRValue`** | PCR Bank value Attestation (default: `24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f`) |
 
 The output of the provisioning step will prompt Alice to confirm that the image startup script and metadata looks valid.
 
@@ -444,10 +444,10 @@ The output also shows the unique `Fingerprint` of the VM `2020/07/22 09:47:32 Im
 $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id  \
     --secretsFile=secrets.json \
-    --useTPM --attestationPCR=0 --attestationPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+    --useTPM --attestationPCR=0 --attestationPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f
 
-2020/09/08 16:03:27 tc-e381ee09  us-central1-a  4616733414634708048
-2020/09/08 16:03:27 Found  VM instanceID "4616733414634708048"
+2020/09/08 16:03:27 tc-e381ee09  us-central1-a  221808688638269893
+2020/09/08 16:03:27 Found  VM instanceID "221808688638269893"
 2020/09/08 16:03:27 Image Data: #cloud-config
 
 write_files:
@@ -463,7 +463,7 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-e381ee09/tokenclient@sha256:4e94992868f38d51b0ad85fd0e4649f818c754111eb73afb236c505024599f6f --address 35.222.5.146:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useSecrets --tlsCertChain projects/620714181540/secrets/tls-ca --v=25 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-e381ee09/tokenclient@sha256:defa799ced1518c1e55d515b20fbfe542e2e10bb2ef8daed154dbbc63226c003 --address 35.222.5.146:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useSecrets --tlsCertChain projects/97849079040/secrets/tls-ca --v=25 -alsologtostderr
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
@@ -486,12 +486,12 @@ runcmd:
 2020/09/08 16:03:27 looks ok? (y/N): 
 y
 2020/09/08 16:03:34 2020-09-08 20:03:34.37037 +0000 UTC
-2020/09/08 16:03:34 Document data: "4616733414634708048"
+2020/09/08 16:03:34 Document data: "221808688638269893"
 
 ```
 
 Note that Alice not trusts the entire TokenClient vm Image hash which itself includes a docker image hash 
-(`gcr.io/tc-03330b55/tokenclient@sha256:4e94992868f38d51b0ad85fd0e4649f818c754111eb73afb236c505024599f6f`).  
+(`docker pull gcr.io/tc-78966d6a/tokenclient@sha256:defa799ced1518c1e55d515b20fbfe542e2e10bb2ef8daed154dbbc63226c003`).  
 It is expected that this image was generated elsewhere such that both Alice and Bob would know the precise and source code that it includes.  
 Docker based images will not generate deterministic builds but you can use `Bazel` as described in [Building deterministic Docker images with Bazel](https://blog.bazel.build/2015/07/28/docker_build.html) and as an example:
 
@@ -506,17 +506,17 @@ You can find more information about how to build the TokenClient and TokenServer
 The `fingerprint` value is a hash of the entire VM's state and configuration.  Any change (stop/restart, metadata update, etc) will change its value.  You can use this VM fingerprint to ensure that when the tokenclient makes a request, the VM is in the same state it was originally provisioned against 
 
 ```bash
-$ gcloud compute instances describe 4616733414634708048 --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
+$ gcloud compute instances describe 221808688638269893 --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
 Mj7BV6UuUs4=
 
-$ gcloud compute instances stop 4616733414634708048 --zone us-central1-a --project tc-e381ee09 
-$ gcloud compute instances start 4616733414634708048 --zone us-central1-a --project tc-e381ee09 
+$ gcloud compute instances stop 221808688638269893 --zone us-central1-a --project tc-e381ee09 
+$ gcloud compute instances start 221808688638269893 --zone us-central1-a --project tc-e381ee09 
 
-$ gcloud compute instances describe 4616733414634708048 --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
+$ gcloud compute instances describe 221808688638269893 --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
 Y0hv2RZ_Qy0=
 
 # change any metadata using console
-$ gcloud compute instances describe 4616733414634708048 --zone us-central1-a --project tc-e381ee09  --format="value(fingerprint)"
+$ gcloud compute instances describe 221808688638269893 --zone us-central1-a --project tc-e381ee09  --format="value(fingerprint)"
 SRVm69LywSw=
 ```
 
@@ -677,7 +677,7 @@ TokenServer `alice/deploy/main.tf`
 
 
 ```bash
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --useMTLS --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0 --validatePeerIP --peerSerialNumber=5 --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=7 --v=20 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --useMTLS --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f --pcr=0 --validatePeerIP --peerSerialNumber=5 --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=7 --v=20 -alsologtostderr
 ```
 
 And during provisioning, specify the address for the TokenClient and the certificate serial number:
@@ -702,15 +702,15 @@ The `provision.go` utility provides a way to seal data to the target VM's TPM:
 go run src/provisioner/provisioner.go --clientProjectId $TF_VAR_tc_project_id \
   --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id \
   --encryptToTPM="datasealedtotpm"  \
-  --pcrValues 0=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe
+  --pcrValues 0=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f
 ```
-(the PCR=0 value for GCP COS images is `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`).  You can bind to any other PCR value you choose.  Specify multiple values using formatted as `--pcrValues 0=foo,23=bar`
+(the PCR=0 value for GCP COS images is `24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f`).  You can bind to any other PCR value you choose.  Specify multiple values using formatted as `--pcrValues 0=foo,23=bar`
 
 The optionsl to use for the provisioner in this output only mode are:
 | Option | Description |
 |:------------|-------------|
 | **`-encryptToTPM`** | Seal data to TokenClient's TPM Endorsement Public Key |
-| **`-pcrValues`** | PCR bank and value to seal to (SHA256 PCR Values to seal against 0=foo,23=bar) (default: `0=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
+| **`-pcrValues`** | PCR bank and value to seal to (SHA256 PCR Values to seal against 0=foo,23=bar) (default: `0=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f`) |
 
 Note, running the the command with the provisioner will just emit the PCR sealed value.  It will NOT write to firestore
 
@@ -806,21 +806,21 @@ These flows are enabled by the TokenClient by starting up by setting
 | **`-doAttestation`** | Start offer to Make/Activate Credential flow |
 | **`-exchangeSigningKey`** | Offer RSA Signing Key (requires --doAttestation) |
 
-- TokenServer `--useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0` 
+- TokenServer `--useTPM --expectedPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f --pcr=0` 
 
 | Option | Description |
 |:------------|-------------|
 | **`-useTPM`** | Enable TPM operations |
-| **`-expectedPCRValue`** | ExpectedPCRValue from Quote/Verify (default: `PCR 0:  fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
+| **`-expectedPCRValue`** | ExpectedPCRValue from Quote/Verify (default: `PCR 0:  24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f`) |
 | **`-pcr`** | PCR Bank to use for quote/verify (default: `0`) |
 
-- Provisioner `--useTPM --attestationPCR=0 --attestationPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`
+- Provisioner `--useTPM --attestationPCR=0 --attestationPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f`
 
 | Option | Description |
 |:------------|-------------|
 | **`-useTPM`** | Enable TPM operations |
 | **`-attestationPCR`** | PCR Bank to use for Attestation (default: `0`) |
-| **`-attestationPCRValue`** | PCR Bank value Attestation (default: `fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe`) |
+| **`-attestationPCRValue`** | PCR Bank value Attestation (default: `24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f`) |
 
 ![images/quoteverify.png](images/quoteverify.png)
 
@@ -870,6 +870,7 @@ Further enhancements can be to use
     the data that Alice has on the GCS bucket can be wrapped with an AES key on top of what Google Provides.
     Even if anyone got hold of the secret file, it would be encrypted anyway.  Bob can only decrypt it if he gets the AES key.
     You can go further with this and distribute keys that are infact part of [Shamirs Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
+    See [End-to-End Stream encryption with gsutil and TINK](https://github.com/salrashid123/gcs_stream_enc)
 
   * Encrypt PubSub message payload with key wrapping
     Alice can also encrypt pubsub message data with her encryption key and send that to the TokenServer.
@@ -906,16 +907,16 @@ If you want to use a different DNS SAN value or create a CA from scratch, see [C
 
 ```bash
 # Default: mTLS useSecrets
-ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0 --validatePeerIP --validatePeerSN --useMTLS --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f --pcr=0 --validatePeerIP --validatePeerSN --useMTLS --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr
 
 # mTLS with fileSecrets
-ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0 --validatePeerIP --validatePeerSN --useMTLS --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f --pcr=0 --validatePeerIP --validatePeerSN --useMTLS --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr
 
 # TLS with fileSecrets
-ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0 --validatePeerIP  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f --pcr=0 --validatePeerIP  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr
 
 # ALTS
-ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe --pcr=0 --validatePeerIP  --useALTS --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr          
+ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f --pcr=0 --validatePeerIP  --useALTS --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr          
 
 ```
 
