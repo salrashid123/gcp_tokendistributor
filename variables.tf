@@ -36,7 +36,7 @@ variable "collection_id" {
 
 variable "ts_image_hash" {
   type    = string
-  default = "docker.io/salrashid123/tokenserver@sha256:35787231c1915eda89e5df83fa0ba9e7b014db1aad030b5c1bdc7fac8cbf87d1"
+  default = "docker.io/salrashid123/tokenserver@sha256:149b2e932e6dbddc241f1f8c9094216080bf03b5371d96c9627bef070e99b5b7"
 }
 
 variable "gae_location_id" {
@@ -59,6 +59,18 @@ variable "tls_server_key" {
   type    = string
   default = "app/certs/tokenservice.key"
 }
+
+variable "ts_pcr_value" {
+  type    = string
+  default = "24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f"
+  #default = "0f35c214608d93c7a6e68ae7359b4a8be5a0e99eea9107ece427c4dea4e439cf" # for SEV
+}
+
+variable "ts_pcr" {
+  type    = string
+  default = "0"
+}
+
 
 # Token Client
 

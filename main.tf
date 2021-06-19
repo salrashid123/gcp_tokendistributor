@@ -32,6 +32,8 @@ module "ts_deploy" {
   ts_address = module.ts_setup.ts_address
   ts_service_account = module.ts_setup.ts_service_account
   ts_audience = "https://tokenserver"
+  ts_pcr_value = var.ts_pcr_value
+  ts_pcr = var.ts_pcr
 }
 
 module "tc_setup" {

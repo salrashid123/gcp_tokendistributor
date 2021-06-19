@@ -3,14 +3,28 @@
 resource "google_compute_instance" "tokenclient" {
   name         = "tokenclient"
   machine_type = "e2-small"
+  # machine_type = "n2d-standard-2"    # for SEV
   description = "TokenClient"
   project = var.project_id  
   zone = var.zone
   boot_disk {
     initialize_params {
       image = "cos-cloud/cos-stable-81-12871-119-0"
+      # image = "confidential-vm-images/cos-stable-89-16108-403-47"   # for SEV
     }
   }
+  scheduling {
+    on_host_maintenance = "MIGRATE"
+    # on_host_maintenance = "TERMINATE" # for SEV
+  }
+  shielded_instance_config {
+    enable_secure_boot = true
+    enable_vtpm = true    
+  }
+  confidential_instance_config {
+    enable_confidential_compute = false    
+    # enable_confidential_compute = true # for SEV
+  }  
   tags = ["tokenclient"]
   service_account {
     email = var.tc_service_account

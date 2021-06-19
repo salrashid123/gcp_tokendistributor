@@ -832,6 +832,122 @@ On TokenClient
 On TokenServer
 ![images/ts_unrestricted.png](images/ts_unrestricted.png)
 
+### Using SEV
+
+By default, the TokenClients do not use AMD-SEV instances.  You can enable and check for SEV status in various ways:
+
+
+#### Using PCR0 for SEV status
+
+GCP Confidential Compute VM instances have static values for PCR0 that indicate if SEV is enabled or not.
+
+- No SEV:
+
+```bash
+# tpm2_pcrread sha256:0
+sha256:
+  0 : 0x24AF52A4F429B71A3184A6D64CDDAD17E54EA030E2AA6576BF3A5A3D8BD3328F
+```
+
+- with SEV
+
+```bash
+# tpm2_pcrread sha256:0
+sha256:
+  0 : 0x0F35C214608D93C7A6E68AE7359B4A8BE5A0E99EEA9107ECE427C4DEA4E439CF
+```
+
+
+#### Using Instance Identity Document Claims for SEV status
+
+GCE's instance identity document also has a specific claim that denotes SEV status:  `google.compute_engine.instance_confidentiality`.  If the value is set to `1`, then that means the source VM is using AMD-SEV
+
+```bash
+$ curl -s -H 'Metadata-Flavor: Google' "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=foo.bar&format=full"
+```
+```json
+{
+  "alg": "RS256",
+  "kid": "19fe2a7b6795239606ca0a750794a7bd9fd95961",
+  "typ": "JWT"
+}
+{
+  "aud": "foo.bar",
+  "azp": "112179062720391305885",
+  "email": "1071284184436-compute@developer.gserviceaccount.com",
+  "email_verified": true,
+  "exp": 1624121996,
+  "google": {
+    "compute_engine": {
+      "instance_confidentiality": 1,
+      "instance_creation_timestamp": 1624116928,
+      "instance_id": "5649429890762780752",
+      "instance_name": "sev-1",
+      "project_id": "mineral-minutia-820",
+      "project_number": 1071284184436,
+      "zone": "us-central1-a"
+    }
+  },
+  "iat": 1624118396,
+  "iss": "https://accounts.google.com",
+  "sub": "112179062720391305885"
+}
+```
+
+You can optionally check for that value by overridin `server.go` identity document verification flows.  By default, the value is just printed out
+
+```golang
+		// optionally check if the remote system has SEV enabled or not
+		glog.Printf("   Instance Confidentiality Status %d", doc.InstanceConfidentiality)
+```
+#### EnablingSEV
+
+To enable SEV 
+
+1) TokenServer Deployment
+   Edit `variables.tf` and set the PCR0 value the server expects
+```
+variable "ts_pcr_value" {
+  type    = string
+  #default = "24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f"
+  default = "0f35c214608d93c7a6e68ae7359b4a8be5a0e99eea9107ece427c4dea4e439cf" # for SEV
+}
+
+variable "ts_pcr" {
+  type    = string
+  default = "0"
+}
+```
+
+2) TokenClient Deployment
+
+   on the TokenClient, edit `bob/deploy/main.tf`:, set
+
+* `machine_type = "n2d-standard-2"`
+* `on_host_maintenance = "TERMINATE"`
+* `image = "confidential-vm-images/cos-stable-89-16108-403-47"`
+* `enable_confidential_compute = true`
+
+3) Provisioning
+
+On the provisioning step, specify the PCR0 value to bind to
+
+```bash
+go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
+    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=5 \
+    --clientVMId $TF_VAR_tc_instance_id  --secretsFile=secrets.json \
+    -attestationPCR=0 \
+    -attestationPCRValue=0f35c214608d93c7a6e68ae7359b4a8be5a0e99eea9107ece427c4dea4e439cf \
+    -pcrValues=0:0f35c214608d93c7a6e68ae7359b4a8be5a0e99eea9107ece427c4dea4e439cf
+```
+
+so if you do not want to enforce SEV, in `provisioner.go`, use the default argument for `attestationPCRValue`
+
+```golang
+	attestationPCR      = flag.Int64("attestationPCR", 0, "The PCR bank for Attestation (default:0)")
+	attestationPCRValue = flag.String("attestationPCRValue", "24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f", "expectedPCRValue")
+```
+
 ### Logs
 
 The following files details the full end-to-end logs:

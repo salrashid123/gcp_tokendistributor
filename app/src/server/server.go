@@ -60,6 +60,7 @@ type gcpIdentityDoc struct {
 			ProjectID                 string `json:"project_id,omitempty"`
 			ProjectNumber             int64  `json:"project_number,omitempty"`
 			Zone                      string `json:"zone,omitempty"`
+			InstanceConfidentiality   int64  `json:"instance_confidentiality,omitempty"`
 		} `json:"compute_engine"`
 	} `json:"google"`
 	Email           string `json:"email,omitempty"`
@@ -219,6 +220,9 @@ func authUnaryInterceptor(
 			glog.Errorf("   IssuedAt Identity document timestamp too old")
 			return nil, grpc.Errorf(codes.Unauthenticated, "IssuedAt Identity document timestamp too old")
 		}
+
+		// optionally check if the remote system has SEV enabled or not
+		glog.V(10).Infof("   Instance Confidentiality Status %d", doc.Google.ComputeEngine.InstanceConfidentiality)
 
 		instanceID := doc.Google.ComputeEngine.InstanceID
 		glog.V(10).Infof("     Looking up Firestore Collection %s for instanceID %s", *firestoreCollectionName, instanceID)

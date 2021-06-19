@@ -33,3 +33,11 @@ variable "zone" {
 variable "ts_audience" {
   type    = string
 }
+
+variable "ts_pcr_value" {
+  type     = string
+}
+
+variable "ts_pcr" {
+  type     = string
+}
