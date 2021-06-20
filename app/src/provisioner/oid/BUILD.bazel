@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+
+# go_binary(
+#     name = "oid",
+#     embed = [":go_default_library"],
+#     visibility = ["//visibility:public"],
+# )
+
+go_library(
+    name = "go_default_library",
+    srcs = ["oid.go"],
+    importpath = "oid",
+    visibility = ["//visibility:public"],
+    deps = [],
+)

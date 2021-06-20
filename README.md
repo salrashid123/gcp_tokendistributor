@@ -606,9 +606,14 @@ To recompile, comment out the `replace` steps in `app/go.mod`:
 
 ```golang
 require (
+	// oid v0.0.0
 	// tokenservice v0.0.0
 )
-// replace tokenservice => ./src/tokenservice
+
+replace (
+	// oid => ./src/provisioner/oid
+	// tokenservice => ./src/tokenservice
+)
 ```
 
 then import, compile, build with bazel
@@ -739,8 +744,9 @@ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id
     --secretsFile=secrets.json
 ```
 
->> Some notes about using the TPM to seal data:
-  Decryption of TPM based data by the TokenClient is visible by the GCP Hypervisor.  If the threat model why you are using this configuration strictly stipulates that hypervisor cannot read or corrupt VM memory then that would likely mean you also cannot a vTPM.  Note that GCP Confidential Compute instances uses SEV and not SNP.  Please see [AMD SEV-SNP:  Strengthening VM Isolation with Integrity Protection](https://www.amd.com/system/files/TechDocs/SEV-SNP-strengthening-vm-isolation-with-integrity-protection-and-more.pdf)
+>> **Some notes about using the TPM to seal data**
+  * Decryption of TPM based data by the TokenClient is visible by the GCP Hypervisor.  If the threat model why you are using this configuration strictly stipulates that hypervisor cannot read or corrupt VM memory then that would likely mean you also cannot a vTPM.  
+  * Note that GCP Confidential Compute instances uses SEV and not SNP.  Please see [AMD SEV-SNP:  Strengthening VM Isolation with Integrity Protection](https://www.amd.com/system/files/TechDocs/SEV-SNP-strengthening-vm-isolation-with-integrity-protection-and-more.pdf)
 
 
 ### Provision with TINK Encryption Key
@@ -792,6 +798,24 @@ The default protocol included in this repo also performs three optional TPM base
 
 * `Restricted Signing Key (Attestation Key based signing)`:
    Use the Attestation Key to sign some data. The TPM will only sign data that has been Hashed by the TPM itself.
+   Update `6/19/21`:Note:  GCP Shielded and Compute VMs already exposes the AKSigning key via [get-shielded-identity](https://cloud.google.com/compute/docs/reference/rest/v1/instances/getShieldedInstanceIdentity#response-body) API call
+    ```json
+    {
+      "signingKey": {
+        "ekCert": string,
+        "ekPub": string
+      },
+      "encryptionKey": {
+        "ekCert": string,
+        "ekPub": string
+      },
+      "kind": string
+    }
+    ```
+  What that means is that we can _directly_ use this key to attest given VM created a signature using its TPM.   The section of code within `src/client/client.go` that begins with "Load EncryptionKey and Certifcate from NV" describes the flow where the AK and EK are read in from NV.  The Public Keys that are shown there are the same as you would see running 
+  `gcloud compute instances  get-shielded-identity $TF_VAR_tc_instance_id --project $TF_VAR_tc_project_id`
+
+  The section right after where the NV based EK/AK are read describes the "manual" way to setup EK/AK.   In many practical ways, its redundant to do all this manually but it will allow the client to generate any number of AK certs from the same EK.
 
 * `Unrestricted Signing Key`
    Normally, the AK cannot sign any arbitrary data (it is a restricted key). Instead, the TokenClient can generate a new RSA key on the TPM where the private key is always on the tpm. Once thats done, the AK can sign it and return the public part to the Token Server. Since the Endorsement Key and Attestation key were now associated together, the new unrestricted key can also be indirectly associated with that specific TokenClient. The TokenClient can now sign for any arbitrary data, send it to the TokenServer which can verify its authenticity by using the public key previously sent
@@ -879,7 +903,7 @@ $ curl -s -H 'Metadata-Flavor: Google' "http://metadata.google.internal/computeM
   "exp": 1624121996,
   "google": {
     "compute_engine": {
-      "instance_confidentiality": 1,
+      "instance_confidentiality": 1,            <<<<<<<<<<
       "instance_creation_timestamp": 1624116928,
       "instance_id": "5649429890762780752",
       "instance_name": "sev-1",
@@ -902,7 +926,7 @@ You can optionally check for that value by overridin `server.go` identity docume
 ```
 #### EnablingSEV
 
-To enable SEV 
+To enable SEV, you need to configure various terraform definition files:
 
 1) TokenServer Deployment
    Edit `variables.tf` and set the PCR0 value the server expects

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
 	pb "tokenservice"
 
 	"sync"
@@ -44,7 +45,11 @@ import (
 )
 
 const (
-	tpmDevice = "/dev/tpm0"
+	tpmDevice             = "/dev/tpm0"
+	signCertNVIndex       = 0x01c10000
+	signKeyNVIndex        = 0x01c10001
+	encryptionCertNVIndex = 0x01c00002
+	emptyPassword         = ""
 )
 
 type grpcTokenSource struct {
@@ -82,7 +87,6 @@ var (
 	useTPM             = flag.Bool("useTPM", false, "Enable TPM operations")
 	doAttestation      = flag.Bool("doAttestation", false, "Start offer to Make/Activate Credential flow")
 	exchangeSigningKey = flag.Bool("exchangeSigningKey", false, "Offer RSA Signing Key (requires --doAttestation)")
-	emptyPassword      = ""
 	importedKeyFile    = "/dev/shm/importedKey.bin"
 	akPubFile          = "/dev/shm/akPub.bin"
 	akPrivFile         = "/dev/shm/akPriv.bin"
@@ -432,7 +436,159 @@ func main() {
 						}
 					}
 
-					// First create attestation keys
+					// First acquire the AK, EK keys, certificates from NV
+
+					glog.V(5).Infof("=============== Load EncryptionKey and Certifcate from NV ===============")
+					ekk, err := tpm2tools.EndorsementKeyRSA(rwc)
+					if err != nil {
+						glog.Errorf("ERROR:  could not get EndorsementKeyRSA: %v", err)
+						return
+					}
+					epubKey := ekk.PublicKey().(*rsa.PublicKey)
+					ekBytes, err := x509.MarshalPKIXPublicKey(epubKey)
+					if err != nil {
+						glog.Errorf("ERROR:  could not get MarshalPKIXPublicKey: %v", err)
+						return
+					}
+					ekPubPEM := pem.EncodeToMemory(
+						&pem.Block{
+							Type:  "PUBLIC KEY",
+							Bytes: ekBytes,
+						},
+					)
+					glog.V(10).Infof("     Encryption PEM \n%s", string(ekPubPEM))
+					ekk.Close()
+
+					// now reread the EKCert directly from NV
+					//   the EKCertificate (x509) is saved at encryptionCertNVIndex
+					//   the following steps attempts to read that value in directly from NV
+					//   This is currently not supported but i'm adding in code anyway
+
+					// ekcertBytes, err := tpm2.NVReadEx(rwc, encryptionCertNVIndex, tpm2.HandleOwner, "", 0)
+					// if err != nil {
+					// 	glog.Errorf("ERROR:  could not get NVReadEx: %v", err)
+					// 	return
+					// }
+
+					// encCert, err := parseEKCertificate(ekcertBytes)
+					// if err != nil {
+					// 	glog.Errorf("ERROR:  could not get parseEKCertificate: %v", err)
+					// 	return
+					// }
+					// // https://pkg.go.dev/github.com/google/certificate-transparency-go/x509
+					// glog.V(10).Infof("     Encryption Issuer x509 \n%v", encCert.Issuer)
+
+					glog.V(10).Infof("     Load SigningKey and Certifcate ")
+					kk, err := tpm2tools.EndorsementKeyFromNvIndex(rwc, signKeyNVIndex)
+					if err != nil {
+						glog.Errorf("ERROR:  could not get EndorsementKeyFromNvIndex: %v", err)
+						return
+					}
+					pubKey := kk.PublicKey().(*rsa.PublicKey)
+					akBytes, err := x509.MarshalPKIXPublicKey(pubKey)
+					if err != nil {
+						glog.Errorf("ERROR:  could not get MarshalPKIXPublicKey: %v", err)
+						return
+					}
+					akPubPEM := pem.EncodeToMemory(
+						&pem.Block{
+							Type:  "PUBLIC KEY",
+							Bytes: akBytes,
+						},
+					)
+					glog.V(10).Infof("     Signing PEM \n%s", string(akPubPEM))
+
+					// now reread the EKCert directly from NV
+					//   the EKCertificate (x509) is saved at signCertNVIndex
+					//   the following steps attemts to read that value in directly from NV
+					//   This is currently not supported but i'm adding in code anyway
+
+					// kcertBytes, err := tpm2.NVReadEx(rwc, signCertNVIndex, tpm2.HandleOwner, emptyPassword, 0)
+					// if err != nil {
+					// 	glog.Errorf("ERROR:  could not get Signing NVReadEx: %v", err)
+					// 	return
+					// }
+
+					// signCert, err := parseEKCertificate(kcertBytes)
+					// if err != nil {
+					// 	glog.Errorf("ERROR:  could not get parseEKCertificate: %v", err)
+					// 	return
+					// }
+					// glog.V(10).Infof("     Signing Issuer x509 \n%v", signCert.Issuer)
+
+					// spubKey := signCert.PublicKey.(*rsa.PublicKey)
+
+					// skBytes, err := x509.MarshalPKIXPublicKey(spubKey)
+					// if err != nil {
+					// 	glog.Errorf("ERROR:  could  MarshalPKIXPublicKey (signing): %v", err)
+					// 	return
+					// }
+					// skPubPEM := pem.EncodeToMemory(
+					// 	&pem.Block{
+					// 		Type:  "PUBLIC KEY",
+					// 		Bytes: skBytes,
+					// 	},
+					// )
+					// glog.V(10).Infof("    Signing PEM Public \n%s", string(skPubPEM))
+
+					// now that we have the signing key, create a test signature
+
+					aKkeyHandle := kk.Handle()
+					sessCreateHandle, _, err := tpm2.StartAuthSession(
+						rwc,
+						tpm2.HandleNull,
+						tpm2.HandleNull,
+						make([]byte, 16),
+						nil,
+						tpm2.SessionPolicy,
+						tpm2.AlgNull,
+						tpm2.AlgSHA256)
+					if err != nil {
+						glog.Errorf("ERROR:  could  StartAuthSession (signing): %v", err)
+						return
+					}
+					if _, err := tpm2.PolicySecret(rwc, tpm2.HandleEndorsement, tpm2.AuthCommand{Session: tpm2.HandlePasswordSession, Attributes: tpm2.AttrContinueSession}, sessCreateHandle, nil, nil, nil, 0); err != nil {
+						glog.Errorf("ERROR:  could  PolicySecret (signing): %v", err)
+						return
+					}
+					aKdataToSign := []byte("foobar")
+					aKdigest, aKvalidation, err := tpm2.Hash(rwc, tpm2.AlgSHA256, aKdataToSign, tpm2.HandleOwner)
+					if err != nil {
+						glog.Errorf("ERROR:  could  StartAuthSession (signing): %v", err)
+						return
+					}
+					glog.V(10).Infof("     AK Issued Hash %s", base64.StdEncoding.EncodeToString(aKdigest))
+					aKsig, err := tpm2.Sign(rwc, aKkeyHandle, emptyPassword, aKdigest, aKvalidation, &tpm2.SigScheme{
+						Alg:  tpm2.AlgRSASSA,
+						Hash: tpm2.AlgSHA256,
+					})
+					if err != nil {
+						glog.Errorf("ERROR:  could  Sign (signing): %v", err)
+						return
+					}
+					glog.V(10).Infof("     AK Signed Data %s", base64.StdEncoding.EncodeToString(aKsig.RSA.Signature))
+
+					if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, aKdigest, aKsig.RSA.Signature); err != nil {
+						glog.Errorf("ERROR:  could  VerifyPKCS1v15 (signing): %v", err)
+						return
+					}
+					glog.V(10).Infof("     Signature Verified")
+					err = tpm2.FlushContext(rwc, sessCreateHandle)
+					if err != nil {
+						glog.Errorf("ERROR:  could  flush SessionHandle: %v", err)
+						return
+					}
+					err = tpm2.FlushContext(rwc, aKkeyHandle)
+					if err != nil {
+						glog.Errorf("ERROR:  could  flush aKkeyHandle: %v", err)
+						return
+					}
+					kk.Close()
+
+					// At this point, we have a signing certificate
+
+					// Second, create attestation keys as another type of key, but do this manually
+					glog.V(5).Infof("=============== Create AK manually ===============")
 					akName, ekPub, akPub, akPubPEM, err := createKeys()
 					if err != nil {
 						glog.Errorf("ERROR:     Unable to generate EK/AK: %v", err)
