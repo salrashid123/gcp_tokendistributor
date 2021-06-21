@@ -133,13 +133,11 @@ terraform apply --target=module.ts_build -auto-approve
 You should see the new project details and IP address allocated/assigned for the `TokenServer`
 
 ```bash
-    Outputs:
-
-    ts_address = 34.67.176.155
-    ts_image_hash = sha256:35787231c1915eda89e5df83fa0ba9e7b014db1aad030b5c1bdc7fac8cbf87d1
-    ts_project_id = ts-3950a2df
-    ts_project_number = 973084368812
-    ts_service_account = tokenserver@ts-3950a2df.iam.gserviceaccount.com
+ts_address = "34.121.24.128"
+ts_image_hash = "sha256:149b2e932e6dbddc241f1f8c9094216080bf03b5371d96c9627bef070e99b5b7"
+ts_project_id = "ts-f793b75c"
+ts_project_number = "430136110592"
+ts_service_account = "tokenserver@ts-f793b75c.iam.gserviceaccount.com"
 ```
 
 
@@ -193,10 +191,10 @@ In this case its
 
 ```bash
 $ echo $TF_VAR_ts_service_account
-  tokenserver@ts-3950a2df.iam.gserviceaccount.com
+  tokenserver@ts-f793b75c.iam.gserviceaccount.com
 
 $ echo $TF_VAR_ts_address
-  34.67.176.155
+  34.121.24.128
 ```
 
 ### Start TokenClient Infrastructure (Bob)
@@ -229,13 +227,11 @@ terraform apply --target=module.tc_build -auto-approve
 The command will create a new GCP project, enable GCP api services, create a service account for the Token server and allocate a static IP:
 
 ```bash
-    Outputs:
-
-    tc_address = 35.225.46.21
-    tc_image_hash = sha256:defa799ced1518c1e55d515b20fbfe542e2e10bb2ef8daed154dbbc63226c003
-    tc_project_id = tc-78966d6a
-    tc_project_number = 538014872919
-    tc_service_account = tokenclient@tc-78966d6a.iam.gserviceaccount.com
+tc_address = "34.136.60.156"
+tc_image_hash = "sha256:3f9d2415ccc9280c505cea651291bc62cc6162f900675967366b75a86d529c34"
+tc_project_id = "tc-b23369ac"
+tc_project_number = "909790142773"
+tc_service_account = "tokenclient@tc-b23369ac.iam.gserviceaccount.com"
 ```
 
 ### Deploy TokenClient (Bob)
@@ -301,14 +297,12 @@ The terraform script `bob/deploy/main.tf` uses the default options described bel
 You should see an output like:
 
 ```bash
-      Outputs:
-      tc_address = 35.225.46.21
-      tc_image_hash = sha256:defa799ced1518c1e55d515b20fbfe542e2e10bb2ef8daed154dbbc63226c003
-      tc_instance_id = 221808688638269893
-      tc_project_id = tc-78966d6a
-      tc_project_number = 538014872919
-      tc_service_account = tokenclient@tc-78966d6a.iam.gserviceaccount.com
-      ts_project_id = ts-3950a2df
+tc_address = "34.136.60.156"
+tc_image_hash = "sha256:3f9d2415ccc9280c505cea651291bc62cc6162f900675967366b75a86d529c34"
+tc_instance_id = "5055893581146000589"
+tc_project_id = "tc-b23369ac"
+tc_project_number = "909790142773"
+tc_service_account = "tokenclient@tc-b23369ac.iam.gserviceaccount.com"
 ```
 
 Note the `tc_instance_id` and `tc_project_id`. 
@@ -436,7 +430,7 @@ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id
 
 The output of the provisioning step will prompt Alice to confirm that the image startup script and metadata looks valid.
 
-At that point, the image hash value will be saved into Firestore `R0OB1dVupyp/rNcb2/5Bfrx9uKjdjDNAPM9kUS7UiaI=`  using the `vm_id=2503055333933721897` in firestore document key.  Every time the TokenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
+At that point, the image hash value will be saved into Firestore `R0OB1dVupyp/rNcb2/5Bfrx9uKjdjDNAPM9kUS7UiaI=`  using the `vm_id=5055893581146000589` in firestore document key.  Every time the TokenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
 
 The output also shows the unique `Fingerprint` of the VM `2020/07/22 09:47:32 Image Fingerprint: [yM8bKId-VQA=]`. 
 
@@ -446,8 +440,8 @@ $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_
     --secretsFile=secrets.json \
     --useTPM --attestationPCR=0 --attestationPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f
 
-2020/09/08 16:03:27 tc-e381ee09  us-central1-a  221808688638269893
-2020/09/08 16:03:27 Found  VM instanceID "221808688638269893"
+2020/09/08 16:03:27 tc-b23369ac  us-central1-a  5055893581146000589
+2020/09/08 16:03:27 Found  VM instanceID "5055893581146000589"
 2020/09/08 16:03:27 Image Data: #cloud-config
 
 write_files:
@@ -463,7 +457,7 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-e381ee09/tokenclient@sha256:defa799ced1518c1e55d515b20fbfe542e2e10bb2ef8daed154dbbc63226c003 --address 35.222.5.146:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useSecrets --tlsCertChain projects/97849079040/secrets/tls-ca --v=25 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-b23369ac/tokenclient@sha256:3f9d2415ccc9280c505cea651291bc62cc6162f900675967366b75a86d529c34 --address 34.121.24.128:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useSecrets --tlsCertChain projects/97849079040/secrets/tls-ca --v=25 -alsologtostderr
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
@@ -491,7 +485,7 @@ y
 ```
 
 Note that Alice not trusts the entire TokenClient vm Image hash which itself includes a docker image hash 
-(`docker pull gcr.io/tc-78966d6a/tokenclient@sha256:defa799ced1518c1e55d515b20fbfe542e2e10bb2ef8daed154dbbc63226c003`).  
+(`docker pull gcr.io/tc-b23369ac/tokenclient@sha256:3f9d2415ccc9280c505cea651291bc62cc6162f900675967366b75a86d529c34`).  
 It is expected that this image was generated elsewhere such that both Alice and Bob would know the precise and source code that it includes.  
 Docker based images will not generate deterministic builds but you can use `Bazel` as described in [Building deterministic Docker images with Bazel](https://blog.bazel.build/2015/07/28/docker_build.html) and as an example:
 
@@ -505,18 +499,20 @@ You can find more information about how to build the TokenClient and TokenServer
 
 The `fingerprint` value is a hash of the entire VM's state and configuration.  Any change (stop/restart, metadata update, etc) will change its value.  You can use this VM fingerprint to ensure that when the tokenclient makes a request, the VM is in the same state it was originally provisioned against 
 
+Do not run the following commands during setup of this demo.
+
 ```bash
-$ gcloud compute instances describe 221808688638269893 --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
+$ gcloud compute instances describe $TF_VAR_tc_instance_id --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
 Mj7BV6UuUs4=
 
-$ gcloud compute instances stop 221808688638269893 --zone us-central1-a --project tc-e381ee09 
-$ gcloud compute instances start 221808688638269893 --zone us-central1-a --project tc-e381ee09 
+$ gcloud compute instances stop $TF_VAR_tc_instance_id --zone us-central1-a --project tc-e381ee09 
+$ gcloud compute instances start $TF_VAR_tc_instance_id --zone us-central1-a --project tc-e381ee09 
 
-$ gcloud compute instances describe 221808688638269893 --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
+$ gcloud compute instances describe $TF_VAR_tc_instance_id --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
 Y0hv2RZ_Qy0=
 
 # change any metadata using console
-$ gcloud compute instances describe 221808688638269893 --zone us-central1-a --project tc-e381ee09  --format="value(fingerprint)"
+$ gcloud compute instances describe $TF_VAR_tc_instance_id --zone us-central1-a --project tc-e381ee09  --format="value(fingerprint)"
 SRVm69LywSw=
 ```
 
@@ -546,13 +542,12 @@ The TokenClient would have acquired the secret key and then performed the option
 ![images/tccomplete.png](images/tccomplete.png)
 
 ```log
-2020-11-21T03:03:01.593707258Z I1121 03:03:01.593640       1 client.go:378]      Tink AEAD Decrypted Text foo
-2020-11-21T03:03:01.593367341Z I1121 03:03:01.593276       1 client.go:371]      Tink AEAD encrypted text AWrGuDmEm1pTNeyZ+zAaGtmdIib7zNSBpS/qLJac8DQ850VG
-2020-11-21T03:03:01.592495689Z I1121 03:03:01.591794       1 client.go:347]      Decoding as Tink
-2020-11-21T03:03:01.592473778Z I1121 03:03:01.591751       1 client.go:334]      Received  Data: name:"secret2" type:TINK data:"\x08\xb9\xf0\x9a\xd6\x06\x12d\nX\n0type.googleapis.com/google.crypto.tink.AesGcmKey\x12\"\x1a \x0eӡ\xcc\x02\x9b~\xff\xde\xf4^\x10d\x91\xb2\x84\xa9\xf9\xad\n\x02\xaf\x8a`B\xaa(~]V\xa0\xb8\x18\x01\x10\x01\x18\xb9\xf0\x9a\xd6\x06 \x01"
-2020-11-21T03:03:01.592465864Z I1121 03:03:01.591740       1 client.go:337]      Decoding as RAW fooobar
-2020-11-21T03:03:01.592419639Z I1121 03:03:01.591694       1 client.go:334]      Received  Data: name:"secret1" data:"fooobar"
-2020-11-21T03:03:01.591811689Z I1121 03:03:01.591663       1 client.go:329]      Received  toResponse: 10cd4b47-2ba6-11eb-b228-0242ac110002
+I0620 12:27:22.399474       1 client.go:367]      Received  Data: name:"secret1" data:"fooobar"
+I0620 12:27:22.399505       1 client.go:370]      Decoding as RAW fooobar
+I0620 12:27:22.399513       1 client.go:367]      Received  Data: name:"secret2" type:TINK data:"\x08\xb9\xf0\x9a\xd6\x06\x12d\nX\n0type.googleapis.com/google.crypto.tink.AesGcmKey\x12\"\x1a \x0eӡ\xcc\x02\x9b~\xff\xde\xf4^\x10d\x91\xb2\x84\xa9\xf9\xad\n\x02\xaf\x8a`B\xaa(~]V\xa0\xb8\x18\x01\x10\x01\x18\xb9\xf0\x9a\xd6\x06 \x01"
+I0620 12:27:22.399546       1 client.go:380]      Decoding as Tink
+I0620 12:27:22.400385       1 client.go:404]      Tink AEAD encrypted text AWrGuDnqX+ANzRzPVXfjN+UZcVgY/6EPREbNyQeazM5togJD
+I0620 12:27:22.400414       1 client.go:411]      Tink AEAD Decrypted Text foo
 ```
 #### Firestore
 
@@ -898,16 +893,16 @@ $ curl -s -H 'Metadata-Flavor: Google' "http://metadata.google.internal/computeM
 {
   "aud": "foo.bar",
   "azp": "112179062720391305885",
-  "email": "1071284184436-compute@developer.gserviceaccount.com",
+  "email": "tokenclient@tc-b23369ac.iam.gserviceaccount.com",
   "email_verified": true,
   "exp": 1624121996,
   "google": {
     "compute_engine": {
       "instance_confidentiality": 1,            <<<<<<<<<<
       "instance_creation_timestamp": 1624116928,
-      "instance_id": "5649429890762780752",
-      "instance_name": "sev-1",
-      "project_id": "mineral-minutia-820",
+      "instance_id": "5055893581146000589",
+      "instance_name": "tokenclient",
+      "project_id": "tc-b23369ac",
       "project_number": 1071284184436,
       "zone": "us-central1-a"
     }

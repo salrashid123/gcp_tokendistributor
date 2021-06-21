@@ -92,7 +92,7 @@ variable "tls_client_key" {
 }
 variable "tc_image_hash" {
   type    = string
-  default = "docker.io/salrashid123/tokenclient@sha256:defa799ced1518c1e55d515b20fbfe542e2e10bb2ef8daed154dbbc63226c003"  
+  default = "docker.io/salrashid123/tokenclient@sha256:3f9d2415ccc9280c505cea651291bc62cc6162f900675967366b75a86d529c34"  
 }
 variable "sni_servername" {
   type    = string

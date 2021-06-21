@@ -14,7 +14,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//src/tokenservice:go_default_library",
-        "//src/provisioner/oid:go_default_library",    
+        "//src/util/certparser:go_default_library",    
         "@com_github_golang_glog//:go_default_library",
         "@org_golang_x_net//context:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
@@ -25,6 +25,5 @@ go_library(
         "@com_google_cloud_go_firestore//:go_default_library",
         "@org_golang_google_api//compute/v1:go_default_library",
         "@com_github_golang_protobuf//jsonpb:go_default_library",
-        "@org_golang_x_crypto//cryptobyte:go_default_library",
     ],
 )

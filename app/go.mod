@@ -21,10 +21,12 @@ require (
 	google.golang.org/genproto v0.0.0-20200831141814-d751682dd103
 	google.golang.org/grpc v1.31.1
 	oid v0.0.0
+	certparser v0.0.0
 	tokenservice v0.0.0
 )
 
 replace (
-	oid => ./src/provisioner/oid
+	certparser => ./src/util/certparser
+	oid => ./src/util/certparser/oid
 	tokenservice => ./src/tokenservice
 )
