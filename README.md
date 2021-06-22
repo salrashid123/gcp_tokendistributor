@@ -27,7 +27,7 @@ Bob creates creates a VM (`VM-B`) with `serviceAccountB`.
 
 Bob and Alice exchange information offline about `ip-A`, `serviceAccountA` and `serviceAccountB` each party uses
 
-Bob grants Alice and `serviceAccountA` permissions to read GCE startup script and metadata for `VM-A`
+Bob grants Alice and `serviceAccountA` permissions to read GCE startup script and metadata for `VM-A` and AuditLog viewer
 
 `VM-A` runs a `TokenService` that functions to validate and return authorized token requests from `VM-B` 
 
@@ -42,6 +42,10 @@ Reads `VM-B` startup script data
 Validates that `VM-B` has been deprivileged (no ssh access)
 
 Validates the docker image running on `VM-B` is known image hash and trusted by Alice) 
+
+Validates the AuditLog for the VM does not indicate the COS image's metadata was ever updated.
+
+Validates the AuditLog for the VM shows the full boot disk creation (eg, from COS base image; not boot disk)
 
 Provisioning Server generates hash of `VM-B` startup script that includes commands to prevent SSH and `docker run` command for the trusted image image.
 
@@ -133,11 +137,11 @@ terraform apply --target=module.ts_build -auto-approve
 You should see the new project details and IP address allocated/assigned for the `TokenServer`
 
 ```bash
-ts_address = "34.121.24.128"
-ts_image_hash = "sha256:149b2e932e6dbddc241f1f8c9094216080bf03b5371d96c9627bef070e99b5b7"
-ts_project_id = "ts-f793b75c"
-ts_project_number = "430136110592"
-ts_service_account = "tokenserver@ts-f793b75c.iam.gserviceaccount.com"
+ts_address = "34.136.142.112"
+ts_image_hash = "sha256:341c39facaab9f19c4172b546fb6ed0ff5365d1c3ba0a622a4d5a4d9ea3c2fa6"
+ts_project_id = "ts-1b7443bf"
+ts_project_number = "925569020848"
+ts_service_account = "tokenserver@ts-1b7443bf.iam.gserviceaccount.com"
 ```
 
 
@@ -191,10 +195,10 @@ In this case its
 
 ```bash
 $ echo $TF_VAR_ts_service_account
-  tokenserver@ts-f793b75c.iam.gserviceaccount.com
+  tokenserver@ts-1b7443bf.iam.gserviceaccount.com
 
 $ echo $TF_VAR_ts_address
-  34.121.24.128
+  34.136.142.112
 ```
 
 ### Start TokenClient Infrastructure (Bob)
@@ -227,11 +231,11 @@ terraform apply --target=module.tc_build -auto-approve
 The command will create a new GCP project, enable GCP api services, create a service account for the Token server and allocate a static IP:
 
 ```bash
-tc_address = "34.136.60.156"
-tc_image_hash = "sha256:3f9d2415ccc9280c505cea651291bc62cc6162f900675967366b75a86d529c34"
-tc_project_id = "tc-b23369ac"
-tc_project_number = "909790142773"
-tc_service_account = "tokenclient@tc-b23369ac.iam.gserviceaccount.com"
+tc_address = "34.121.225.36"
+tc_image_hash = "sha256:eea4812c723e6d39d4261504508c0903c1c0958fc6ec25a9cad906c57ea610a9"
+tc_project_id = "tc-4f4f5a70"
+tc_project_number = "634665912513"
+tc_service_account = "tokenclient@tc-4f4f5a70.iam.gserviceaccount.com"
 ```
 
 ### Deploy TokenClient (Bob)
@@ -297,12 +301,12 @@ The terraform script `bob/deploy/main.tf` uses the default options described bel
 You should see an output like:
 
 ```bash
-tc_address = "34.136.60.156"
-tc_image_hash = "sha256:3f9d2415ccc9280c505cea651291bc62cc6162f900675967366b75a86d529c34"
-tc_instance_id = "5055893581146000589"
-tc_project_id = "tc-b23369ac"
-tc_project_number = "909790142773"
-tc_service_account = "tokenclient@tc-b23369ac.iam.gserviceaccount.com"
+tc_address = "34.121.225.36"
+tc_image_hash = "sha256:eea4812c723e6d39d4261504508c0903c1c0958fc6ec25a9cad906c57ea610a9"
+tc_instance_id = "8939838129032687278"
+tc_project_id = "tc-4f4f5a70"
+tc_project_number = "634665912513"
+tc_service_account = "tokenclient@tc-4f4f5a70.iam.gserviceaccount.com"
 ```
 
 Note the `tc_instance_id` and `tc_project_id`. 
@@ -430,7 +434,7 @@ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id
 
 The output of the provisioning step will prompt Alice to confirm that the image startup script and metadata looks valid.
 
-At that point, the image hash value will be saved into Firestore `R0OB1dVupyp/rNcb2/5Bfrx9uKjdjDNAPM9kUS7UiaI=`  using the `vm_id=5055893581146000589` in firestore document key.  Every time the TokenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
+At that point, the image hash value will be saved into Firestore `v7SftwlRj75WRXCq0Q/buov8D7t+Sg08fRqaylohfiI=`  using the `vm_id=8939838129032687278` in firestore document key.  Every time the TokenClient makes a request for a security token, the TokenServer will lookup the document and verify the image hash is still the one that was authorized.
 
 The output also shows the unique `Fingerprint` of the VM `2020/07/22 09:47:32 Image Fingerprint: [yM8bKId-VQA=]`. 
 
@@ -440,9 +444,12 @@ $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_
     --secretsFile=secrets.json \
     --useTPM --attestationPCR=0 --attestationPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f
 
-2020/09/08 16:03:27 tc-b23369ac  us-central1-a  5055893581146000589
-2020/09/08 16:03:27 Found  VM instanceID "5055893581146000589"
-2020/09/08 16:03:27 Image Data: #cloud-config
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
+    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=5 \
+    --clientVMId $TF_VAR_tc_instance_id  --secretsFile=secrets.json
+2021/06/22 08:05:00 tc-4f4f5a70  us-central1-a  8939838129032687278
+2021/06/22 08:05:00 Found  VM instanceID "8939838129032687278"
+2021/06/22 08:05:00 Image Data: #cloud-config
 
 write_files:
 - path: /etc/systemd/system/cloudservice.service
@@ -457,7 +464,7 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-b23369ac/tokenclient@sha256:3f9d2415ccc9280c505cea651291bc62cc6162f900675967366b75a86d529c34 --address 34.121.24.128:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useSecrets --tlsCertChain projects/97849079040/secrets/tls-ca --v=25 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-4f4f5a70/tokenclient@sha256:eea4812c723e6d39d4261504508c0903c1c0958fc6ec25a9cad906c57ea610a9 --address 34.136.142.112:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useMTLS --useSecrets  --tlsClientCert projects/634665912513/secrets/tls_crt --tlsClientKey projects/634665912513/secrets/tls_key --tlsCertChain projects/634665912513/secrets/tls-ca --useTPM --doAttestation --exchangeSigningKey --v=25 -alsologtostderr
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 
@@ -469,23 +476,43 @@ runcmd:
 - systemctl daemon-reload
 - systemctl start cloudservice.service
 
-2020/09/08 16:03:27      Found  VM initScriptHash: [bRU/GQt02of49h56ph2dv7F5ZgZ1kUskdREZvwWNaWg=]
-2020/09/08 16:03:27      Found  VM CreationTimestamp "2020-09-08T12:59:59.972-07:00"
-2020/09/08 16:03:27      Found  VM Fingerprint "Mj7BV6UuUs4="
-2020/09/08 16:03:27      Found  VM CpuPlatform "Intel Haswell"
-2020/09/08 16:03:27      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-e381ee09/zones/us-central1-a/disks/tokenclient"
-2020/09/08 16:03:27      Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
-2020/09/08 16:03:27      Found  VM ServiceAccount "tokenclient@tc-e381ee09.iam.gserviceaccount.com"
-2020/09/08 16:03:27 Found VM External IP 104.154.65.88
-2020/09/08 16:03:27 looks ok? (y/N): 
+2021/06/22 08:05:00      Found  VM initScriptHash: [v7SftwlRj75WRXCq0Q/buov8D7t+Sg08fRqaylohfiI=]
+2021/06/22 08:05:00      Found  VM CreationTimestamp "2021-06-22T04:57:59.255-07:00"
+2021/06/22 08:05:00      Found  VM Fingerprint "sSHMqlnfdVM="
+2021/06/22 08:05:00      Found  VM CpuPlatform "AMD Rome"
+2021/06/22 08:05:00      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-4f4f5a70/zones/us-central1-a/disks/tokenclient"
+2021/06/22 08:05:01      Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
+2021/06/22 08:05:01      Found  VM ServiceAccount "tokenclient@tc-4f4f5a70.iam.gserviceaccount.com"
+2021/06/22 08:05:01 Found VM External IP 34.121.225.36
+2021/06/22 08:05:01 ===========  Instance AuditLog Start =========== 
+2021/06/22 08:05:03 LogEntry:
+2021/06/22 08:05:03     Severity Notice
+2021/06/22 08:05:03     TimeStamp @2021-06-22T11:58:09Z
+2021/06/22 08:05:03     Service Name  [compute.googleapis.com]
+2021/06/22 08:05:03     Method Name [beta.compute.instances.insert]
+2021/06/22 08:05:03     AuthenticationInfo [principal_email:"admin@esodemoapp2.com"]
+2021/06/22 08:05:03     Request fields:{key:"@type"  value:{string_value:"type.googleapis.com/compute.instances.insert"}}
+2021/06/22 08:05:03     ============
+
+2021/06/22 08:05:03 LogEntry:
+2021/06/22 08:05:03     Severity Notice
+2021/06/22 08:05:03     TimeStamp @2021-06-22T11:57:52Z
+2021/06/22 08:05:03     Service Name  [compute.googleapis.com]
+2021/06/22 08:05:03     Method Name [beta.compute.instances.insert]
+2021/06/22 08:05:03     AuthenticationInfo [principal_email:"admin@esodemoapp2.com"]
+2021/06/22 08:05:03     Request fields:{key:"@type"  value:{string_value:"type.googleapis.com/compute.instances.insert"}}  fields:{key:"canIpForward"  value:{bool_value:false}}  fields:{key:"deletionProtection"  value:{bool_value:false}}  fields:{key:"description"  value:{string_value:"TokenClient"}}  fields:{key:"disks"  value:{list_value:{values:{struct_value:{fields:{key:"autoDelete"  value:{bool_value:true}}  fields:{key:"boot"  value:{bool_value:true}}  fields:{key:"initializeParams"  value:{struct_value:{fields:{key:"sourceImage"  value:{string_value:"projects/cos-cloud/global/images/cos-stable-81-12871-119-0"}}}}}  fields:{key:"mode"  value:{string_value:"READ_WRITE"}}}}}}}  fields:{key:"machineType"  value:{string_value:"projects/tc-4f4f5a70/zones/us-central1-a/machineTypes/e2-small"}}  fields:{key:"name"  value:{string_value:"tokenclient"}}  fields:{key:"networkInterfaces"  value:{list_value:{values:{struct_value:{fields:{key:"accessConfigs"  value:{list_value:{values:{struct_value:{fields:{key:"natIP"  value:{string_value:"34.121.225.36"}}  fields:{key:"type"  value:{string_value:"ONE_TO_ONE_NAT"}}}}}}}  fields:{key:"network"  value:{string_value:"projects/tc-4f4f5a70/global/networks/tcnetwork"}}}}}}}  fields:{key:"scheduling"  value:{struct_value:{fields:{key:"automaticRestart"  value:{bool_value:true}}  fields:{key:"onHostMaintenance"  value:{string_value:"MIGRATE"}}  fields:{key:"preemptible"  value:{bool_value:false}}}}}  fields:{key:"serviceAccounts"  value:{list_value:{values:{struct_value:{fields:{key:"email"  value:{string_value:"tokenclient@tc-4f4f5a70.iam.gserviceaccount.com"}}  fields:{key:"scopes"  value:{list_value:{values:{string_value:"https://www.googleapis.com/auth/cloud-platform"}  values:{string_value:"https://www.googleapis.com/auth/userinfo.email"}}}}}}}}}  fields:{key:"shieldedInstanceConfig"  value:{struct_value:{fields:{key:"enableIntegrityMonitoring"  value:{bool_value:true}}  fields:{key:"enableSecureBoot"  value:{bool_value:true}}  fields:{key:"enableVtpm"  value:{bool_value:true}}}}}  fields:{key:"tags"  value:{struct_value:{fields:{key:"tags"  value:{list_value:{values:{string_value:"tokenclient"}}}}}}}
+2021/06/22 08:05:03     ============
+
+2021/06/22 08:05:03 ===========  Instance AuditLog End =========== 
+2021/06/22 08:05:03 looks ok? (y/N): 
 y
-2020/09/08 16:03:34 2020-09-08 20:03:34.37037 +0000 UTC
-2020/09/08 16:03:34 Document data: "221808688638269893"
+2021/06/22 08:05:15 2021-06-22 12:05:15.128201 +0000 UTC
+2021/06/22 08:05:15 Document data: "8939838129032687278"
 
 ```
 
 Note that Alice not trusts the entire TokenClient vm Image hash which itself includes a docker image hash 
-(`docker pull gcr.io/tc-b23369ac/tokenclient@sha256:3f9d2415ccc9280c505cea651291bc62cc6162f900675967366b75a86d529c34`).  
+(`docker pull gcr.io/tc-4f4f5a70/tokenclient@sha256:eea4812c723e6d39d4261504508c0903c1c0958fc6ec25a9cad906c57ea610a9`).  
 It is expected that this image was generated elsewhere such that both Alice and Bob would know the precise and source code that it includes.  
 Docker based images will not generate deterministic builds but you can use `Bazel` as described in [Building deterministic Docker images with Bazel](https://blog.bazel.build/2015/07/28/docker_build.html) and as an example:
 
@@ -494,6 +521,154 @@ Docker based images will not generate deterministic builds but you can use `Baze
 
 You can find more information about how to build the TokenClient and TokenServer in the appendix.
 
+#### VM Startup and base image verification
+
+Suppose Bob deploys non COS or Confidential compute image or a boot disk not sourced from 
+`https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0`, and instead used a `fakeimage`
+
+```yaml
+resource "google_compute_instance" "tokenclient" {
+  name         = "tokenclient"
+  machine_type = "e2-small"
+  # machine_type = "n2d-standard-2"    # for SEV
+  description = "TokenClient"
+  project = var.project_id  
+  zone = var.zone
+  boot_disk {
+    initialize_params {
+      # image = "cos-cloud/cos-stable-81-12871-119-0"
+      image = "projects/tc-4f4f5a70/global/images/fakeimage"
+      # image = "confidential-vm-images/cos-stable-89-16108-403-47"   # for SEV
+    }
+  }
+```
+
+then during provisioning, the disk image and startup sequence is clearly shown (at that point, you should click "No")
+
+```log
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
+    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=5 \
+    --clientVMId $TF_VAR_tc_instance_id  --secretsFile=secrets.json
+2021/06/22 08:44:59 tc-4f4f5a70  us-central1-a  5701091505452377594
+2021/06/22 08:44:59 Found  VM instanceID "5701091505452377594"
+2021/06/22 08:44:59 Image Data: #cloud-config
+
+write_files:
+- path: /etc/systemd/system/cloudservice.service
+  permissions: 0644
+  owner: root
+  content: |
+    [Unit]
+    Description=Start a simple docker container
+    Wants=gcr-online.target
+    After=gcr-online.target
+
+    [Service]
+    Environment="HOME=/home/cloudservice"
+    ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-4f4f5a70/tokenclient@sha256:eea4812c723e6d39d4261504508c0903c1c0958fc6ec25a9cad906c57ea610a9 --address 34.136.142.112:50051 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useMTLS --useSecrets  --tlsClientCert projects/634665912513/secrets/tls_crt --tlsClientKey projects/634665912513/secrets/tls_key --tlsCertChain projects/634665912513/secrets/tls-ca --useTPM --doAttestation --exchangeSigningKey --v=25 -alsologtostderr
+    ExecStop=/usr/bin/docker stop mycloudservice
+    ExecStopPost=/usr/bin/docker rm mycloudservice
+
+bootcmd:
+- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+- systemctl mask --now serial-getty@ttyS0.service
+
+runcmd:
+- systemctl daemon-reload
+- systemctl start cloudservice.service
+
+2021/06/22 08:44:59      Found  VM initScriptHash: [v7SftwlRj75WRXCq0Q/buov8D7t+Sg08fRqaylohfiI=]
+2021/06/22 08:44:59      Found  VM CreationTimestamp "2021-06-22T05:44:06.372-07:00"
+2021/06/22 08:44:59      Found  VM Fingerprint "HHqf-5_bcaY="
+2021/06/22 08:44:59      Found  VM CpuPlatform "AMD Rome"
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+2021/06/22 08:44:59      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-4f4f5a70/zones/us-central1-a/disks/tokenclient"
+2021/06/22 08:45:00      Found Disk Image https://www.googleapis.com/compute/v1/projects/tc-4f4f5a70/global/images/fakeimage
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+2021/06/22 08:45:00      Found  VM ServiceAccount "tokenclient@tc-4f4f5a70.iam.gserviceaccount.com"
+2021/06/22 08:45:00 Found VM External IP 34.121.225.36
+2021/06/22 08:45:00 ===========  Instance AuditLog Start =========== 
+2021/06/22 08:45:02 LogEntry:
+2021/06/22 08:45:02     Severity Notice
+2021/06/22 08:45:02     TimeStamp @2021-06-22T12:44:16Z
+2021/06/22 08:45:02     Service Name  [compute.googleapis.com]
+2021/06/22 08:45:02     Method Name [beta.compute.instances.insert]
+2021/06/22 08:45:02     AuthenticationInfo [principal_email:"admin@esodemoapp2.com"]
+2021/06/22 08:45:02     Request fields:{key:"@type"  value:{string_value:"type.googleapis.com/compute.instances.insert"}}
+2021/06/22 08:45:02     ============
+
+2021/06/22 08:45:02 LogEntry:
+2021/06/22 08:45:02     Severity Notice
+2021/06/22 08:45:02     TimeStamp @2021-06-22T12:44:05Z
+2021/06/22 08:45:02     Service Name  [compute.googleapis.com]
+2021/06/22 08:45:02     Method Name [beta.compute.instances.insert]
+2021/06/22 08:45:02     AuthenticationInfo [principal_email:"admin@esodemoapp2.com"]
+2021/06/22 08:45:02     Request fields:{key:"@type"  value:{string_value:"type.googleapis.com/compute.instances.insert"}}  fields:{key:"canIpForward"  value:{bool_value:false}}  fields:{key:"deletionProtection"  value:{bool_value:false}}  fields:{key:"description"  value:{string_value:"TokenClient"}}  fields:{key:"disks"  value:{list_value:{values:{struct_value:{fields:{key:"autoDelete"  value:{bool_value:true}}  fields:{key:"boot"  value:{bool_value:true}}  fields:{key:"initializeParams"  value:{struct_value:{fields:{key:"sourceImage"  value:{string_value:"projects/tc-4f4f5a70/global/images/fakeimage"}}}}}  fields:{key:"mode"  value:{string_value:"READ_WRITE"}}}}}}}  fields:{key:"machineType"  value:{string_value:"projects/tc-4f4f5a70/zones/us-central1-a/machineTypes/e2-small"}}  fields:{key:"name"  value:{string_value:"tokenclient"}}  fields:{key:"networkInterfaces"  value:{list_value:{values:{struct_value:{fields:{key:"accessConfigs"  value:{list_value:{values:{struct_value:{fields:{key:"natIP"  value:{string_value:"34.121.225.36"}}  fields:{key:"type"  value:{string_value:"ONE_TO_ONE_NAT"}}}}}}}  fields:{key:"network"  value:{string_value:"projects/tc-4f4f5a70/global/networks/tcnetwork"}}}}}}}  fields:{key:"scheduling"  value:{struct_value:{fields:{key:"automaticRestart"  value:{bool_value:true}}  fields:{key:"onHostMaintenance"  value:{string_value:"MIGRATE"}}  fields:{key:"preemptible"  value:{bool_value:false}}}}}  fields:{key:"serviceAccounts"  value:{list_value:{values:{struct_value:{fields:{key:"email"  value:{string_value:"tokenclient@tc-4f4f5a70.iam.gserviceaccount.com"}}  fields:{key:"scopes"  value:{list_value:{values:{string_value:"https://www.googleapis.com/auth/cloud-platform"}  values:{string_value:"https://www.googleapis.com/auth/userinfo.email"}}}}}}}}}  fields:{key:"shieldedInstanceConfig"  value:{struct_value:{fields:{key:"enableIntegrityMonitoring"  value:{bool_value:true}}  fields:{key:"enableSecureBoot"  value:{bool_value:true}}  fields:{key:"enableVtpm"  value:{bool_value:true}}}}}  fields:{key:"tags"  value:{struct_value:{fields:{key:"tags"  value:{list_value:{values:{string_value:"tokenclient"}}}}}}}
+2021/06/22 08:45:02     ============
+
+2021/06/22 08:45:02 ===========  Instance AuditLog End =========== 
+2021/06/22 08:45:02 looks ok? (y/N):
+```
+
+#### VM Metadata editing 
+
+The cos-init script is saved into instance metadata and should not be editable.  If Bob edits the cos metadata before provisioning, the audit log would show that during provisioning:
+
+```log
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=5     --clientVMId $TF_VAR_tc_instance_id  --secretsFile=secrets.json
+
+2021/06/22 08:51:58 tc-4f4f5a70  us-central1-a  6332740435730784933
+2021/06/22 08:51:58 Found  VM instanceID "6332740435730784933"
+2021/06/22 08:51:58 Image Data: #cloud-config
+
+write_files:
+- path: /etc/systemd/system/cloudservice.service
+  permissions: 0644
+  owner: root
+  content: |
+    [Unit]
+    Description=Start a simple docker container
+    Wants=gcr-online.target
+    After=gcr-online.target
+
+    [Service]
+    Environment="HOME=/home/cloudservice"
+    ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 --name=mycloudservice gcr.io/tc-4f4f5a70/tokenclient@sha256:eea4812c723e6d39d4261504508c0903c1c0958fc6ec25a9cad906c57ea610a9 --address 34.136.142.112:50052 --servername tokenservice.esodemoapp2.com --tsAudience https://tokenserver --useMTLS --useSecrets  --tlsClientCert projects/634665912513/secrets/tls_crt --tlsClientKey projects/634665912513/secrets/tls_key --tlsCertChain projects/634665912513/secrets/tls-ca --useTPM --doAttestation --exchangeSigningKey --v=25 -alsologtostderr
+    ExecStop=/usr/bin/docker stop mycloudservice
+    ExecStopPost=/usr/bin/docker rm mycloudservice
+
+bootcmd:
+- iptables -D INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+- systemctl mask --now serial-getty@ttyS0.service
+
+runcmd:
+- systemctl daemon-reload
+- systemctl start cloudservice.service
+2021/06/22 08:51:58      Found  VM initScriptHash: [700Dma/2uMOpNNcHAF7vjZUrrk7ZBCSdTiaUrPM0GJA=]
+2021/06/22 08:51:58      Found  VM CreationTimestamp "2021-06-22T05:49:15.472-07:00"
+2021/06/22 08:51:58      Found  VM Fingerprint "gfpbP5Jrxhc="
+2021/06/22 08:51:58      Found  VM CpuPlatform "Intel Haswell"
+2021/06/22 08:51:58      Found  VM Boot Disk Source "https://www.googleapis.com/compute/v1/projects/tc-4f4f5a70/zones/us-central1-a/disks/tokenclient"
+2021/06/22 08:51:58      Found Disk Image https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-stable-81-12871-119-0
+2021/06/22 08:51:58      Found  VM ServiceAccount "tokenclient@tc-4f4f5a70.iam.gserviceaccount.com"
+2021/06/22 08:51:58 Found VM External IP 34.121.225.36
+2021/06/22 08:51:59 ===========  Instance AuditLog Start =========== 
+2021/06/22 08:52:00 LogEntry:
+2021/06/22 08:52:00     Severity Notice
+2021/06/22 08:52:00     TimeStamp @2021-06-22T12:51:46Z
+2021/06/22 08:52:00     Service Name  [compute.googleapis.com]
+2021/06/22 08:52:00     Method Name [v1.compute.instances.setMetadata]
+2021/06/22 08:52:00     AuthenticationInfo [principal_email:"admin@esodemoapp2.com"]
+2021/06/22 08:52:00     Request fields:{key:"@type"  value:{string_value:"type.googleapis.com/compute.instances.setMetadata"}}  fields:{key:"Metadata Keys Modified"  value:{list_value:{values:{string_value:"user-data"}}}}
+2021/06/22 08:52:00     ============
+
+2021/06/22 08:52:00 >>>> SetMetadata called on instance, there is no reason this should happen!
+```
 
 #### VM Fingerprint verification
 
@@ -503,7 +678,7 @@ Do not run the following commands during setup of this demo.
 
 ```bash
 $ gcloud compute instances describe $TF_VAR_tc_instance_id --zone us-central1-a --project tc-e381ee09 --format="value(fingerprint)"
-Mj7BV6UuUs4=
+sSHMqlnfdVM=
 
 $ gcloud compute instances stop $TF_VAR_tc_instance_id --zone us-central1-a --project tc-e381ee09 
 $ gcloud compute instances start $TF_VAR_tc_instance_id --zone us-central1-a --project tc-e381ee09 

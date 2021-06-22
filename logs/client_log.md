@@ -4,170 +4,274 @@
 ```log
 ...
 ...
-I0620 12:26:21.999638       1 client.go:289] Attempting to contact TokenServer [42]
-I0620 12:26:21.999681       1 client.go:697]      Sleeping..
-E0620 12:26:22.080713       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-f793b75c/databases/(default)/documents/foo/5055893581146000589" not found
-I0620 12:26:31.999823       1 client.go:289] Attempting to contact TokenServer [43]
-I0620 12:26:31.999878       1 client.go:697]      Sleeping..
-E0620 12:26:32.074081       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-f793b75c/databases/(default)/documents/foo/5055893581146000589" not found
-I0620 12:26:42.000018       1 client.go:289] Attempting to contact TokenServer [44]
-I0620 12:26:42.000054       1 client.go:697]      Sleeping..
-E0620 12:26:42.090845       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-f793b75c/databases/(default)/documents/foo/5055893581146000589" not found
-I0620 12:26:52.000264       1 client.go:289] Attempting to contact TokenServer [45]
-I0620 12:26:52.000307       1 client.go:697]      Sleeping..
-E0620 12:26:52.085778       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-f793b75c/databases/(default)/documents/foo/5055893581146000589" not found
-I0620 12:27:02.000424       1 client.go:289] Attempting to contact TokenServer [46]
-I0620 12:27:02.000475       1 client.go:697]      Sleeping..
-E0620 12:27:02.087092       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-f793b75c/databases/(default)/documents/foo/5055893581146000589" not found
-I0620 12:27:12.000597       1 client.go:289] Attempting to contact TokenServer [47]
-I0620 12:27:12.000663       1 client.go:697]      Sleeping..
-E0620 12:27:12.070367       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-f793b75c/databases/(default)/documents/foo/5055893581146000589" not found
-I0620 12:27:22.000875       1 client.go:289] Attempting to contact TokenServer [48]
-I0620 12:27:22.001277       1 client.go:697]      Sleeping..
-I0620 12:27:22.399444       1 client.go:362]      Received  toResponse: dc9d5655-d1c2-11eb-95cf-0242ac110002
-I0620 12:27:22.399474       1 client.go:367]      Received  Data: name:"secret1" data:"fooobar"
-I0620 12:27:22.399505       1 client.go:370]      Decoding as RAW fooobar
-I0620 12:27:22.399513       1 client.go:367]      Received  Data: name:"secret2" type:TINK data:"\x08\xb9\xf0\x9a\xd6\x06\x12d\nX\n0type.googleapis.com/google.crypto.tink.AesGcmKey\x12\"\x1a \x0eӡ\xcc\x02\x9b~\xff\xde\xf4^\x10d\x91\xb2\x84\xa9\xf9\xad\n\x02\xaf\x8a`B\xaa(~]V\xa0\xb8\x18\x01\x10\x01\x18\xb9\xf0\x9a\xd6\x06 \x01"
-I0620 12:27:22.399546       1 client.go:380]      Decoding as Tink
-I0620 12:27:22.400385       1 client.go:404]      Tink AEAD encrypted text AWrGuDnqX+ANzRzPVXfjN+UZcVgY/6EPREbNyQeazM5togJD
-I0620 12:27:22.400414       1 client.go:411]      Tink AEAD Decrypted Text foo
-I0620 12:27:22.421003       1 client.go:441] =============== Load EncryptionKey and Certifcate from NV ===============
-I0620 12:27:22.575452       1 client.go:459]      Encryption PEM 
+I0622 11:59:03.211109       1 client.go:289] Attempting to contact TokenServer [2]
+I0622 11:59:03.211232       1 client.go:697]      Sleeping..
+I0622 11:59:13.211605       1 client.go:289] Attempting to contact TokenServer [3]
+I0622 11:59:13.211866       1 client.go:697]      Sleeping..
+E0622 11:59:13.227746       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 11:59:23.212349       1 client.go:289] Attempting to contact TokenServer [4]
+I0622 11:59:23.212376       1 client.go:697]      Sleeping..
+E0622 11:59:23.227246       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 11:59:33.212629       1 client.go:289] Attempting to contact TokenServer [5]
+I0622 11:59:33.212755       1 client.go:697]      Sleeping..
+E0622 11:59:33.226890       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 11:59:43.212964       1 client.go:289] Attempting to contact TokenServer [6]
+I0622 11:59:43.213026       1 client.go:697]      Sleeping..
+E0622 11:59:43.227459       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 11:59:53.213247       1 client.go:289] Attempting to contact TokenServer [7]
+I0622 11:59:53.213356       1 client.go:697]      Sleeping..
+E0622 11:59:53.230068       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 12:00:03.213610       1 client.go:289] Attempting to contact TokenServer [8]
+I0622 12:00:03.214323       1 client.go:697]      Sleeping..
+E0622 12:00:03.228675       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 12:00:13.214568       1 client.go:289] Attempting to contact TokenServer [9]
+I0622 12:00:13.214698       1 client.go:697]      Sleeping..
+E0622 12:00:13.229047       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 12:00:23.215192       1 client.go:289] Attempting to contact TokenServer [10]
+I0622 12:00:23.215317       1 client.go:697]      Sleeping..
+E0622 12:00:23.230055       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 12:00:33.215680       1 client.go:289] Attempting to contact TokenServer [11]
+I0622 12:00:33.215782       1 client.go:697]      Sleeping..
+E0622 12:00:33.229467       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 12:00:43.216055       1 client.go:289] Attempting to contact TokenServer [12]
+I0622 12:00:43.216805       1 client.go:697]      Sleeping..
+E0622 12:00:43.230931       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 12:00:53.217168       1 client.go:289] Attempting to contact TokenServer [13]
+I0622 12:00:53.217295       1 client.go:697]      Sleeping..
+E0622 12:00:53.226848       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+E0622 12:01:00.317042       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: connect: connection refused"
+I0622 12:01:03.217548       1 client.go:289] Attempting to contact TokenServer [14]
+I0622 12:01:03.217584       1 client.go:697]      Sleeping..
+E0622 12:01:03.230116       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+I0622 12:01:13.217786       1 client.go:289] Attempting to contact TokenServer [15]
+I0622 12:01:13.217839       1 client.go:697]      Sleeping..
+I0622 12:01:23.218037       1 client.go:289] Attempting to contact TokenServer [16]
+I0622 12:01:23.218978       1 client.go:697]      Sleeping..
+E0622 12:01:23.228485       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+E0622 12:01:30.348140       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unauthenticated desc = IssuedAt Identity document timestamp too old
+I0622 12:01:33.219183       1 client.go:289] Attempting to contact TokenServer [17]
+I0622 12:01:33.219233       1 client.go:697]      Sleeping..
+E0622 12:01:33.230922       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp 34.136.142.112:50051: i/o timeout"
+E0622 12:01:33.318500       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:01:43.219488       1 client.go:289] Attempting to contact TokenServer [18]
+I0622 12:01:43.219533       1 client.go:697]      Sleeping..
+E0622 12:01:43.311823       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:01:53.219727       1 client.go:289] Attempting to contact TokenServer [19]
+I0622 12:01:53.219766       1 client.go:697]      Sleeping..
+E0622 12:01:53.310599       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:02:03.219945       1 client.go:289] Attempting to contact TokenServer [20]
+I0622 12:02:03.219989       1 client.go:697]      Sleeping..
+E0622 12:02:03.324502       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:02:13.220332       1 client.go:289] Attempting to contact TokenServer [21]
+I0622 12:02:13.220471       1 client.go:697]      Sleeping..
+E0622 12:02:13.298984       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:02:23.220590       1 client.go:289] Attempting to contact TokenServer [22]
+I0622 12:02:23.220649       1 client.go:697]      Sleeping..
+E0622 12:02:23.293066       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:02:33.220794       1 client.go:289] Attempting to contact TokenServer [23]
+I0622 12:02:33.220854       1 client.go:697]      Sleeping..
+E0622 12:02:33.296032       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:02:43.221026       1 client.go:289] Attempting to contact TokenServer [24]
+I0622 12:02:43.221128       1 client.go:697]      Sleeping..
+E0622 12:02:43.308076       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:02:53.221285       1 client.go:289] Attempting to contact TokenServer [25]
+I0622 12:02:53.221335       1 client.go:697]      Sleeping..
+E0622 12:02:53.289623       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:03:03.221509       1 client.go:289] Attempting to contact TokenServer [26]
+I0622 12:03:03.221555       1 client.go:697]      Sleeping..
+E0622 12:03:03.292013       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:03:13.221693       1 client.go:289] Attempting to contact TokenServer [27]
+I0622 12:03:13.221777       1 client.go:697]      Sleeping..
+E0622 12:03:13.317501       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:03:23.221951       1 client.go:289] Attempting to contact TokenServer [28]
+I0622 12:03:23.222065       1 client.go:697]      Sleeping..
+E0622 12:03:23.326464       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:03:33.222353       1 client.go:289] Attempting to contact TokenServer [29]
+I0622 12:03:33.223022       1 client.go:697]      Sleeping..
+E0622 12:03:33.322968       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:03:43.223141       1 client.go:289] Attempting to contact TokenServer [30]
+I0622 12:03:43.223897       1 client.go:697]      Sleeping..
+E0622 12:03:43.310407       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:03:53.224195       1 client.go:289] Attempting to contact TokenServer [31]
+I0622 12:03:53.224245       1 client.go:697]      Sleeping..
+E0622 12:03:53.323718       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:04:03.224389       1 client.go:289] Attempting to contact TokenServer [32]
+I0622 12:04:03.224448       1 client.go:697]      Sleeping..
+E0622 12:04:03.277354       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:04:13.224692       1 client.go:289] Attempting to contact TokenServer [33]
+I0622 12:04:13.224753       1 client.go:697]      Sleeping..
+E0622 12:04:13.311899       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:04:23.224903       1 client.go:289] Attempting to contact TokenServer [34]
+I0622 12:04:23.225121       1 client.go:697]      Sleeping..
+E0622 12:04:23.285093       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:04:33.225381       1 client.go:289] Attempting to contact TokenServer [35]
+I0622 12:04:33.225453       1 client.go:697]      Sleeping..
+E0622 12:04:33.328875       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:04:43.225655       1 client.go:289] Attempting to contact TokenServer [36]
+I0622 12:04:43.225704       1 client.go:697]      Sleeping..
+E0622 12:04:43.308754       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:04:53.225878       1 client.go:289] Attempting to contact TokenServer [37]
+I0622 12:04:53.225924       1 client.go:697]      Sleeping..
+E0622 12:04:53.298698       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+null
+I0622 12:05:03.226120       1 client.go:289] Attempting to contact TokenServer [38]
+I0622 12:05:03.226187       1 client.go:697]      Sleeping..
+E0622 12:05:03.314370       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:05:13.226371       1 client.go:289] Attempting to contact TokenServer [39]
+I0622 12:05:13.226412       1 client.go:697]      Sleeping..
+E0622 12:05:13.318061       1 client.go:346] Error:   GetToken() from TokenService: rpc error: code = PermissionDenied desc = InstanceID not Found  rpc error: code = NotFound desc = "projects/ts-1b7443bf/databases/(default)/documents/foo/8939838129032687278" not found
+I0622 12:05:23.226609       1 client.go:289] Attempting to contact TokenServer [40]
+I0622 12:05:23.226655       1 client.go:697]      Sleeping..
+null
+I0622 12:05:23.815397       1 client.go:362]      Received  toResponse: 1f641610-d352-11eb-b51d-0242ac110002
+I0622 12:05:23.815581       1 client.go:367]      Received  Data: name:"secret1"  data:"fooobar"
+I0622 12:05:23.815643       1 client.go:370]      Decoding as RAW fooobar
+I0622 12:05:23.815674       1 client.go:367]      Received  Data: name:"secret2"  type:TINK  data:"\x08\xb9\xf0\x9a\xd6\x06\x12d\nX\n0type.googleapis.com/google.crypto.tink.AesGcmKey\x12\"\x1a \x0eӡ\xcc\x02\x9b~\xff\xde\xf4^\x10d\x91\xb2\x84\xa9\xf9\xad\n\x02\xaf\x8a`B\xaa(~]V\xa0\xb8\x18\x01\x10\x01\x18\xb9\xf0\x9a\xd6\x06 \x01"
+I0622 12:05:23.815791       1 client.go:380]      Decoding as Tink
+I0622 12:05:23.816021       1 client.go:404]      Tink AEAD encrypted text AWrGuDnrlnZl8INA9KlvGIl3N0xfa67S7KLaFsMvuJEcAwMa
+I0622 12:05:23.816073       1 client.go:411]      Tink AEAD Decrypted Text foo
+I0622 12:05:23.832189       1 client.go:441] =============== Load EncryptionKey and Certifcate from NV ===============
+I0622 12:05:23.941344       1 client.go:459]      Encryption PEM 
 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0L+xTVAysyRfNAzMO8QO
-zWG11WTOnfTU/InyC0dpcF6txBbevdv7yVQB0tA/ZLf8JsEKU7hzxAhYrZ3RVnOd
-hPONkkc2AH+ZENqkExb3i5Rwg6IKNztXGE3wV5EbWBtAURJdxCX1+dCg2vKThRwE
-SH7AwutagNnK4zgUP0XNGMKXwHjpQSiL2QTqlePco9Svq+tqw0E4XtNFSaP6cCIp
-KdT0a+KZj3eiy+IiUDXiusTgR8qLkuTueUv546BHvkBaSjM1dTad5QSX793yn1Oe
-ZiFHwAPqb6VzrMmnX8+B0wymMZz8vb6Qqc0Q16vrubcHWepQ3glqyTlC7Z1Ia7VL
-lQIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAon140WZ75XDaoprRmmsa
+4i7ueGtXkWIfNdTFpirNwRikslULGdh1V4zzPwm9CCJozsvWc9LVl4IM5/Fa2/eH
+of4cxoPELkdAI1MR0qH84bqijTCCYl9DOT/IB2eZPAoJ9D8NYCmG5NdwNk4KOQg1
+HshTEMAZ7Ruz7SgFJ1Jf9G/Fj8WtFY8lP0bb4jeO+tOhQbZ62Puw+ngRckdSTowM
+l/mF8gLCSLIj2EcXEqrKsxJ/dqL/3egB7A7Wexxy0xwxPK15ppRWEmtjprbF2Riz
+tgALlBqFTW7Lwl8NyubZOW2dYrf4F5Ph1wHwLTG9dNoyDuzpXltIphgwLJFheNPs
+2QIDAQAB
 -----END PUBLIC KEY-----
-I0620 12:27:22.577727       1 client.go:481]      Load SigningKey and Certifcate 
-I0620 12:27:22.698100       1 client.go:499]      Signing PEM 
+I0622 12:05:23.943565       1 client.go:481]      Load SigningKey and Certifcate 
+I0622 12:05:24.021802       1 client.go:499]      Signing PEM 
 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxjSvTq5Rd5/0lo9iHDL+
-MdANu/jZ/X7LAE9upDSd0ROi3K30G4Z2Pf31Suh6ZrWGpd5GKCK8jwhC5x9ldMlV
-1wScPAhoPnuk9BzE6Vgv4RRs7U1TVpC4GoKMjn4QcdPsXH4lL3QYBeqkhAsYxwz5
-Lzg9SvaEKRZpcqzVsgBQneppczTnr1P3UPrL02o4/1UTtDz74tLS/+aMZjWpIwdA
-Hf+MKG0n8hSJlPVifAeic8TR1KCTSUuaKN3MmESdXSMYbgjbXM7lD8lrw/cOSndR
-ZtFR85w6PrZVVhbbjRvZadau/6n9kJjUoZiBgOu2BMQ2O9VkyyUi2LgWgNbkohlm
-DQIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5Ogtmk0I0GF77l7T4dXe
+D7i/G2edQzaR0gzdJirquKzoALtysvEgAuA35zlc8iL0DXXTsLgq6SPIW8RHcWsh
+c4HtOE9FExflmvY+vQ3vodi2XlwDKylWYgneDxXxCl9dnAA+fUmRqKIiRUPHk6QH
+A/DLEvHfgtZgRX7OV0a6YSWAWN+wx9G1hwrcOvmQoY0Dg23CiAh4gBUe/7z/nAIs
+0A4VIq0oHI+l5uQ+4WLvUIWNU9QQ89rRaSVMXAWIMCwZu++oT2Az3GGRbLpXtmrR
+ilYbepZqXhYPOyMEG50HrfJmJEEOUEEn2z8Cz7JwZDOPO71tkUbKEjU6ayvg/Vjj
+LwIDAQAB
 -----END PUBLIC KEY-----
-I0620 12:27:22.702868       1 client.go:560]      AK Issued Hash w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=
-I0620 12:27:22.708225       1 client.go:569]      AK Signed Data FnhQvWIGu60kKkwkK+On7jZGLrSHZDXe9E8bJLvHKq5ZBd+2dIEPyOBsrpQq6FBbvoWY8K5VD6GXsKBc66xpi9dgPfONDUT8uLeYVE5tjP6kbVQ1YVP31xeTvUgUSgu5AvE6HV37yg0tamyjvK3gx5RLCWzn/miGKWKjVCodM5w8XrHiMelZPC3n/1/2svWvDP2SJ4dw9TjTm9JktLWyKErWwfwaBwYyque+OXYzSvPG3BxZN0Nf+fVWWSn6Sosc3FF3pEXnS5MxstasCxP5TjfY45S9fwyXatSeQvfbmlTSOgTJunmzzjT9FWTh1ZOuni+gX64AnMmPrq8oPCawNg==
-I0620 12:27:22.708407       1 client.go:575]      Signature Verified
-I0620 12:27:22.711327       1 client.go:591] =============== Create AK manually ===============
-I0620 12:27:22.711351       1 client.go:846]      --> CreateKeys()
-I0620 12:27:22.712964       1 client.go:856]     Current PCR 0 Value %!d(string=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f) 
-I0620 12:27:22.712986       1 client.go:861]      createPrimary
-I0620 12:27:22.863759       1 client.go:879]      tpmEkPub: 
-&{26352094570150208363257265599990946045561468446095548277083407918123681900737464986379446983354960010560414355371541121380455708589497235972713061301200011027702279985449479609774488584035332132760009882771714110051058585211589080570759246991350117443977443980190418229121594812389611161359588491805966239722721177948893635363233873925014426752131622308572149849763308876876306340173789310331488633548306855615762017804851617080916001673113410094283558518790232746346958503025590124434562565021912755971489377272156317860381185221394343935280090192789350005167879766451738966265716883865559341935330001833144612113301 65537}
-I0620 12:27:22.863874       1 client.go:892]      ekPub Name: 000b53a7b9c62e6ebea87a6e4e95be99a2e3d89ab7f2995d8214fd4e67c967617779
-I0620 12:27:22.863895       1 client.go:893]      ekPubPEM: 
+I0622 12:05:24.025807       1 client.go:560]      AK Issued Hash w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=
+I0622 12:05:24.030774       1 client.go:569]      AK Signed Data HnfUCVd2vCgmXiJ834QZ0BUGQZD5WPUXAVGzwfpAi7VLWniKp96uizV8ygln2O2RS/qkSOG29gCuKFDENWGLPKL1SeTwfAGtCqlmn6j+zHjmuAmMcCYS8zPTQHVP4DfGxo2sQxEJJ6tAAcvvP9O+6WhCIRVJvBt5pO2VUF9cqCWW3wD1rsvOxitxv3LQizfTJL3sjll/mNUIsEUXvNzEfFvZN/yA2noAzp78BMDoAAJkG4O4G+tCS+0tbZx9P05XIrHG4Y6BPWq219cM5VeMVqZdJRBKMp/qqWoSJe47FWm1oDTn7wWSgVyeAc5lunvSnCEj95s6wQpZVCryehDSdA==
+I0622 12:05:24.031094       1 client.go:575]      Signature Verified
+I0622 12:05:24.034509       1 client.go:591] =============== Create AK manually ===============
+I0622 12:05:24.035056       1 client.go:846]      --> CreateKeys()
+I0622 12:05:24.036667       1 client.go:856]     Current PCR 0 Value %!d(string=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f) 
+I0622 12:05:24.036723       1 client.go:861]      createPrimary
+I0622 12:05:24.132609       1 client.go:879]      tpmEkPub: 
+&{20512477926697847886762473633835154278537216751711082010481331619566349403631200349296771283598424715939130063315763781826417026955687218543240704530577327378623076250728582892878271503967584859565762381972158857127423615376680506963650827249450077352280774517276517767898168712856136911414495384081164531266140936666214165990012595042174024660991281746389357308286903805441573118891029162658935736484300659703088617550643868022163210451039886708564694564209370877460358400084154881167900520095431387569532773177629639266926642155398993169485768915972169414948105205096500088095637726045171333052087357525446022655193 65537}
+I0622 12:05:24.132740       1 client.go:892]      ekPub Name: 000b2383e4506c650fdcd0ef4765082d180836b5a1801c00834465ee1d3bda08262e
+I0622 12:05:24.132752       1 client.go:893]      ekPubPEM: 
 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0L+xTVAysyRfNAzMO8QO
-zWG11WTOnfTU/InyC0dpcF6txBbevdv7yVQB0tA/ZLf8JsEKU7hzxAhYrZ3RVnOd
-hPONkkc2AH+ZENqkExb3i5Rwg6IKNztXGE3wV5EbWBtAURJdxCX1+dCg2vKThRwE
-SH7AwutagNnK4zgUP0XNGMKXwHjpQSiL2QTqlePco9Svq+tqw0E4XtNFSaP6cCIp
-KdT0a+KZj3eiy+IiUDXiusTgR8qLkuTueUv546BHvkBaSjM1dTad5QSX793yn1Oe
-ZiFHwAPqb6VzrMmnX8+B0wymMZz8vb6Qqc0Q16vrubcHWepQ3glqyTlC7Z1Ia7VL
-lQIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAon140WZ75XDaoprRmmsa
+4i7ueGtXkWIfNdTFpirNwRikslULGdh1V4zzPwm9CCJozsvWc9LVl4IM5/Fa2/eH
+of4cxoPELkdAI1MR0qH84bqijTCCYl9DOT/IB2eZPAoJ9D8NYCmG5NdwNk4KOQg1
+HshTEMAZ7Ruz7SgFJ1Jf9G/Fj8WtFY8lP0bb4jeO+tOhQbZ62Puw+ngRckdSTowM
+l/mF8gLCSLIj2EcXEqrKsxJ/dqL/3egB7A7Wexxy0xwxPK15ppRWEmtjprbF2Riz
+tgALlBqFTW7Lwl8NyubZOW2dYrf4F5Ph1wHwLTG9dNoyDuzpXltIphgwLJFheNPs
+2QIDAQAB
 -----END PUBLIC KEY-----
-I0620 12:27:22.863924       1 client.go:900]      CreateKeyUsingAuth
-I0620 12:27:22.985846       1 client.go:926]      akPub: 0001000b00050072000000100014000b0800000000000100b467d7094e3ef78ac016883eaa93ad90b29925674a8f64393789e7a5f8639ee2a68f5b629292672ee902d8358b1f855abe01ef27a2549ef6452228fb5c57f90bed437e370ae42bb84da770f3ebb8de59cb6a0dcd7d511aeba20f86d861d1752a8e65a729d6faab378c37897dc1182cce65a36ff54cb16d38d6e6ceff5d0090c8c8d943f7f49ad83591b072894029962d4e929cdbe0577bffd0d7c5441f531ea89f5bf70a02717af3b32ce65b070426c86ac7b8c563880ac5a4c20a1aca93603488ea4a92094d37911768b5f2952b061dc9d3faf7f693172fb5965e3f0e59caae93362aac5020f343ad9ddebe811dd8eff14ab5c550e17a3ffb55f8fd85c8bd3d,
-I0620 12:27:22.985879       1 client.go:927]      akPriv: 0020e356456db0446c4957a91896cbbf98d939d88c35af9ff2107618ddcfc3060d290010ee6ba1e6ee227a367a0064c812e9323044d58629ae81bdb05249894137bb19a6c2dde7d2f77c8b14b44b887f912c990fe151744dfc24e2102d6021bf0cde6e0431207ae6165ba5c7f694ca3b0c068b10eeb3abdba26b831dff4fb1c30d9d847939bc36f04ee8abf00ae91d93b51ac63995d50bbbfeafe0dc3c488accd93b8448b4bd76e7f27e16f8a84e6caacfca75eafb1b794a7f1ed03237747db14fa973d94d93bf6024f55bba628a7fb20754bcbf8174a1890848c9935bca,
-I0620 12:27:22.985900       1 client.go:934]      CredentialData.ParentName.Digest.Value 53a7b9c62e6ebea87a6e4e95be99a2e3d89ab7f2995d8214fd4e67c967617779
-I0620 12:27:22.985912       1 client.go:935]      CredentialTicket 30820dc2d7090ea410033de1f977661def5f93d770a848e262421bc3d3791033
-I0620 12:27:22.985924       1 client.go:936]      CredentialHash 92eaf7eef2d9020d51d41cc579031006e05462e80924dcea5bd907e2e053a88e
-I0620 12:27:22.985937       1 client.go:938]      ContextSave (ek)
-I0620 12:27:22.995690       1 client.go:949]      ContextLoad (ek)
-I0620 12:27:23.002581       1 client.go:959]      LoadUsingAuth
-I0620 12:27:23.009783       1 client.go:987]      AK keyName 000bdec56a29ce186cd28492931439e081ddb9ab2adf90cbeda85a6465d1c87989a1
-I0620 12:27:23.012947       1 client.go:1009]      akPubPEM: 
+I0622 12:05:24.132781       1 client.go:900]      CreateKeyUsingAuth
+I0622 12:05:24.291156       1 client.go:926]      akPub: 0001000b00050072000000100014000b0800000000000100c22bc0b1c6aafb37bc152b99f41d27d5432415ebfe11543867a4ab3dbb2733fd780ce84f322ce315294aee06afacaeed1df5b01302c634c08597039dabde78e21b33065e053a7ea43808a63de82dc4a916e520390bc3f6a5592e0b001aa62b0def4cbcafe812056e4249f1492db71536b475a3e6793823bf3528ffabd980ebb028e419b930de906958185c578c14ec324bd7cc43ea940944cd4242fa48970080d1517ebc3a2f8998f72de7e930b2b899c1cfc5b269efabab53ba442189d40b2b99a90962404ec7b427107188928b284ea2ba1e800897706dc0b2b862c77dba9c928ed83cfd54b8cad2731b04d47d5eedcfff1fa04537a3003e7dd0fca7547823,
+I0622 12:05:24.291238       1 client.go:927]      akPriv: 0020fbe7dcfa3ac34f816efc7042597e38634f73a0295130de847a362f76b98ae64d00106e8a69b2cc798309897cb994a32f186d1046c21d62abcc329803b8f8b74fc9a9f105e68afa31957d10d14219bcf3c3ccf4dda4ae1827c339f92a11cea7c6b443105cc965c32b6199176fa46e86db20d3c3804860859fdf21320efbe813181b22a353053ecf89bf3536efbc366ade51272c44a5525b90b53aa0ed2a0911fca875c146438bff6cd5113b41e648580122a4a58214fe18c74cec32f11eb0174aa92187327f6a21c7ee275322cc00fb68323698dd9b8f3205c19b44f0,
+I0622 12:05:24.291341       1 client.go:934]      CredentialData.ParentName.Digest.Value 2383e4506c650fdcd0ef4765082d180836b5a1801c00834465ee1d3bda08262e
+I0622 12:05:24.291377       1 client.go:935]      CredentialTicket 602abcc0e1c3c45f92d1363cb251a3fdb1252ecd892e30e3a585cdde8149582c
+I0622 12:05:24.291455       1 client.go:936]      CredentialHash 393f7baaa0e3a7355039e12427973abbaac0a74e4c20b1fa495e61a729913609
+I0622 12:05:24.291543       1 client.go:938]      ContextSave (ek)
+I0622 12:05:24.301065       1 client.go:949]      ContextLoad (ek)
+I0622 12:05:24.309080       1 client.go:959]      LoadUsingAuth
+I0622 12:05:24.316055       1 client.go:987]      AK keyName 000b38bf125fe251606c0df4ff0777c86d65423ad453ca148863fbae501bd5737d39
+I0622 12:05:24.318492       1 client.go:1009]      akPubPEM: 
 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtGfXCU4+94rAFog+qpOt
-kLKZJWdKj2Q5N4nnpfhjnuKmj1tikpJnLukC2DWLH4VavgHvJ6JUnvZFIij7XFf5
-C+1DfjcK5Cu4Tadw8+u43lnLag3NfVEa66IPhthh0XUqjmWnKdb6qzeMN4l9wRgs
-zmWjb/VMsW041ubO/10AkMjI2UP39JrYNZGwcolAKZYtTpKc2+BXe//Q18VEH1Me
-qJ9b9woCcXrzsyzmWwcEJshqx7jFY4gKxaTCChrKk2A0iOpKkglNN5EXaLXylSsG
-HcnT+vf2kxcvtZZePw5Zyq6TNiqsUCDzQ62d3r6BHdjv8Uq1xVDhej/7Vfj9hci9
-PQIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwivAscaq+ze8FSuZ9B0n
+1UMkFev+EVQ4Z6SrPbsnM/14DOhPMizjFSlK7gavrK7tHfWwEwLGNMCFlwOdq954
+4hszBl4FOn6kOAimPegtxKkW5SA5C8P2pVkuCwAapisN70y8r+gSBW5CSfFJLbcV
+NrR1o+Z5OCO/NSj/q9mA67Ao5Bm5MN6QaVgYXFeMFOwyS9fMQ+qUCUTNQkL6SJcA
+gNFRfrw6L4mY9y3n6TCyuJnBz8Wyae+rq1O6RCGJ1AsrmakJYkBOx7QnEHGIkoso
+TqK6HoAIl3BtwLK4Ysd9upySjtg8/VS4ytJzGwTUfV7tz/8foEU3owA+fdD8p1R4
+IwIDAQAB
 -----END PUBLIC KEY-----
-I0620 12:27:23.012975       1 client.go:1011]      Write (akPub) ========
-I0620 12:27:23.013064       1 client.go:1016]      Write (akPriv) ========
-I0620 12:27:23.013302       1 client.go:1022]      <-- CreateKeys()
-I0620 12:27:24.606966       1 client.go:615]      MakeCredential RPC RequestID [dd910920-d1c2-11eb-9291-0242ac110002] InResponseTo ID [da48f901-02bc-4cb3-b0a5-e7408e36847b]
-I0620 12:27:24.607037       1 client.go:617] =============== ActivateCredential  ===============
-I0620 12:27:24.607046       1 client.go:1028]      --> activateCredential()
-I0620 12:27:24.607053       1 client.go:1033]      ContextLoad (ek)
-I0620 12:27:24.615847       1 client.go:1044]      Read (akPub)
-I0620 12:27:24.615926       1 client.go:1049]      Read (akPriv)
-I0620 12:27:24.615954       1 client.go:1055]      LoadUsingAuth
-I0620 12:27:24.624223       1 client.go:1082]      keyName 000bdec56a29ce186cd28492931439e081ddb9ab2adf90cbeda85a6465d1c87989a1
-I0620 12:27:24.624247       1 client.go:1084]      ActivateCredentialUsingAuth
-I0620 12:27:24.634370       1 client.go:1132]      <--  activateCredential()
-I0620 12:27:24.640719       1 client.go:767]      --> Start Quote
-I0620 12:27:24.642429       1 client.go:777]      PCR 0 Value 24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f 
-I0620 12:27:24.642452       1 client.go:782]      ContextLoad (ek) ========
-I0620 12:27:24.650509       1 client.go:792]      LoadUsingAuth ========
-I0620 12:27:24.653640       1 client.go:814]      Read (akPub) ========
-I0620 12:27:24.653716       1 client.go:819]      Read (akPriv) ========
-I0620 12:27:24.658504       1 client.go:831]      AK keyName 000bdec56a29ce186cd28492931439e081ddb9ab2adf90cbeda85a6465d1c87989a1
-I0620 12:27:24.663888       1 client.go:837]      Quote Hex ff54434780180022000bb7d99ec5929c67a20f115d4710cc720616e56f59aacf56179550f2b58017d5b5000a6463456b5842416b6a51000000000007bd2a000000090000000001201605110016280000000001000b0301000000202ba7022b59f2158786ea3ea29a7ad12ff0c6c9d6682da6555d8926075b643b1f
-I0620 12:27:24.663916       1 client.go:838]      Quote Sig 058238167cfb55561f45ae901d1adf71dae96bd347a2f2af0de1a06b70c57a4d830a314a5a0df92dcb13c52693c65b7dd7e85badd02d608a85ff4018486f6a613e15f63e73493df4852c6cad5aa04784fe1b79b35bf1ed96064fb28f946cb5c3de0a183b1cef1b8f8821282b460ce27b580ff95d50b30027fd69c7d62719e2985721742b4192d48ac294b21efee1836b04ece80f7cb08f9cffc77e9c86b16e0eb6cbe57a5be4c16865a2d9b0056454b5bbf05931466cd621def328e887e7fb6db29f6bc64247ce0ab0994c84dd579539290961a0450689f49bf99c661e89d34bcc573a1f688b72d025f00d40247da7240fc68834e1169e3ea07f478da21afe0f
-I0620 12:27:24.663927       1 client.go:839]      <-- End Quote
-I0620 12:27:25.018047       1 client.go:640] =============== responseID:"de6872a3-d1c2-11eb-9291-0242ac110002" inResponseTo:"da48f901-02bc-4cb3-b0a5-e7408e36847b" verified:true
-I0620 12:27:25.018438       1 client.go:641] =============== OfferQuote ===============
-I0620 12:27:25.465756       1 client.go:651]      Quote Requested with nonce a0b264bc-d261-437d-a932-3db68c701992, pcr: 0
-I0620 12:27:25.465801       1 client.go:653] =============== Generating Quote ===============
-I0620 12:27:25.465810       1 client.go:767]      --> Start Quote
-I0620 12:27:25.477733       1 client.go:777]      PCR 0 Value 24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f 
-I0620 12:27:25.477953       1 client.go:782]      ContextLoad (ek) ========
-I0620 12:27:25.486380       1 client.go:792]      LoadUsingAuth ========
-I0620 12:27:25.489407       1 client.go:814]      Read (akPub) ========
-I0620 12:27:25.489875       1 client.go:819]      Read (akPriv) ========
-I0620 12:27:25.494395       1 client.go:831]      AK keyName 000bdec56a29ce186cd28492931439e081ddb9ab2adf90cbeda85a6465d1c87989a1
-I0620 12:27:25.500321       1 client.go:837]      Quote Hex ff54434780180022000bb7d99ec5929c67a20f115d4710cc720616e56f59aacf56179550f2b58017d5b5002461306232363462632d643236312d343337642d613933322d336462363863373031393932000000000007c06e000000090000000001201605110016280000000001000b0301000000202ba7022b59f2158786ea3ea29a7ad12ff0c6c9d6682da6555d8926075b643b1f
-I0620 12:27:25.500677       1 client.go:838]      Quote Sig 36cf1d71a243d8be411dea9d8e873feeb81e1cf399e1f183d921f639529a7c976b165b73fde28f21fcceefac238f683e316d3190b380cc61eb0e274d3f2ab34263a3b2ec43255982164b72ae86df6a69f78a7a290381afd6436feb1af7311114c240af0b22df9a8a3ac53ecbf1145924e3f15a7284ffeb7064a471e68ad010d860ddc2a56e0b9eb24178878066744c32548c4cfa922c4acd76127b384b9f2504f59f4dde0e191f0cd0755d13c1c9cc22fdc8694ad0582a74a4097c65d58102122a7a7772762b7b0f2cc95b99bd6232bb1d8244313062cb0ec5903ad30e4408f438f9269ef703e7e657ec0f0ed0e2da565520a21a3cccb4cd7129c6d66db09368
-I0620 12:27:25.500973       1 client.go:839]      <-- End Quote
-I0620 12:27:25.504948       1 client.go:659] =============== Providing Quote ===============
-I0620 12:27:25.833922       1 client.go:670]      Provided Quote verified: true
-I0620 12:27:25.833964       1 client.go:673] =============== Providing SigningKey ===============
-I0620 12:27:25.833974       1 client.go:1144]      --> Start signingKey
-I0620 12:27:25.835730       1 client.go:1154]      PCR 0 Value 24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f 
-I0620 12:27:25.835830       1 client.go:1159]      ContextLoad (ek)
-I0620 12:27:25.844481       1 client.go:1172]      Read (akPub)
-I0620 12:27:25.844594       1 client.go:1177]      Read (akPriv)
-I0620 12:27:25.844646       1 client.go:1183]      LoadUsingAuth ========
-I0620 12:27:25.852000       1 client.go:1209]      AK keyName: 000bdec56a29ce186cd28492931439e081ddb9ab2adf90cbeda85a6465d1c87989a1
-I0620 12:27:25.853385       1 client.go:1213] ======= SignwithRestrictedKey ========
-I0620 12:27:25.858658       1 client.go:1262]      AK Issued Hash w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=
-I0620 12:27:25.864075       1 client.go:1271]      AK Signed Data gyc1hq9wSgIi3zIzqH463aZjeioXz22a/EcpXl6iM7we2jFaFKv+m5YiKMhLRV4GFJYeTvuJ/ZyX4OM+unbXff66sUriAt30UZ9z8XQD2HFlrbeOz4YBCIG582z5vV9i6v8wFLExQ9lwkeNpsSWwIdm8lcLMRMMjH58rbjEs2HzIRSL8ot3DWXJUEMcAmpqcZ+vmak6W5iSf6bQM5zfcqbNERfbvCnqfOYZr0VscjMlkgUu48i0QDxQvNJnuS7Gu21SAI0nuMuAmYGJ0J/JiJkPyb4Ib7a5CTfw0RPtdyFuhC9OkB7XklzlMnQNK4ihtcGS73qb9zuLzAMe5OoiloA==
-I0620 12:27:25.864471       1 client.go:1292]      AK Verified Signature
-I0620 12:27:25.864501       1 client.go:1295] ======= SignwithUnrestrictedKey ========
-I0620 12:27:26.013363       1 client.go:1321]      Unrestricted ukPub: 0001000b00040072000000100014000b0800000000000100b24019a18856d00cf470c889e63feac7620b1859b5d8d6e2b5cc45cc6cd1b1aa74a997aab5ec4a265ba944a1af680a74acfe4e8447599927eef3650ee0db9c8b294e45744a75a77cf4894650f1ecaeb69396b646f1ff63d9ffc2dfa5d1bfec54a60c00fb77a53e5edb4f294d77f2c8106cf8db1246438bf7352833957875499b4744e41a8da2994f0b1c1dce8d009081276c15982bf4ee3adfc6c468b3e1674900897c4b97c9514cd1f86347586425c8655364afd9040782c26573d4b47aab69738227657d9da5941adb39f9b87c54d636fb32eeb89c10b1d8296d5149e8855e22c45a5028454e898d2d097fa559484bd6ab86786f5260703b04c0ad3fe417fd,
-I0620 12:27:26.013396       1 client.go:1322]      Unrestricted ukPriv: 002053b1650829532c0d65ec941893a686fc1f90384a94d2b7405452719f245751a600107e6d254fd08aa959303624fbd8e7a96eaf950717ff58dc7ea382a981f504e32634581630e88d5952ee1883f2c2abe388134c984cda7bb6ef3e8934f783eb272547c809f3568278849a291b5a997614aef7d7c938c86259e3d4ac4d549b74318a859e4da6ab435b57090886dfc97b05c383655420217e20c1826ede731ec839c8d93f6cd0b3d613e1a2704cc0afd34205f688272e2446f4034eedebd0c30ae0070312cf199a25fa0d63e112a164e1d477b2234a18fd0d1aa278e5,
-I0620 12:27:26.013435       1 client.go:1324]      Write (ukPub) ========
-I0620 12:27:26.013547       1 client.go:1329]      Write (ukPriv) ========
-I0620 12:27:26.022781       1 client.go:1363]      ukeyName: 000b1277e50d200f9595832e4a88612fae87eca227109728b1b8fe5243e9aba874eb,
-I0620 12:27:26.028331       1 client.go:1373]      Certify Attestation: ff54434780170022000bb7d99ec5929c67a20f115d4710cc720616e56f59aacf56179550f2b58017d5b50000000000000007c27e00000009000000000120160511001628000022000b1277e50d200f9595832e4a88612fae87eca227109728b1b8fe5243e9aba874eb0022000bc76c82858a0227c8eac03837d1fcef1c89ba0d26e8de0dc5810ab140ab2bd2c4,
-I0620 12:27:26.028372       1 client.go:1374]      Certify Signature: aa61050f0ed9a2ffaa6bc0d087e6979c618df974fb0f68542c7481f84b0c1fda391708e8254070e612bbd70acd8b1e961c4980673f11b801e1027eb7ecd6f555e804cd6522d7540fdfae8d02fdbd232fe9cd697adc406958414f85aec1aed8863da759dfa0e722681b7c0256e5033416f05a78e81d96be855813dccf145663cf54d8859a349980583980139b852f775838dad20d704085728eb833a0fadbbd871ec8b663d4c104583c177ed0a008bf8c070efd29c9a0f3dc5c781cb04e45506421479dc60f574af26b80024f531e16ca62a7b138d806d05fc378d7799d580a5a5f8fbefee13f6675387e0b63597af34b6e52eb21354f0c9bcd520e3b34dc68e8,
-I0620 12:27:26.033068       1 client.go:1397]      ukPubPEM: 
+I0622 12:05:24.318528       1 client.go:1011]      Write (akPub) ========
+I0622 12:05:24.318589       1 client.go:1016]      Write (akPriv) ========
+I0622 12:05:24.318614       1 client.go:1022]      <-- CreateKeys()
+null
+I0622 12:05:26.002111       1 client.go:615]      MakeCredential RPC RequestID [206fac7b-d352-11eb-a211-0242ac110002] InResponseTo ID [40adda5d-3879-4e2b-8c47-5c459d629e75]
+I0622 12:05:26.002173       1 client.go:617] =============== ActivateCredential  ===============
+I0622 12:05:26.002189       1 client.go:1028]      --> activateCredential()
+I0622 12:05:26.002194       1 client.go:1033]      ContextLoad (ek)
+I0622 12:05:26.010509       1 client.go:1044]      Read (akPub)
+I0622 12:05:26.010592       1 client.go:1049]      Read (akPriv)
+I0622 12:05:26.010625       1 client.go:1055]      LoadUsingAuth
+I0622 12:05:26.017828       1 client.go:1082]      keyName 000b38bf125fe251606c0df4ff0777c86d65423ad453ca148863fbae501bd5737d39
+I0622 12:05:26.017857       1 client.go:1084]      ActivateCredentialUsingAuth
+I0622 12:05:26.029292       1 client.go:1132]      <--  activateCredential()
+I0622 12:05:26.036141       1 client.go:767]      --> Start Quote
+I0622 12:05:26.038010       1 client.go:777]      PCR 0 Value 24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f 
+I0622 12:05:26.038097       1 client.go:782]      ContextLoad (ek) ========
+I0622 12:05:26.045971       1 client.go:792]      LoadUsingAuth ========
+I0622 12:05:26.049087       1 client.go:814]      Read (akPub) ========
+I0622 12:05:26.049322       1 client.go:819]      Read (akPriv) ========
+I0622 12:05:26.053799       1 client.go:831]      AK keyName 000b38bf125fe251606c0df4ff0777c86d65423ad453ca148863fbae501bd5737d39
+I0622 12:05:26.059602       1 client.go:837]      Quote Hex ff54434780180022000b1c9b1cbed577b835ba5bfb26dd4f1dbc510082aec7d45c20960f675ef12a6d9e000a54654d6150455a516c65000000000006ae89000000090000000001201605110016280000000001000b0301000000202ba7022b59f2158786ea3ea29a7ad12ff0c6c9d6682da6555d8926075b643b1f
+I0622 12:05:26.059639       1 client.go:838]      Quote Sig 4c875eae1267ca4e82f6ae462120250812cc556355868f6e745f4377672ca1850e50a4d4b3dd154eb742175ac7331845514c8c41e4bc4cd84c43c7c70a8f5601d9352ef3e54a9233de4fc3e57304ed9c847f1dd55db1155768fe51840059b4f574b160a41cd45d18b663d94a62db0ed38ab631bd0d043d39183ec9e8d3dd17c67df76f4cef2fca8ea6c311a0f17a142523fde0b6b88780ec6b587e38e4caf4b24e839622695781f632af97f0b733aacd44d8e9729d4ed12cff729b03dd7b37571d82b7112bfbfb55ee8490d33769e96268ee224ca62dc43b81069ac2ff91d3d8b295577835d4cc3618644e50d14573bfac0c214f06443b564dccc60ff7077161
+I0622 12:05:26.059652       1 client.go:839]      <-- End Quote
+null
+I0622 12:05:26.524586       1 client.go:640] =============== responseID:"2157ebb0-d352-11eb-a211-0242ac110002"  inResponseTo:"40adda5d-3879-4e2b-8c47-5c459d629e75"  verified:true
+I0622 12:05:26.524651       1 client.go:641] =============== OfferQuote ===============
+null
+I0622 12:05:26.939051       1 client.go:651]      Quote Requested with nonce 3fd1cc63-4859-414a-b679-8d8c2556aae7, pcr: 0
+I0622 12:05:26.939097       1 client.go:653] =============== Generating Quote ===============
+I0622 12:05:26.939108       1 client.go:767]      --> Start Quote
+I0622 12:05:26.951643       1 client.go:777]      PCR 0 Value 24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f 
+I0622 12:05:26.951668       1 client.go:782]      ContextLoad (ek) ========
+I0622 12:05:26.959791       1 client.go:792]      LoadUsingAuth ========
+I0622 12:05:26.962997       1 client.go:814]      Read (akPub) ========
+I0622 12:05:26.963051       1 client.go:819]      Read (akPriv) ========
+I0622 12:05:26.967204       1 client.go:831]      AK keyName 000b38bf125fe251606c0df4ff0777c86d65423ad453ca148863fbae501bd5737d39
+I0622 12:05:26.973064       1 client.go:837]      Quote Hex ff54434780180022000b1c9b1cbed577b835ba5bfb26dd4f1dbc510082aec7d45c20960f675ef12a6d9e002433666431636336332d343835392d343134612d623637392d386438633235353661616537000000000006b21a000000090000000001201605110016280000000001000b0301000000202ba7022b59f2158786ea3ea29a7ad12ff0c6c9d6682da6555d8926075b643b1f
+I0622 12:05:26.973089       1 client.go:838]      Quote Sig 7b420d15c16042d92e0133becd59f3aa63f8b921acb9dd50492eeb315d3c56f2a2e3a62c2dc060ec10db8148ea6bd04de3a508b97cd34d5378d51070e86d641746a59bdca6a2d2672b20acde21177d3406f5fa0d7c7a99c1064f28c8ea37bfd361d1f44b1f1fc27247e9e1d8719bfcf5b504f34510d185446784fdadf4aebbadd72eb16e5264ac8d9366cc4210ebe1674dd4c390302feafac2a384cb19bb34e40a95b1fba75859a6cc49a1bec1afb6cc6b4e1f65e7b273f9655faf01d0dbd3166a23e8e6260bdbb550a786953d4de740bc93f954a99f1869b2e587794e460937b22ac08a617e54508d997d5e7ce1f5d4149207cbba4c9e4a3e8f9ae43f209d69
+I0622 12:05:26.973098       1 client.go:839]      <-- End Quote
+I0622 12:05:26.976015       1 client.go:659] =============== Providing Quote ===============
+null
+I0622 12:05:27.427877       1 client.go:670]      Provided Quote verified: true
+I0622 12:05:27.427923       1 client.go:673] =============== Providing SigningKey ===============
+I0622 12:05:27.427936       1 client.go:1144]      --> Start signingKey
+I0622 12:05:27.429471       1 client.go:1154]      PCR 0 Value 24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f 
+I0622 12:05:27.429541       1 client.go:1159]      ContextLoad (ek)
+I0622 12:05:27.438027       1 client.go:1172]      Read (akPub)
+I0622 12:05:27.438218       1 client.go:1177]      Read (akPriv)
+I0622 12:05:27.438307       1 client.go:1183]      LoadUsingAuth ========
+I0622 12:05:27.445467       1 client.go:1209]      AK keyName: 000b38bf125fe251606c0df4ff0777c86d65423ad453ca148863fbae501bd5737d39
+I0622 12:05:27.446415       1 client.go:1213] ======= SignwithRestrictedKey ========
+I0622 12:05:27.450916       1 client.go:1262]      AK Issued Hash w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=
+I0622 12:05:27.455922       1 client.go:1271]      AK Signed Data vwC4zl8cY3wR9J8j97a08COgB1hXHo+bnJBoP82gPWqvZyt0kdTb1BHIV9xq5I7WqqlK+Ko587ewc9rjk9PKKKWpw3sNtudOHCEsAcEZoJ4D1NapBN/VZsKXh37DroEZ8mwjrxVD8h/FVeeKwBLxCu6DxBSUDaQuIyVZlzCgERlPj6IetemOxGUDKySd+O3v6q9blxeg/szyMVs/ZmmbBG2L7B9f0/b4FirV/JKjdq35CrDrJPWvAztMwkaE9FlmhgnLukvDOme5KNRN7odmwxsbEQtQKR+Ij7SZ0mXLOJ0P3dqCDBDgcLn61kSKEv7XFOTUeZlNmPMEfcCWU43ITQ==
+I0622 12:05:27.456083       1 client.go:1292]      AK Verified Signature
+I0622 12:05:27.456113       1 client.go:1295] ======= SignwithUnrestrictedKey ========
+I0622 12:05:27.517994       1 client.go:1321]      Unrestricted ukPub: 0001000b00040072000000100014000b0800000000000100e321638d2c58d2aef1536f0a8e97776c2ecb01ac976e3d48926c18280732140f2e3b70f982138d797c548b92f32ae3cd3d973f5804eb1be6fd13ae845e0224f8d2df392fe5a36c1012a433f1149008d31196319050c674805e8eabe8c29d046fe3dd91a741bb5a1f2f3aa391180ab21fdd8117c4376793cbc59a47d62a6200de8e85e79ddae92bde3d4eaa8796e08a37450f44e261fdeed61f1579e9a7bdd0e06df39e16170ede83ccd68eb5e66a62328584d0adf79b772d0ad7fdd3e90bc62c6597347eae99ab57bfb7bad5c17b3e25c417f7e3e08ade95e25eb51fe164dafd3ed6154b361adfd2c6deaafdbb6f253b00720103ddd6c675b9cd36cc65ec079f,
+I0622 12:05:27.518033       1 client.go:1322]      Unrestricted ukPriv: 0020523965108b6b866a5c6fcaf56b6870c10c2e77b2359babd12f61ca093225967a001086305608e37845c80638e6928eea4acb85f6f787d8669a3ece542f245237831a1a91005175c221277c1c8cf8a55f1574e56989e3074fb5b7082635358032db46ff91f895df32b07e800d40548cb7a08771a8282e5122b193eb3e8d9c4e16e785857e9cf88551a56ed954e74be3754b7b15577f03673fedb6444224d7acf6320b951d53294b8929446c9c60150764808f612f3a63f632d13b0333c1228d312f14c3748b0a429dcc485ecff4697a0b556854237e9a3109453c619d,
+I0622 12:05:27.518047       1 client.go:1324]      Write (ukPub) ========
+I0622 12:05:27.518118       1 client.go:1329]      Write (ukPriv) ========
+I0622 12:05:27.527622       1 client.go:1363]      ukeyName: 000b847f86e868aa98e22ccf5607c8fe95e4d879a3c9681b4934294864b81c28c8d5,
+I0622 12:05:27.532947       1 client.go:1373]      Certify Attestation: ff54434780170022000b1c9b1cbed577b835ba5bfb26dd4f1dbc510082aec7d45c20960f675ef12a6d9e0000000000000006b44a00000009000000000120160511001628000022000b847f86e868aa98e22ccf5607c8fe95e4d879a3c9681b4934294864b81c28c8d50022000b4f34c3765f57fbb26eb958f67684b5413f7c39979fceca105e50c8145fa2f06f,
+I0622 12:05:27.533017       1 client.go:1374]      Certify Signature: 31e27c0ed263c47a69c1a3b3f608f8bc514ecee3a483513cb77e3200e20e0449902896e7ff6630745d0e203064228a98f6b9bd790a2a771a0258c980e5211c3ec8c27b6e5c6c2044702d1de5b79e58141afb85b9af1adc69108b7946e96f89115bc57bfc036e6fb59cb6b8cb0a991fd578f58a75af826e5b097d8d1edaecb1c00e0e192d93de274d878ebb17f7766c68b0c591578a76bce9835718c53dddd42dadc3119fe7c9549f28cfe3683b7cf01e2ccc5b97c7c0e3bbddcbbd1b696c3546d96eb85e79c18019ce441cf29ae0c7cf9e496e9fb899cf808e728e6efd1a7caeb37abebdfe5453c4189b457c0e68f7fbd4f91c5e0ac5967f667c5bf5858dd345,
+I0622 12:05:27.537106       1 client.go:1397]      ukPubPEM: 
 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAskAZoYhW0Az0cMiJ5j/q
-x2ILGFm12NbitcxFzGzRsap0qZeqtexKJlupRKGvaAp0rP5OhEdZmSfu82UO4Nuc
-iylORXRKdad89IlGUPHsrraTlrZG8f9j2f/C36XRv+xUpgwA+3elPl7bTylNd/LI
-EGz42xJGQ4v3NSgzlXh1SZtHROQajaKZTwscHc6NAJCBJ2wVmCv07jrfxsRos+Fn
-SQCJfEuXyVFM0fhjR1hkJchlU2Sv2QQHgsJlc9S0eqtpc4InZX2dpZQa2zn5uHxU
-1jb7Mu64nBCx2CltUUnohV4ixFpQKEVOiY0tCX+lWUhL1quGeG9SYHA7BMCtP+QX
-/QIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4yFjjSxY0q7xU28Kjpd3
+bC7LAayXbj1IkmwYKAcyFA8uO3D5ghONeXxUi5LzKuPNPZc/WATrG+b9E66EXgIk
++NLfOS/lo2wQEqQz8RSQCNMRljGQUMZ0gF6Oq+jCnQRv492Rp0G7Wh8vOqORGAqy
+H92BF8Q3Z5PLxZpH1ipiAN6Oheed2ukr3j1OqoeW4Io3RQ9E4mH97tYfFXnpp73Q
+4G3znhYXDt6DzNaOteZqYjKFhNCt95t3LQrX/dPpC8YsZZc0fq6Zq1e/t7rVwXs+
+JcQX9+Pgit6V4l61H+Fk2v0+1hVLNhrf0sbeqv27byU7AHIBA93WxnW5zTbMZewH
+nwIDAQAB
 -----END PUBLIC KEY-----
-I0620 12:27:26.034751       1 client.go:1406]      TPM based Hash for Unrestricted Key w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=
-I0620 12:27:26.040521       1 client.go:1415] Control Signature data with unrestriced Key:  BkF39ZnUe/+rJsvzrWmZUMPawWVL1v5reQTYzGMaYY8iWk2XmhlCv0DucRNi5qGkuC6SZdB4ejmGKTRhki6Eg9q2y7trDxd5k+xBNiQ/bxSwT4d7ZR9XyzFiZg/O7cnZkWMEJsrk5Fosfr50AkDugsHnkNzveL4fTX1GzSPXVCGUJpevMs1Q67ahpfC8PBDW582NEhGSuxfVtVwQr1gvxoV9IAlKYOWlX6DT1/6WffX+2Ui5oNfVl9feZ/PsvvSLq4KCsOOq6KZsJMXUyOAtU/J2V98iVjxIhCfyxm/9qi048SHFQsoardrOBWIrABYDItoR1pbVFT3rSEMtv6uJcw
-I0620 12:27:26.040950       1 client.go:1423]      Unrestricted Key Signature Verified
-I0620 12:27:26.049245       1 client.go:679]      Returning SigningKey
-I0620 12:27:26.401850       1 client.go:692]      SigningKey Response true
-I0620 12:27:32.001518       1 client.go:707]      >>>>>>>>>>>>>>> System Provisioned <<<<<<<<<<<<<<
-I0620 12:27:32.001588       1 client.go:715]      Worker 1 starting
+I0622 12:05:27.539894       1 client.go:1406]      TPM based Hash for Unrestricted Key w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=
+I0622 12:05:27.545115       1 client.go:1415] Control Signature data with unrestriced Key:  QVQ89LRn1PScphvFPapaIuOLOkeSjvx66Poskk8I/6g3tZBGsUPbUrWHEtezpsbc+BTFvirtUtLYPKG94xKueFJyGyPaBb4tSj6rUasjD5C+S2vJ1meiSanjBsBXIyfkVaQg6Y640Z0kxQ4F/Gn3CBn3lPPhjUZaW+Y8JYv900ENP0tq9370jVr9d09jM3m6AlAZmS3jm3kVbHZxPT/LSUM9eD6bFmrIkhXDtZRGvTGUMZ9u/RYzPSaYdWDtt+KIlmd7fysfUSk2bmJFnFN7ucXSYNZCn91sthuT5Op7E1ZofFEske5is7KBvbuTObt55Q3g5w7zDu8SumJpY2yM6A
+I0622 12:05:27.545442       1 client.go:1423]      Unrestricted Key Signature Verified
+I0622 12:05:27.552396       1 client.go:679]      Returning SigningKey
+null
+I0622 12:05:28.087495       1 client.go:692]      SigningKey Response true
+I0622 12:05:33.226834       1 client.go:707]      >>>>>>>>>>>>>>> System Provisioned <<<<<<<<<<<<<<
+I0622 12:05:33.226916       1 client.go:715]      Worker 1 starting
 
 ```

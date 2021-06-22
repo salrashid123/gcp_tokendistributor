@@ -26,12 +26,17 @@ import (
 	"cloud.google.com/go/firestore"
 
 	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/proto"
 	tpmpb "github.com/google/go-tpm-tools/proto"
 	"github.com/google/go-tpm-tools/server"
-	"google.golang.org/api/compute/v1"
-
-	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
+	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
+	"google.golang.org/genproto/googleapis/cloud/audit"
+
+	"cloud.google.com/go/logging"
+	"cloud.google.com/go/logging/logadmin"
 )
 
 type ServiceEntry struct {
@@ -214,6 +219,55 @@ func main() {
 		log.Println("VM InstanceID from EKCert Signing: ", e.GCEInstanceID())
 	}
 
+	// Now Read logging
+
+	log.Println("===========  Instance AuditLog Start =========== ")
+	loggingClient, err := logadmin.NewClient(ctx, *clientProjectId, option.WithScopes("https://www.googleapis.com/auth/logging.read"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var entries []*logging.Entry
+	filter := fmt.Sprintf("resource.type=gce_instance AND logName=projects/%s/logs/cloudaudit.googleapis.com%%2Factivity AND protoPayload.\"@type\"=\"type.googleapis.com/google.cloud.audit.AuditLog\" AND resource.labels.instance_id=%s", *clientProjectId, *clientVMId)
+	iter := loggingClient.Entries(ctx,
+		logadmin.Filter(filter),
+		logadmin.NewestFirst(),
+	)
+
+	for len(entries) < 20 {
+		entry, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Error getting input %v\n", err)
+		}
+		entries = append(entries, entry)
+	}
+
+	// https://pkg.go.dev/google.golang.org/genproto/googleapis/cloud/audit#AuditLog
+	for _, entry := range entries {
+		log.Println("LogEntry:")
+		log.Printf("    Severity %s\n", entry.Severity)
+		log.Printf("    TimeStamp @%s\n", entry.Timestamp.Format(time.RFC3339))
+
+		b, ok := entry.Payload.(*audit.AuditLog)
+		if !ok {
+			log.Fatalf("Error unmarshalling AuditLog %v\n", err)
+		}
+
+		log.Printf("    Service Name  [%s]\n", b.ServiceName)
+		log.Printf("    Method Name [%s]\n", b.MethodName)
+		log.Printf("    AuthenticationInfo [%s]\n", b.AuthenticationInfo)
+		log.Printf("    Request %s\n", b.Request)
+		log.Println("    ============\n")
+		if b.MethodName == "v1.compute.instances.setMetadata" {
+			log.Fatalf(">>>> SetMetadata called on instance, exiting\n")
+		}
+
+	}
+
+	log.Println("===========  Instance AuditLog End =========== ")
 	var s string
 
 	if *autoAccept {

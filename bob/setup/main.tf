@@ -36,3 +36,17 @@ resource "google_project_iam_member" "logwriter" {
   role    = "roles/logging.logWriter"
   member  = "serviceAccount:${google_service_account.tokenclient.email}"
 }
+
+resource "google_project_iam_audit_config" "project" {
+  project = google_project.project.project_id
+  service = "compute.googleapis.com"
+  audit_log_config {
+    log_type = "ADMIN_READ"
+  }
+  audit_log_config {
+    log_type = "DATA_READ"
+  }
+  audit_log_config {
+    log_type = "DATA_WRITE"
+  }
+}
