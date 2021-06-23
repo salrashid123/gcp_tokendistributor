@@ -5,7 +5,7 @@ go 1.14
 require (
 	cloud.google.com/go v0.81.0
 	cloud.google.com/go/firestore v1.3.0
-	cloud.google.com/go/logging v1.4.2 // indirect
+	cloud.google.com/go/logging v1.1.2 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.5.2
@@ -21,13 +21,13 @@ require (
 	google.golang.org/api v0.46.0
 	google.golang.org/genproto v0.0.0-20210517163617-5e0236093d7a
 	google.golang.org/grpc v1.37.1
-	certparser v0.0.0	
-	oid v0.0.0
-	tokenservice v0.0.0
+	// certparser v0.0.0	
+	// oid v0.0.0
+	// tokenservice v0.0.0
 )
 
 replace (
-	certparser => ./src/util/certparser
-	oid => ./src/util/certparser/oid
-	tokenservice => ./src/tokenservice
+	// certparser => ./src/util/certparser
+	// oid => ./src/util/certparser/oid
+	// tokenservice => ./src/tokenservice
 )

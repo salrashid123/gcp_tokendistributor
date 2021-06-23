@@ -394,6 +394,14 @@ go_repository(
     version = "v0.0.0-20201126162022-7de9c90e9dd1",
 )
 
+go_repository(
+    name = "com_google_cloud_go_logging",
+    build_file_proto_mode = "disable_global",
+    importpath = "cloud.google.com/go/logging",
+    sum = "h1:KNALX0NZn8UJhqKnqoHxhMqyoZfBZoh5wF7CQJZ5XrU=",
+    version = "v1.1.2",
+)
+
 gazelle_dependencies()
 
 # protobuf
@@ -1243,8 +1251,8 @@ go_repository(
     name = "org_golang_x_oauth2",
     build_file_proto_mode = "disable_global",
     importpath = "golang.org/x/oauth2",
-    sum = "h1:pkQiBZBvdos9qq4wBAHqlzuZHEXo07pqV06ef90u1WI=",
-    version = "v0.0.0-20210514164344-f6687ab2804c",
+    sum = "h1:SgVl/sCtkicsS7psKkje4H9YtjdEl3xsYh7N+5TDHqY=",
+    version = "v0.0.0-20210427180440-81ed05c6b58c",
 )
 
 go_repository(
@@ -1293,12 +1301,4 @@ go_repository(
     importpath = "golang.org/x/xerrors",
     sum = "h1:go1bK/D/BFZV2I8cIQd1NKEZ+0owSTG1fDTci4IqFcE=",
     version = "v0.0.0-20200804184101-5ec99f83aff1",
-)
-
-go_repository(
-    name = "com_google_cloud_go_logging",
-    build_file_proto_mode = "disable",
-    importpath = "cloud.google.com/go/logging",
-    sum = "h1:Mu2Q75VBDQlW1HlBMjTX4X84UFR73G1TiLlRYc/b7tA=",
-    version = "v1.4.2",
 )
