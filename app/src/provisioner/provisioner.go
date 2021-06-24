@@ -231,13 +231,13 @@ func main() {
 	fiveminsAgo := time.Now().Add(time.Minute * time.Duration(-30))
 	t := fiveminsAgo.Format(time.RFC3339) // Logging API wants timestamps in RFC 3339 format.
 
-	filter := fmt.Sprintf("resource.type=gce_instance AND logName=projects/%s/logs/cloudaudit.googleapis.com%%2Factivity AND protoPayload.\"@type\"=\"type.googleapis.com/google.cloud.audit.AuditLog\" AND resource.labels.instance_id=%s AND %s", *clientProjectId, *clientVMId, fmt.Sprintf(`timestamp > "%s"`, t))
+	filter := fmt.Sprintf("resource.type=gce_instance AND (logName=projects/%s/logs/cloudaudit.googleapis.com%%2Factivity OR logName=projects/%s/logs/cloudaudit.googleapis.com%%2Fdata_access) AND protoPayload.\"@type\"=\"type.googleapis.com/google.cloud.audit.AuditLog\" AND resource.labels.instance_id=%s AND %s", *clientProjectId, *clientProjectId, *clientVMId, fmt.Sprintf(`timestamp > "%s"`, t))
 	iter := loggingClient.Entries(ctx,
 		logadmin.Filter(filter),
 		logadmin.NewestFirst(),
 	)
 
-	for len(entries) < 20 {
+	for len(entries) < 200 {
 		entry, err := iter.Next()
 		if err == iterator.Done {
 			break
@@ -253,7 +253,7 @@ func main() {
 		log.Println("LogEntry:")
 		log.Printf("    Severity %s\n", entry.Severity)
 		log.Printf("    TimeStamp @%s\n", entry.Timestamp.Format(time.RFC3339))
-
+		log.Printf("    LogName [%s]\n", entry.LogName)
 		b, ok := entry.Payload.(*audit.AuditLog)
 		if !ok {
 			log.Fatalf("Error unmarshalling AuditLog %v\n", err)
@@ -262,8 +262,9 @@ func main() {
 		log.Printf("    Service Name  [%s]\n", b.ServiceName)
 		log.Printf("    Method Name [%s]\n", b.MethodName)
 		log.Printf("    AuthenticationInfo [%s]\n", b.AuthenticationInfo)
+		log.Printf("    CallerIP [%s]\n", b.RequestMetadata.CallerIp)
 		log.Printf("    Request %s\n", b.Request)
-		log.Println("    ============\n")
+		log.Println("    ============")
 		if b.MethodName == "v1.compute.instances.setMetadata" {
 			log.Fatalf(">>>> SetMetadata called on instance, exiting\n")
 		}
