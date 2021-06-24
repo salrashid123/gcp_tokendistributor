@@ -620,7 +620,7 @@ func main() {
 						glog.Errorf("ERROR:  could not activateCredential: %v", err)
 						return
 					}
-					attestation, signature, err := quote(int(*r.Pcr), secret)
+					attestation, signature, err := quote(int(r.Pcr), secret)
 					if err != nil {
 						glog.Errorf("ERROR:  Unable to generate quote: %v", err)
 						return

@@ -37,7 +37,7 @@ message TokenResponse {
   string responseID = 1;
   string inResponseTo = 2;
   repeated Secret secrets = 3;
-  optional int64 pcr = 4;
+  int64 pcr = 4;
 }
 
 

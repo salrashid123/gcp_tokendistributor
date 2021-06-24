@@ -228,7 +228,10 @@ func main() {
 	}
 
 	var entries []*logging.Entry
-	filter := fmt.Sprintf("resource.type=gce_instance AND logName=projects/%s/logs/cloudaudit.googleapis.com%%2Factivity AND protoPayload.\"@type\"=\"type.googleapis.com/google.cloud.audit.AuditLog\" AND resource.labels.instance_id=%s", *clientProjectId, *clientVMId)
+	fiveminsAgo := time.Now().Add(time.Minute * time.Duration(-30))
+	t := fiveminsAgo.Format(time.RFC3339) // Logging API wants timestamps in RFC 3339 format.
+
+	filter := fmt.Sprintf("resource.type=gce_instance AND logName=projects/%s/logs/cloudaudit.googleapis.com%%2Factivity AND protoPayload.\"@type\"=\"type.googleapis.com/google.cloud.audit.AuditLog\" AND resource.labels.instance_id=%s AND %s", *clientProjectId, *clientVMId, fmt.Sprintf(`timestamp > "%s"`, t))
 	iter := loggingClient.Entries(ctx,
 		logadmin.Filter(filter),
 		logadmin.NewestFirst(),

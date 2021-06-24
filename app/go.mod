@@ -21,13 +21,13 @@ require (
 	google.golang.org/api v0.46.0
 	google.golang.org/genproto v0.0.0-20210517163617-5e0236093d7a
 	google.golang.org/grpc v1.37.1
-	// certparser v0.0.0	
-	// oid v0.0.0
-	// tokenservice v0.0.0
+	certparser v0.0.0	
+	oid v0.0.0
+	tokenservice v0.0.0
 )
 
 replace (
-	// certparser => ./src/util/certparser
-	// oid => ./src/util/certparser/oid
-	// tokenservice => ./src/tokenservice
+	certparser => ./src/util/certparser
+	oid => ./src/util/certparser/oid
+	tokenservice => ./src/tokenservice
 )

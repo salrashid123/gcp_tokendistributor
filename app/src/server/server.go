@@ -421,7 +421,7 @@ func (s *server) GetToken(ctx context.Context, in *tokenservice.TokenRequest) (*
 		ResponseID:   respID.String(),
 		InResponseTo: in.RequestId,
 		Secrets:      c.Secrets,
-		Pcr:          &c.PCR,
+		Pcr:          c.PCR,
 	}, nil
 }
 

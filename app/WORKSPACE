@@ -416,16 +416,6 @@ load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 protobuf_deps()
 
-# Imports
-
-# go_repository(
-#     name = "tokenservice",
-#     build_file_proto_mode = "disable_global",
-#     importpath = "google.golang.org/grpc",
-#     sum = "h1:T7P4R73V3SSDPhH7WW7ATbfViLtmamH0DKrP3f9AuDI=",
-#     version = "v1.31.0",
-# )
-
 # Docker
 
 git_repository(

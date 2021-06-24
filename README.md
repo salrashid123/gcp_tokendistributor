@@ -742,10 +742,40 @@ If mTLS is uses, the issue of key distribution and security of the TLS keys beco
 
 To enable any of the mTLS variation or to use ALTS, see the config samples in the appendix
 
+
+### Building Locally
+
+To Test if your app builds, you need several things:
+
+A) To build the binary locally,
+
+```bash
+$ go version
+   go version go1.15.2 linux/amd64
+
+$ protoc --version
+   libprotoc 3.13.0
+
+$ go get -u github.com/golang/protobuf/protoc-gen-go   
+   go: found github.com/golang/protobuf/protoc-gen-go in github.com/golang/protobuf v1.5.2
+   go: google.golang.org/protobuf upgrade => v1.26.0
+
+$ /usr/local/bin/protoc -I ./ --include_imports \
+   --experimental_allow_proto3_optional --include_source_info \
+   --descriptor_set_out=src/tokenservice/tokenservice.proto.pb \
+   --go_out=plugins=grpc:. src/tokenservice/tokenservice.proto
+
+
+$ go build src/server/server.go
+$ go build src/client/client.go
+$ go build src/provisioner/provisioner.go
+```
+
 #### Deterministic Builds using Bazel
 
 You can build the TokenClient and Server images using Bazel 
 
+Note, as of `6/23/20`, i coudn't get bazel to generate the `.proto.pb`, `.pb.go` files within bazel (eg, option `B` below..which means you have to generate run protoc manually first.).   Run the `Building Locally` step first
 
 ```bash
 cd app/
@@ -772,16 +802,19 @@ These images will have a consistent image hash no matter where they are built.
 Also note that the generated `tokenservice.pb.go` files were pregenerated.  This is to avoid conflicts due to GCP secretsmanager library which automatically
 uses pregenerated library set.  See [Use pre-generated .pb.go files](https://github.com/bazelbuild/rules_go/blob/master/proto/core.rst#option-2-use-pre-generated-pbgo-files).
 
-To recompile, comment out the `replace` steps in `app/go.mod`:
+
+To build using bazel,  Comment out the relevant require and replace steps in `app/go.mod`:
 
 ```golang
 require (
+	// certparser v0.0.0	
 	// oid v0.0.0
 	// tokenservice v0.0.0
 )
 
 replace (
-	// oid => ./src/provisioner/oid
+	// certparser => ./src/util/certparser
+	// oid => ./src/util/certparser/oid
 	// tokenservice => ./src/tokenservice
 )
 ```
@@ -789,8 +822,73 @@ replace (
 then import, compile, build with bazel
 
 ```bash
-bazel run :gazelle -- update-repos -from_file=go.mod -build_file_proto_mode=disable_global
-/usr/local/bin/protoc -I ./src/tokenservice --include_imports --include_source_info --descriptor_set_out=src/tokenservice/tokenservice.proto.pb  --go_out=plugins=grpc:./src/tokenservice/ src/tokenservice/tokenservice.proto
+bazel run :gazelle -- update-repos -from_file=go.mod 
+```
+
+
+A) if you want to reuse compiled the protos from the `Building binary Locally` step, 
+
+then in `src/tokenservice/BUILD.bazel` use
+
+```json
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "tokenservice.pb.go",
+    ],
+    importpath = "tokenservice",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",                
+        "@org_golang_x_net//context:go_default_library",         
+    ],
+)
+```
+
+B) if you want bazel to build everything, edit
+
+`src/tokenservice/BUILD.bazel` set
+
+```json
+proto_library(
+    name = "tokenservice_proto",
+    srcs = ["tokenservice.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "tokenservice_go_proto",
+    compiler = "@io_bazel_rules_go//proto:go_grpc",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+    importpath = "tokenservice",
+    proto = ":tokenservice_proto",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "go_default_library",
+    embed = [":tokenservice_go_proto"],
+    importpath = "tokenservice",
+    visibility = ["//visibility:public"],
+)
+```
+
+NOTE, this mode does notwork yet: the error is related to bazel which i don't know enough of
+
+```
+package conflict error: github.com/golang/protobuf/ptypes/any: multiple copies of package passed to linker:
+Target //src/server:tokenserver failed to build
+```
+
+C) Finally, compile everything
+
+```bash
+bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //...
 ```
 
 ##### (enhancement) Generating GCP Service account
