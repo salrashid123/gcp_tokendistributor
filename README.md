@@ -822,7 +822,7 @@ replace (
 then import, compile, build with bazel
 
 ```bash
-bazel run :gazelle -- update-repos -from_file=go.mod 
+bazel run :gazelle -- update-repos -from_file=go.mod -build_file_proto_mode=disable_global
 ```
 
 
