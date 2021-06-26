@@ -1013,7 +1013,7 @@ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id
 ```
 
 >> **Some notes about using the TPM to seal data**
-  * Decryption of TPM based data by the TokenClient is visible by the GCP Hypervisor.  If the threat model why you are using this configuration strictly stipulates that hypervisor cannot read or corrupt VM memory then that would likely mean you also cannot a vTPM.  
+  * Decryption of TPM based data by the TokenClient is visible by the GCP Hypervisor.  If the threat model why you are using this configuration strictly stipulates that hypervisor cannot read or corrupt VM memory then that would likely mean you also cannot a vTPM to _directly_ encode a secret.  However, there are workarounds to securely transfers a secret using the vTPM AND Confidential compute instance.  For more details, see the section below "Indirect secret sealing using vTPM for Confidential Compute" 
   * Note that GCP Confidential Compute instances uses SEV and not SNP.  Please see [AMD SEV-SNP:  Strengthening VM Isolation with Integrity Protection](https://www.amd.com/system/files/TechDocs/SEV-SNP-strengthening-vm-isolation-with-integrity-protection-and-more.pdf)
 
 
@@ -1240,6 +1240,23 @@ so if you do not want to enforce SEV, in `provisioner.go`, use the default argum
 	attestationPCRValue = flag.String("attestationPCRValue", "24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f", "expectedPCRValue")
 ```
 
+### Indirect secret sealing using vTPM for Confidential Compute
+
+If Bob's VM is a Confidential Compute Instance, then Alice can be assured that sensitive data in-use (memory) cannot be accessed through a compromized hypervisor.  However, vTPM operations still traverse the hypervisor which means is that if Alice seals some sensitive data using Bob's vTPM Endorsement Key, then the act of decrypting the sensitive data on Bob's VM will potentially be visible to a compromized hypervisor.   Essentially, this means you should not _directly_ encrypt sensitive data with vTPMs.
+
+However, there is a workaround using transferring wrapped keys:
+
+1.  Alice wants to transmit secret (`s1`) to Bob's VM (`vm1`)
+2.  Alice generates a one-time AES encryption key (`k1`)
+3.  Alice encrypts `s1` with `k1`:   [`encrypt(k1,s1) => s1_ciphertext`]
+4.  Alice gets the endorsement public key for `vm1` (`EK1`)
+5.  Alice encrypts `k1` with `EK1`:   [`encrypt(EK1,k1) => k1_ciphertext`]
+6.  Alice transmits _both_  `k1_ciphertext` and `s1_ciphertext` to Bob's VM
+7.  Bob's VM keeps `s1_ciphertext` in memory and uses vTPM to decrypt `k1_ciphertext`:    [`decrypt(vTPM, k1_ciphertext) => k1`]
+8.  Bob uses `k1` to decrypt `s1_ciphertext`:   [`decrypt(k1,s1_ciphertext) => s1`]
+
+
+Essentially this flow wraps the sensitive data with a key where the encrypted form will remain in VM memory.  The decryption key for the wrapped key will use the vTPM and could be visible to a compromized hypervisor but that key will not be useful since the actual sensitive data is still in memory in encrypted form (and memory isn't visible on confidential compute)
 ### Logs
 
 The following files details the full end-to-end logs:
