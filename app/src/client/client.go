@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"io"
 
-	pb "tokenservice"
+	pb "github.com/salrashid123/gcp_tokendistributor/tokenservice"
 
 	"sync"
 

@@ -10,7 +10,7 @@ load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 go_library(
     name = "go_default_library",
     srcs = ["oid.go"],
-    importpath = "oid",
+    importpath = "github.com/salrashid123/gcp_tokendistributor/oid",
     visibility = ["//visibility:public"],
     deps = [],
 )

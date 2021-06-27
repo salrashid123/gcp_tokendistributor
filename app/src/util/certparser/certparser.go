@@ -14,7 +14,7 @@ import (
 
 	"regexp"
 
-	"oid"
+	"github.com/salrashid123/gcp_tokendistributor/oid"
 
 	"golang.org/x/crypto/cryptobyte"
 )

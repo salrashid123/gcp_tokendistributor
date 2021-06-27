@@ -25,12 +25,14 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	"tokenservice"
+
+	"github.com/salrashid123/gcp_tokendistributor/tokenservice"
 
 	"github.com/golang/glog"
 
 	"os"
-	pb "tokenservice"
+
+	pb "github.com/salrashid123/gcp_tokendistributor/tokenservice"
 
 	"cloud.google.com/go/firestore"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"

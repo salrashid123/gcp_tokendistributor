@@ -763,6 +763,7 @@ $ go get -u github.com/golang/protobuf/protoc-gen-go
 $ /usr/local/bin/protoc -I ./ --include_imports \
    --experimental_allow_proto3_optional --include_source_info \
    --descriptor_set_out=src/tokenservice/tokenservice.proto.pb \
+   --go_opt=paths=source_relative \
    --go_out=plugins=grpc:. src/tokenservice/tokenservice.proto
 
 
@@ -807,24 +808,47 @@ To build using bazel,  Comment out the relevant require and replace steps in `ap
 
 ```golang
 require (
-	// certparser v0.0.0	
-	// oid v0.0.0
-	// tokenservice v0.0.0
+	// github.com/salrashid123/gcp_tokendistributor/certparser v0.0.0
+	// github.com/salrashid123/gcp_tokendistributor/oid v0.0.0
+	// github.com/salrashid123/gcp_tokendistributor/tokenservice v0.0.0
 )
 
 replace (
-	// certparser => ./src/util/certparser
-	// oid => ./src/util/certparser/oid
-	// tokenservice => ./src/tokenservice
+	// github.com/salrashid123/gcp_tokendistributor/certparser => ./src/util/certparser
+	// github.com/salrashid123/gcp_tokendistributor/oid => ./src/util/certparser/oid
+	// github.com/salrashid123/gcp_tokendistributor/tokenservice => ./src/tokenservice
 )
 ```
 
 then import, compile, build with bazel
 
 ```bash
-bazel run :gazelle -- update-repos -from_file=go.mod -build_file_proto_mode=disable_global
+bazel run :gazelle -- update-repos -from_file=go.mod -prune=true -to_macro=repositories.bzl%go_repositories
 ```
 
+Edit `repositories.bzl`,
+
+replace
+
+```yaml
+    go_repository(
+        name = "org_golang_x_tools",
+        importpath = "golang.org/x/tools",
+        sum = "h1:L69ShwSZEyCsLKoAxDKeMvLDZkumEe8gXUZAjab0tX8=",
+        version = "v0.1.3",
+    )
+```
+
+with
+
+```yaml
+    go_repository(
+        name = "org_golang_x_tools",
+        importpath = "golang.org/x/tools",
+        sum = "h1:kRBLX7v7Af8W7Gdbbc908OJcdgtK8bOz9Uaj8/F1ACA=",
+        version = "v0.1.2",
+    ) 
+```
 
 A) if you want to reuse compiled the protos from the `Building binary Locally` step, 
 
@@ -836,7 +860,7 @@ go_library(
     srcs = [
         "tokenservice.pb.go",
     ],
-    importpath = "tokenservice",
+    importpath = "github.com/salrashid123/gcp_tokendistributor/tokenservice",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_golang_protobuf//proto:go_default_library",
@@ -865,7 +889,7 @@ go_proto_library(
     name = "tokenservice_go_proto",
     compiler = "@io_bazel_rules_go//proto:go_grpc",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "tokenservice",
+    importpath = "github.com/salrashid123/gcp_tokendistributor/tokenservice",
     proto = ":tokenservice_proto",
     visibility = ["//visibility:public"],
 )
@@ -873,17 +897,11 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     embed = [":tokenservice_go_proto"],
-    importpath = "tokenservice",
+    importpath = "github.com/salrashid123/gcp_tokendistributor/tokenservice",
     visibility = ["//visibility:public"],
 )
 ```
 
-NOTE, this mode does notwork yet: the error is related to bazel which i don't know enough of
-
-```
-package conflict error: github.com/golang/protobuf/ptypes/any: multiple copies of package passed to linker:
-Target //src/server:tokenserver failed to build
-```
 
 C) Finally, compile everything
 

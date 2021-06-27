@@ -41,7 +41,7 @@ go_library(
         "@com_github_google_go_tpm//tpm2:go_default_library",
         "@com_github_google_go_tpm_tools//proto:go_default_library",
         "@com_github_google_go_tpm_tools//tpm2tools:go_default_library",  
-        "@org_golang_google_genproto//googleapis/cloud/secretmanager/v1:go_default_library",
+        "@go_googleapis//google/cloud/secretmanager/v1:secretmanager_go_proto",
         "@com_google_cloud_go//secretmanager/apiv1:go_default_library",
         "@com_github_google_tink_go//aead:go_default_library",
         "@com_github_google_tink_go//insecurecleartextkeyset:go_default_library",

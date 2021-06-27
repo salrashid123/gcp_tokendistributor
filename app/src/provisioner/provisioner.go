@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	certparser "certparser"
-	tspb "tokenservice"
+	certparser "github.com/salrashid123/gcp_tokendistributor/certparser"
+	tspb "github.com/salrashid123/gcp_tokendistributor/tokenservice"
 
 	"cloud.google.com/go/firestore"
 

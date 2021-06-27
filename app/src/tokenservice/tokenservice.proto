@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package tokenservice;
 
-option go_package = "src/tokenservice";
+option go_package = "github.com/salrashid123/gcp_tokendistributor/tokenservice";
 
 service TokenService {
   rpc GetToken (TokenRequest) returns (TokenResponse) {}

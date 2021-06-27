@@ -18,13 +18,13 @@ ADD . /app
 
 RUN go mod download
 
-RUN /usr/local/bin/protoc -I ./ --include_imports --experimental_allow_proto3_optional --include_source_info --descriptor_set_out=src/tokenservice/tokenservice.proto.pb  --go_out=plugins=grpc:. src/tokenservice/tokenservice.proto
+RUN /usr/local/bin/protoc -I ./ --include_imports --experimental_allow_proto3_optional --include_source_info --descriptor_set_out=src/tokenservice/tokenservice.proto.pb --go_opt=paths=source_relative --go_out=plugins=grpc:. src/tokenservice/tokenservice.proto
 
 RUN export GOBIN=/app/bin && go install src/client/client.go
 
 
 FROM gcr.io/distroless/base
-COPY --from=build /app/bin /
+COPY --from=build /app/bin/client /
 COPY --from=build /app/certs/tls-ca.crt .
 COPY --from=build /app/certs/tokenclient.crt .
 COPY --from=build /app/certs/tokenclient.key .

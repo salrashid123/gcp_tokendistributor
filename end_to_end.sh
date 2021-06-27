@@ -1,8 +1,7 @@
 #!/bin/bash
 
-export TF_VAR_billing_account=000C16-9779B5-30 
-export TF_VAR_org_id=673208786
-
+export TF_VAR_billing_account=000C16-9779B5-30redacted
+export TF_VAR_org_id=673208786-redacted
 
 terraform init
 terraform apply --target=module.ts_setup -auto-approve
