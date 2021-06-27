@@ -734,6 +734,8 @@ Each clientVM unique vm_id is saved in TokenServer's Firestore database.  Note, 
 
 Both alice and bob must decide upfront if they wish to use mTLS or ALTS (Application Layer Transport Security) for encryption and in the case of ALTS, supplemental authentication.  ALTS only works on GCP at the moment so mTLS is applicable if Alice runs the TokenServer onprem.   The default value is mTLS in this example.
 
+>> NOTE:  if you use ALTS, the hypervisor has visiblity to the network traffic between the TokenServer and TokenClient.  In otherwords, if you use ALTS, the hypervisor is within the trust boundary.  If the hypervisor is not and your applicaiton requires Confidential Compute's memory encryption capabilities, then you should not use ALTS.  For more information, see the section below titled `Indirect secret sealing using vTPM for Confidential Compute` and `EndToEnd Encryption`
+
 the `main.tf` files for both Alice and Bob have the cloud-init configuration for ALTS commented out.  To use alts, redeploy the service on both ends using the commented versions.
 
 - For reference, see [grpc_alts](https://github.com/salrashid123/grpc_alts)
@@ -776,8 +778,6 @@ $ go build src/provisioner/provisioner.go
 
 You can build the TokenClient and Server images using Bazel 
 
-Note, as of `6/23/20`, i coudn't get bazel to generate the `.proto.pb`, `.pb.go` files within bazel (eg, option `B` below..which means you have to generate run protoc manually first.).   Run the `Building Locally` step first
-
 ```bash
 cd app/
 
@@ -797,6 +797,17 @@ REPOSITORY                                  TAG                    IMAGE ID     
 gcr.io/yourproject/tokenclient/src/client   tokenclient            833121004941        50 years ago        20.7MB
 gcr.io/yourproject/tokenserver/src/server   tokenserver            c98ed1bc6e27        50 years ago        30.5MB
 ```
+
+As of `6/27/21`, the image hashes are:
+
+```bash
+cd app/
+gcloud builds submit --config=cloudbuild-ts.yaml --machine-type=n1-highcpu-32
+gcloud builds submit --config=cloudbuild-ts.yaml --machine-type=n1-highcpu-32
+```
+
+* `tokenserver@sha256:edcbf399e03f822ab15edc4d94a10ca02f196dd21197170e7d5fced8415f7c22`
+* `tokenclient@sha256:28724e869c8485f7836040b9a0a57542aefc650e1a7a461cba14b0bd941dd574`
 
 These images will have a consistent image hash no matter where they are built.
 
@@ -1258,7 +1269,7 @@ so if you do not want to enforce SEV, in `provisioner.go`, use the default argum
 	attestationPCRValue = flag.String("attestationPCRValue", "24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f", "expectedPCRValue")
 ```
 
-### Indirect secret sealing using vTPM for Confidential Compute
+#### Indirect secret sealing using vTPM for Confidential Compute
 
 If Bob's VM is a Confidential Compute Instance, then Alice can be assured that sensitive data in-use (memory) cannot be accessed through a compromized hypervisor.  However, vTPM operations still traverse the hypervisor which means is that if Alice seals some sensitive data using Bob's vTPM Endorsement Key, then the act of decrypting the sensitive data on Bob's VM will potentially be visible to a compromized hypervisor.   Essentially, this means you should not _directly_ encrypt sensitive data with vTPMs.
 
@@ -1274,7 +1285,8 @@ However, there is a workaround using transferring wrapped keys:
 8.  Bob uses `k1` to decrypt `s1_ciphertext`:   [`decrypt(k1,s1_ciphertext) => s1`]
 
 
-Essentially this flow wraps the sensitive data with a key where the encrypted form will remain in VM memory.  The decryption key for the wrapped key will use the vTPM and could be visible to a compromized hypervisor but that key will not be useful since the actual sensitive data is still in memory in encrypted form (and memory isn't visible on confidential compute)
+Essentially this flow wraps the sensitive data with a key where the encrypted form will remain in VM memory.  The decryption key for the wrapped key will use the vTPM and could be visible to a compromized hypervisor but that key will not be useful since the actual sensitive data is still in memory in encrypted form (and memory isn't visible on confidential compute).
+
 ### Logs
 
 The following files details the full end-to-end logs:
