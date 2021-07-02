@@ -26,7 +26,18 @@ resource "google_compute_address" "tcip" {
 resource "google_compute_network" "tcnetwork" {
   name = "tcnetwork"
   project = google_project.project.project_id
+  auto_create_subnetworks = false
+  delete_default_routes_on_create = true
   depends_on = [google_project_service.service]  
+}
+
+resource "google_compute_route" "default" {
+  name        = "default-route"
+  dest_range  = "0.0.0.0/0"
+  project     = google_project.project.project_id  
+  network     = google_compute_network.tcnetwork.name
+  next_hop_gateway = "default-internet-gateway"
+  priority    = 1000
 }
 
 resource "google_compute_subnetwork" "tcsubnet" {

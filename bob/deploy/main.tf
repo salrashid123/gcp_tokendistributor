@@ -1,5 +1,3 @@
-# for mTLS
-
 resource "google_compute_instance" "tokenclient" {
   name         = "tokenclient"
   machine_type = "e2-small"
@@ -32,6 +30,9 @@ resource "google_compute_instance" "tokenclient" {
   }
   network_interface {
     network       = var.network
+    subnetwork    = var.tc_subnet
+
+    ## comment this block to use NAT gateway
     access_config {
       nat_ip = var.tc_address
     }

@@ -34,7 +34,7 @@ module "deploy" {
   sni_servername = var.sni_servername  
   tc_address = module.setup.tc_address
   ts_audience = "https://tokenserver"
-
+  tc_subnet = module.setup.tc_subnet
   ts_service_account = var.ts_service_account
   ts_address = var.ts_address
 

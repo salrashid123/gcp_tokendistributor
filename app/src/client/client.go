@@ -289,11 +289,6 @@ func main() {
 		glog.V(2).Infof("Attempting to contact TokenServer [%d]", attempt)
 		if !isProvisioned {
 			go func() {
-				// tok, err := idTokenSource.Token()
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
-				// glog.V(2).Infof("IdToken %s", tok)
 
 				//idTokenSource, err := idtoken.NewTokenSource(ctx, *tsAudience, idtoken.WithCredentialsFile(*serviceAccount))
 				idTokenSource, err := idtoken.NewTokenSource(ctx, *tsAudience)
@@ -301,6 +296,12 @@ func main() {
 					glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
 					return
 				}
+
+				// tok, err := idTokenSource.Token()
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
+				// glog.V(2).Infof("IdToken %s", tok)
 
 				var conn *grpc.ClientConn
 				conn, err = grpc.Dial(*address,
@@ -415,9 +416,29 @@ func main() {
 					}
 
 				}
-				// TODO: either acquire new idtoken since these additional steps may exceed the TokenServers
-				//       default value of jwtIssuedAtJitter=1.   Either refresh the token here or
-				//       set a larger value on the TokenServer for jwtIssuedAtJitter=7
+				// TODO: either acquire new idtoken here  since these additional steps may exceed the TokenServers
+				//       default value of jwtIssuedAtJitter=5.   Either refresh the token here and _somehow_ update the conn or
+				//       set a larger value on the TokenServer for jwtIssuedAtJitter=10 that hopefully the latency.
+				//       One idea is to create a new TokenSource() where the token is set to expire in <5seconds
+				//       that way, a new token will be used automatically by grpc since it'll force a refresh
+				//       The lazy way isto just create a new conn
+
+				// conn.Close()
+				// idTokenSource, err = idtoken.NewTokenSource(ctx, *tsAudience)
+				// if err != nil {
+				// 	glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
+				// 	return
+				// }
+				// conn, err = grpc.Dial(*address,
+				// 	grpc.WithTransportCredentials(ce),
+				// 	grpc.WithPerRPCCredentials(grpcTokenSource{
+				// 		TokenSource: oauth.TokenSource{
+				// 			idTokenSource,
+				// 		},
+				// 	}),
+				// )
+				// defer conn.Close()
+
 				if *doAttestation && *useTPM {
 
 					totalHandles := 0

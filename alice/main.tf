@@ -33,5 +33,6 @@ module "deploy" {
   image_hash = module.build.image_hash
   ts_address = module.setup.ts_address
   ts_service_account = module.setup.ts_service_account
+  ts_subnet = module.setup.ts_subnet
   ts_audience = "https://tokenserver"
 }

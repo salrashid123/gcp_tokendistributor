@@ -30,6 +30,7 @@ module "ts_deploy" {
   collection_id = var.collection_id
   image_hash = module.ts_build.ts_image_hash
   ts_address = module.ts_setup.ts_address
+  ts_subnet = module.ts_setup.ts_subnet
   ts_service_account = module.ts_setup.ts_service_account
   ts_audience = "https://tokenserver"
   ts_pcr_value = var.ts_pcr_value
@@ -65,6 +66,7 @@ module "tc_deploy" {
   image_hash = module.tc_build.tc_image_hash
   sni_servername = var.sni_servername  
   tc_address = module.tc_setup.tc_address
+  tc_subnet = module.tc_setup.tc_subnet
   ts_audience = "https://tokenserver"
   tc_service_account = module.tc_setup.tc_service_account
 

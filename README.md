@@ -1067,7 +1067,7 @@ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id
 
 And then use that to decrypt data.  For example, the following snippet uses an AEAD TINK key to encrypt and decrypt some data
 
-- Tink [encrypt/decrypt](https://gist.github.com/salrashid123/d943846f4512226fa3e5803749c7371f)
+- Tink [encrypt/decrypt](https://github.com/salrashid123/tink_samples)
 
 Also, depending on the security model you are using (i.e, you entrust google with the key but not the tokenclient's owner), you can also emit the AEAD key as a BigQuery decryption key as described here and in the command line equivalent below:
 

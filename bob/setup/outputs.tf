@@ -27,3 +27,7 @@ output "gcr_id" {
 output "network" {
   value = google_compute_network.tcnetwork.id
 }
+
+output "tc_subnet" {
+  value = google_compute_subnetwork.tcsubnet.id
+}

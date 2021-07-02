@@ -49,6 +49,11 @@ go_library(
         "@com_github_lestrrat_go_jwx//jwk:go_default_library",
         "@com_github_dgrijalva_jwt_go//:go_default_library",
         "@com_github_google_go_tpm//tpm2:go_default_library",
+        "@go_googleapis//google/cloud/audit:audit_go_proto",
+        "@org_golang_google_api//iterator:go_default_library",
+        "@org_golang_google_api//option:go_default_library",                
+        "@com_google_cloud_go_logging//:go_default_library",
+        "@com_google_cloud_go_logging//logadmin:go_default_library",        
     ],
 )
 

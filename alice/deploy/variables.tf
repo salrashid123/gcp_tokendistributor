@@ -41,3 +41,7 @@ variable "ts_pcr_value" {
 variable "ts_pcr" {
   type     = string
 }
+
+variable "ts_subnet" {
+  type    = string
+}

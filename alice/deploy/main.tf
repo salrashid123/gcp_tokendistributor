@@ -1,6 +1,4 @@
 
-# For mTLS
-
 resource "google_compute_instance" "tokenserver" {
   name         = "tokenserver"
   machine_type = "e2-small"
@@ -19,6 +17,9 @@ resource "google_compute_instance" "tokenserver" {
   }
   network_interface {
     network       = var.network
+    subnetwork    = var.ts_subnet
+
+    ## comment this block to use NAT gateway
     access_config {
       nat_ip = var.ts_address
     }
@@ -42,7 +43,7 @@ write_files:
     [Service]
     Environment="HOME=/home/cloudservice"
     ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=${var.ts_pcr_value} --pcr=${var.ts_pcr} --validatePeerIP --validatePeerSN --useMTLS --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=5 --v=20 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=${var.ts_pcr_value} --pcr=${var.ts_pcr} --validatePeerIP --validatePeerSN --useMTLS --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=10 --v=20 -alsologtostderr
     ExecStop=/usr/bin/docker stop mycloudservice
     ExecStopPost=/usr/bin/docker rm mycloudservice
 

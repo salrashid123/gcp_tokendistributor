@@ -41,6 +41,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/lestrrat/go-jwx/jwk"
 	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -51,6 +53,10 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+
+	"cloud.google.com/go/logging"
+	"cloud.google.com/go/logging/logadmin"
+	"google.golang.org/genproto/googleapis/cloud/audit"
 )
 
 type gcpIdentityDoc struct {
@@ -380,6 +386,62 @@ func authUnaryInterceptor(
 		if cresp.Fingerprint != c.ImageFingerprint {
 			glog.Errorf("   -------->  Error Image Fingerprint mismatch got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint)
 			return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Error:  ImageFingerpint does not match got [%s]  expected [%s]", cresp.Fingerprint, c.ImageFingerprint))
+		}
+
+		// Now Read logging, note this may take several seconds.  Since thesame id_token is reused from the client for TPM based operations,
+		//  remember to set  --jwtIssuedAtJitter=10 to a high engough value (10s should be ok)
+		// ... this verification is in the _serving path_ from the TokenClient meaning checking logs live will have some latency impact (which isn't a big deal in this context)
+
+		glog.V(20).Infof("===========  Instance AuditLog Start =========== ")
+		loggingClient, err := logadmin.NewClient(ctx, c.ClientProject, option.WithScopes("https://www.googleapis.com/auth/logging.read"))
+		if err != nil {
+			glog.Errorf("   -------->  Error Could not create logging client")
+			return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Error:  Error Could not create logging client"))
+		}
+
+		var entries []*logging.Entry
+		thirtyMinAgo := time.Now().Add(time.Minute * time.Duration(-30))
+		t := thirtyMinAgo.Format(time.RFC3339) // Logging API wants timestamps in RFC 3339 format.
+
+		filter := fmt.Sprintf("resource.type=gce_instance AND (logName=projects/%s/logs/cloudaudit.googleapis.com%%2Factivity OR logName=projects/%s/logs/cloudaudit.googleapis.com%%2Fdata_access) AND protoPayload.\"@type\"=\"type.googleapis.com/google.cloud.audit.AuditLog\" AND resource.labels.instance_id=%s AND %s", c.ClientProject, c.ClientProject, instanceID, fmt.Sprintf(`timestamp > "%s"`, t))
+		iter := loggingClient.Entries(ctx,
+			logadmin.Filter(filter),
+			logadmin.NewestFirst(),
+		)
+
+		for len(entries) < 200 {
+			entry, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				glog.Errorf("   -------->  Error reading logs %v\n", err)
+				return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Error:  Error unmarshalling AuditLog"))
+			}
+			entries = append(entries, entry)
+		}
+
+		for _, entry := range entries {
+			glog.V(20).Infof("LogEntry:")
+			glog.V(20).Infof("    Severity %s\n", entry.Severity)
+			glog.V(20).Infof("    TimeStamp @%s\n", entry.Timestamp.Format(time.RFC3339))
+			glog.V(20).Infof("    LogName [%s]\n", entry.LogName)
+			b, ok := entry.Payload.(*audit.AuditLog)
+			if !ok {
+				glog.Errorf("   -------->  Error unmarshalling AuditLog %v\n", err)
+				return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Error:  Error unmarshalling AuditLog"))
+			}
+
+			glog.V(20).Infof("    Service Name  [%s]\n", b.ServiceName)
+			glog.V(20).Infof("    Method Name [%s]\n", b.MethodName)
+			glog.V(20).Infof("    AuthenticationInfo [%s]\n", b.AuthenticationInfo)
+			glog.V(20).Infof("    CallerIP [%s]\n", b.RequestMetadata.CallerIp)
+			glog.V(20).Infof("    Request %s\n", b.Request)
+			glog.V(20).Info("    ============\n")
+			if b.MethodName == "v1.compute.instances.setMetadata" {
+				glog.Errorf("   -------->  >>>> SetMetadata called on instance, exiting")
+				return nil, grpc.Errorf(codes.PermissionDenied, fmt.Sprintf("Error: >>>> SetMetadata called on instance, exiting"))
+			}
 		}
 
 		newCtx := context.WithValue(ctx, contextKey("idtoken"), doc)

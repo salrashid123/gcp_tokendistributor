@@ -45,3 +45,7 @@ variable "zone" {
 variable "ts_audience" {
   type    = string
 }
+
+variable "tc_subnet" {
+  type    = string
+}
