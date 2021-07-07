@@ -26,6 +26,10 @@ variable "app_source_dir" {
   default = "app/"
 }
 
+variable "vpn_key" {
+  type    = string
+  default = "a971276b78b0315fff47d84a"  ###<<<<<<<<<<<<< change me `openssl rand -hex 12`
+}
 
 # Token Server
 
@@ -71,6 +75,20 @@ variable "ts_pcr" {
   default = "0"
 }
 
+variable "ts_cidr" {
+  type    = string
+  default = "192.168.0.0/16"
+}
+
+variable "ts_internal_ip" {
+  type    = string
+  default = ""  
+}
+
+variable "ts_external_ip" {
+  type    = string
+  default = ""
+}
 
 # Token Client
 
@@ -103,13 +121,39 @@ variable "ts_provisioner" {
   default = "admin@esodemoapp2.com"  
 }
 
+variable "tc_cidr" {
+  type    = string
+  default = "10.0.0.0/16"
+}
+
+variable "tc_internal_ip" {
+  type    = string
+  default = ""
+}
+
+variable "tc_external_ip" {
+  type    = string
+  default = ""
+}
+
+variable "ts_vpnip_address" {
+  type    = string
+  default = ""
+}
+
+variable "tc_vpnip_address" {
+  type    = string
+  default = ""
+}
+
+
 # Following variables are just placeholders
 # Comment this section out if running both alice/bob on the
 # same org locally for CI/CD
 # Start local
 variable "ts_service_account" {
   type    = string
-  default = "tokenserver@ts-random.iam.gserviceaccount.com"
+   default = "tokenserver@ts-random.iam.gserviceaccount.com"
 }
 variable "ts_address" {
   type    = string

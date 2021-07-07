@@ -1,7 +1,9 @@
 
 ## gcloud CLI Sequence
 
-The following sequence uses gcloud CLI for the same steps as terraform
+The following sequence uses gcloud CLI for the same steps as terraform.
+
+>> Note, the following sequence does NOT use a VPN for simplicity
 
 ### TokenServer
 

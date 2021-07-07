@@ -306,11 +306,11 @@ func main() {
 				var conn *grpc.ClientConn
 				conn, err = grpc.Dial(*address,
 					grpc.WithTransportCredentials(ce),
-					grpc.WithPerRPCCredentials(grpcTokenSource{
-						TokenSource: oauth.TokenSource{
-							idTokenSource,
-						},
-					}),
+					// grpc.WithPerRPCCredentials(grpcTokenSource{
+					// 	TokenSource: oauth.TokenSource{
+					// 		idTokenSource,
+					// 	},
+					// }),
 				)
 				if err != nil {
 					glog.Errorf("ERROR:   Could not connect to TokenServer: %v", err)
@@ -342,7 +342,11 @@ func main() {
 					ProcessID: reqID.URN(),
 				}
 
-				r, err := c.GetToken(ctx, tr, grpc.Header(&header), grpc.Trailer(&trailer), grpc.Peer(&p))
+				r, err := c.GetToken(ctx, tr, grpc.Header(&header), grpc.Trailer(&trailer), grpc.Peer(&p), grpc.PerRPCCredentials(grpcTokenSource{
+					TokenSource: oauth.TokenSource{
+						idTokenSource,
+					},
+				}))
 				if err != nil {
 					glog.Errorf("Error:   GetToken() from TokenService: %v", err)
 					return
@@ -416,28 +420,6 @@ func main() {
 					}
 
 				}
-				// TODO: either acquire new idtoken here  since these additional steps may exceed the TokenServers
-				//       default value of jwtIssuedAtJitter=5.   Either refresh the token here and _somehow_ update the conn or
-				//       set a larger value on the TokenServer for jwtIssuedAtJitter=10 that hopefully the latency.
-				//       One idea is to create a new TokenSource() where the token is set to expire in <5seconds
-				//       that way, a new token will be used automatically by grpc since it'll force a refresh
-				//       The lazy way isto just create a new conn
-
-				// conn.Close()
-				// idTokenSource, err = idtoken.NewTokenSource(ctx, *tsAudience)
-				// if err != nil {
-				// 	glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
-				// 	return
-				// }
-				// conn, err = grpc.Dial(*address,
-				// 	grpc.WithTransportCredentials(ce),
-				// 	grpc.WithPerRPCCredentials(grpcTokenSource{
-				// 		TokenSource: oauth.TokenSource{
-				// 			idTokenSource,
-				// 		},
-				// 	}),
-				// )
-				// defer conn.Close()
 
 				if *doAttestation && *useTPM {
 
@@ -627,7 +609,24 @@ func main() {
 
 					v := pb.NewVerifierClient(conn)
 
-					rr, err := v.MakeCredential(ctx, req)
+					// TODO: either acquire new idtoken here  since these additional steps may exceed the TokenServers
+					//       default value of jwtIssuedAtJitter=5.   Either refresh the token here and _somehow_ update the conn or
+					//       set a larger value on the TokenServer for jwtIssuedAtJitter=10 that hopefully the latency.
+					//       One idea is to create a new TokenSource() where the token is set to expire in <5seconds
+					//       that way, a new token will be used automatically by grpc since it'll force a refresh
+					//       The lazy way is to just create a new conn
+
+					idTokenSource, err = idtoken.NewTokenSource(ctx, *tsAudience)
+					if err != nil {
+						glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
+						return
+					}
+
+					rr, err := v.MakeCredential(ctx, req, grpc.PerRPCCredentials(grpcTokenSource{
+						TokenSource: oauth.TokenSource{
+							idTokenSource,
+						},
+					}))
 					if err != nil {
 						glog.Errorf("Error MakeCredential: %v", err)
 						return
@@ -646,13 +645,24 @@ func main() {
 						glog.Errorf("ERROR:  Unable to generate quote: %v", err)
 						return
 					}
+
+					idTokenSource, err = idtoken.NewTokenSource(ctx, *tsAudience)
+					if err != nil {
+						glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
+						return
+					}
+
 					areq := &pb.ActivateCredentialRequest{
 						RequestId:   u,
 						Secret:      secret,
 						Attestation: attestation,
 						Signature:   signature,
 					}
-					ar, err := v.ActivateCredential(ctx, areq)
+					ar, err := v.ActivateCredential(ctx, areq, grpc.PerRPCCredentials(grpcTokenSource{
+						TokenSource: oauth.TokenSource{
+							idTokenSource,
+						},
+					}))
 					if err != nil {
 						glog.Errorf("could not call ActivateCredential: %v", err)
 						return
@@ -664,7 +674,18 @@ func main() {
 					aqr := &pb.OfferQuoteRequest{
 						RequestId: u,
 					}
-					qr, err := v.OfferQuote(ctx, aqr)
+
+					idTokenSource, err = idtoken.NewTokenSource(ctx, *tsAudience)
+					if err != nil {
+						glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
+						return
+					}
+
+					qr, err := v.OfferQuote(ctx, aqr, grpc.PerRPCCredentials(grpcTokenSource{
+						TokenSource: oauth.TokenSource{
+							idTokenSource,
+						},
+					}))
 					if err != nil {
 						glog.Errorf("ERROR Could not call OfferQuote: %v", err)
 						return
@@ -683,7 +704,18 @@ func main() {
 						Attestation: att,
 						Signature:   ssig,
 					}
-					pqesp, err := v.ProvideQuote(ctx, pqr)
+
+					idTokenSource, err = idtoken.NewTokenSource(ctx, *tsAudience)
+					if err != nil {
+						glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
+						return
+					}
+
+					pqesp, err := v.ProvideQuote(ctx, pqr, grpc.PerRPCCredentials(grpcTokenSource{
+						TokenSource: oauth.TokenSource{
+							idTokenSource,
+						},
+					}))
 					if err != nil {
 						glog.Errorf("ERROR Could not provideQuote: %v", err)
 						return
@@ -705,7 +737,17 @@ func main() {
 							Attestation: att,
 							Signature:   attsig,
 						}
-						pskresp, err := v.ProvideSigningKey(ctx, pskreq)
+
+						idTokenSource, err = idtoken.NewTokenSource(ctx, *tsAudience)
+						if err != nil {
+							glog.Errorf("ERROR: Unable to create TokenSource: %v\n", err)
+							return
+						}
+						pskresp, err := v.ProvideSigningKey(ctx, pskreq, grpc.PerRPCCredentials(grpcTokenSource{
+							TokenSource: oauth.TokenSource{
+								idTokenSource,
+							},
+						}))
 						if err != nil {
 							glog.Errorf("ERROR Could not ProvideSigningKey: %v", err)
 							return

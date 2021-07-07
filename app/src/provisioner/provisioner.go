@@ -158,6 +158,7 @@ func main() {
 				}
 			}
 		}
+		log.Printf("Found VM Internal IP %s\n", ni.NetworkIP)
 	}
 
 	if *encryptToTPM != "" {

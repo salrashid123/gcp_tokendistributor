@@ -32,10 +32,10 @@ resource "google_compute_instance" "tokenclient" {
     network       = var.network
     subnetwork    = var.tc_subnet
 
-    ## comment this block to use NAT gateway
-    access_config {
-      nat_ip = var.tc_address
-    }
+    # comment this block to use NAT gateway or VPN
+    # access_config {
+    #   nat_ip = var.tc_address
+    # }
   }
   metadata = {
     google-logging-enabled = true

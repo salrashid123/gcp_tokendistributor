@@ -22,3 +22,6 @@ variable "tls_client_crt" {
 variable "tls_client_key" {
   type    = string
 }
+variable "tc_cidr" {
+  type    = string
+}

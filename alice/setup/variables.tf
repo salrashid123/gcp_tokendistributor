@@ -28,3 +28,6 @@ variable "tls_server_crt" {
 variable "tls_server_key" {
   type    = string
 }
+variable "ts_cidr" {
+  type    = string
+}

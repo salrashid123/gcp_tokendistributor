@@ -9,7 +9,7 @@ resource "google_project" "project" {
   project_id =  var.tc_project_id == "tc-random" ? random_id.id.hex : var.tc_project_id
   billing_account = var.billing_account
   org_id          = var.org_id
-  auto_create_network = true
+  auto_create_network = false
   labels = {}  
 }
 

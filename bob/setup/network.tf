@@ -23,6 +23,12 @@ resource "google_compute_address" "tcip" {
   region = google_compute_subnetwork.tcsubnet.region 
 }
 
+resource "google_compute_address" "vpnip" {
+  name    = "vpnip"
+  project = google_project.project.project_id 
+  region = google_compute_subnetwork.tcsubnet.region 
+}
+
 resource "google_compute_network" "tcnetwork" {
   name = "tcnetwork"
   project = google_project.project.project_id
@@ -44,7 +50,7 @@ resource "google_compute_subnetwork" "tcsubnet" {
   name = "tcsubnet"
   project = google_project.project.project_id
   network = google_compute_network.tcnetwork.id
-  ip_cidr_range = "10.0.0.0/16"
+  ip_cidr_range = var.tc_cidr
   region = var.region
 }
 
@@ -68,4 +74,40 @@ resource "google_compute_router_nat" "nat" {
     name                    = google_compute_subnetwork.tcsubnet.id
     source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
   }
+}
+
+resource "google_compute_vpn_gateway" "target_gateway" {
+  name    = "vpn1"
+  region  = google_compute_subnetwork.tcsubnet.region  
+  project     = google_project.project.project_id    
+  network = google_compute_network.tcnetwork.id
+}
+
+resource "google_compute_forwarding_rule" "fr_esp" {
+  name        = "fr-esp"
+  project     = google_project.project.project_id    
+  region  = google_compute_subnetwork.tcsubnet.region  
+  ip_protocol = "ESP"
+  ip_address  = google_compute_address.vpnip.address
+  target      = google_compute_vpn_gateway.target_gateway.id
+}
+
+resource "google_compute_forwarding_rule" "fr_udp500" {
+  name        = "fr-udp500"
+  project     = google_project.project.project_id    
+  region  = google_compute_subnetwork.tcsubnet.region  
+  ip_protocol = "UDP"
+  port_range  = "500"
+  ip_address  = google_compute_address.vpnip.address
+  target      = google_compute_vpn_gateway.target_gateway.id
+}
+
+resource "google_compute_forwarding_rule" "fr_udp4500" {
+  name        = "fr-udp4500"
+  project     = google_project.project.project_id    
+  region  = google_compute_subnetwork.tcsubnet.region  
+  ip_protocol = "UDP"
+  port_range  = "4500"
+  ip_address  = google_compute_address.vpnip.address
+  target      = google_compute_vpn_gateway.target_gateway.id
 }

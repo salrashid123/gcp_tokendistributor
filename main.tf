@@ -1,5 +1,4 @@
 
-
 module "ts_setup" {
   source = "./alice/setup"
   region = var.region
@@ -8,12 +7,26 @@ module "ts_setup" {
   billing_account = var.billing_account
   org_id = var.org_id
   allowedclientsubnet = var.allowedclientsubnet
+  ts_cidr = var.ts_cidr  
   tls_server_ca = var.tls_server_ca
   tls_server_crt = var.tls_server_crt
   tls_server_key = var.tls_server_key
   gae_location_id = var.gae_location_id
 }
 
+module "ts_vpn" {
+  source = "./alice/vpn"
+  region = var.region
+  ts_project_name = module.ts_setup.ts_project_name
+  ts_project_id = module.ts_setup.ts_project_id  
+  ts_project_number = module.ts_setup.ts_project_number
+  tc_peer_vpn_ip = var.tc_vpnip_address
+  vpn_key = var.vpn_key
+  tc_cidr = var.tc_cidr
+  ts_cidr = var.ts_cidr
+  ts_gateway = module.ts_setup.ts_google_compute_vpn_gateway
+  ts_network = module.ts_setup.ts_network
+}
 
 module "ts_build" {
   source = "./alice/build"
@@ -23,7 +36,7 @@ module "ts_build" {
 
 module "ts_deploy" {
   source = "./alice/deploy"
-  network =  module.ts_setup.network
+  network =  module.ts_setup.ts_network
   zone = var.zone
   project_id = module.ts_setup.ts_project_id
   project_number = module.ts_setup.ts_project_number  
@@ -41,12 +54,27 @@ module "tc_setup" {
   source = "./bob/setup"
   region = var.region
   tc_project_name = var.tc_project_name
-  tc_project_id = var.tc_project_id  
+  tc_project_id = var.tc_project_id
   billing_account = var.billing_account
   org_id = var.org_id
+  tc_cidr = var.tc_cidr
   tls_client_ca = var.tls_client_ca
   tls_client_crt = var.tls_client_crt
   tls_client_key = var.tls_client_key
+}
+
+module "tc_vpn" {
+  source = "./bob/vpn"
+  region = var.region
+  tc_project_name = module.tc_setup.tc_project_name
+  tc_project_id = module.tc_setup.tc_project_id  
+  tc_project_number = module.tc_setup.tc_project_number
+  ts_peer_vpn_ip = var.ts_vpnip_address
+  tc_cidr = var.tc_cidr
+  ts_cidr = var.ts_cidr
+  vpn_key = var.vpn_key
+  tc_gateway = module.tc_setup.tc_google_compute_vpn_gateway
+  tc_network = module.tc_setup.tc_network
 }
 
 module "tc_build" {
@@ -59,7 +87,7 @@ module "tc_build" {
 
 module "tc_deploy" {
   source = "./bob/deploy"
-  network =  module.tc_setup.network
+  network =  module.tc_setup.tc_network
   zone = var.zone
   project_id = module.tc_setup.tc_project_id
   project_number = module.tc_setup.tc_project_number  

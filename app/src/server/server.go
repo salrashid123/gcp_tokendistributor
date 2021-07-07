@@ -337,6 +337,7 @@ func authUnaryInterceptor(
 					//  peerIP:  this is the ip address as viewed by the socket connection
 				}
 			}
+			glog.V(20).Infof("     Found Registered Internal IP Address: %s", ni.NetworkIP)
 		}
 
 		for _, d := range cresp.Disks {
