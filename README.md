@@ -932,7 +932,7 @@ gcr.io/yourproject/tokenclient/src/client   tokenclient            833121004941 
 gcr.io/yourproject/tokenserver/src/server   tokenserver            c98ed1bc6e27        50 years ago        30.5MB
 ```
 
-As of `6/27/21`, the image hashes are:
+As of `7/29/21`, the image hashes are:
 
 ```bash
 cd app/
@@ -940,8 +940,8 @@ gcloud builds submit --config=cloudbuild-ts.yaml --machine-type=n1-highcpu-32
 gcloud builds submit --config=cloudbuild-ts.yaml --machine-type=n1-highcpu-32
 ```
 
-* `tokenserver@sha256:edcbf399e03f822ab15edc4d94a10ca02f196dd21197170e7d5fced8415f7c22`
-* `tokenclient@sha256:28724e869c8485f7836040b9a0a57542aefc650e1a7a461cba14b0bd941dd574`
+* `tokenserver@sha256:64ad74416a6b43a3f7ef4a45d0ef677d7c7a84a7db2743cd0c3dc0f05e9344c8`
+* `tokenclient@sha256:0228eb3e54c90fa110b6bdceb4064fe07647ada0b3303067638bedb58ff8dbd8`
 
 These images will have a consistent image hash no matter where they are built.
 
@@ -1082,7 +1082,7 @@ In the default certificate in this repo, the SerialNumber is just `5`.  If you w
 
 ```
 openssl x509 -in bob/certs/tokenclient.crt -noout -text
-ertificate:
+Certificate:
     Data:
         Version: 3 (0x2)
         Serial Number: 5 (0x5)

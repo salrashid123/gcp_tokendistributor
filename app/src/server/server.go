@@ -36,7 +36,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt"
 	"github.com/google/go-tpm/tpm2"
 	"github.com/google/uuid"
 	"github.com/lestrrat/go-jwx/jwk"
@@ -195,9 +195,6 @@ func verifyGoogleIDToken(ctx context.Context, aud string, rawToken string) (gcpI
 		glog.Errorf("     OIDC doc has Audience [%s]   Issuer [%s] and SubjectEmail [%s]", claims.Audience, claims.StandardClaims.Issuer, claims.Email)
 		return *claims, nil
 	}
-	// TODO: optionally use  claims.StandardClaims, issuedAt.  If issuedAt +  2seconds is passed,
-	//       return an error even if expiresAt is valid.
-	//       https://github.com/dgrijalva/jwt-go/blob/master/claims.go#L18
 	return gcpIdentityDoc{}, errors.New("Error parsing JWT Claims")
 }
 
