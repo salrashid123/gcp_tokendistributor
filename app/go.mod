@@ -4,10 +4,9 @@ go 1.14
 
 require (
 	cloud.google.com/go v0.81.0
-	cloud.google.com/go/firestore v1.5.0 // indirect
-	cloud.google.com/go/logging v1.4.2 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
+	cloud.google.com/go/firestore v1.5.0
+	cloud.google.com/go/logging v1.4.2
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-tpm v0.3.1
@@ -20,7 +19,6 @@ require (
 	github.com/salrashid123/gcp_tokendistributor/certparser v0.0.0
 	github.com/salrashid123/gcp_tokendistributor/oid v0.0.0
 	github.com/salrashid123/gcp_tokendistributor/tokenservice v0.0.0
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
 	google.golang.org/api v0.46.0
 	google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84
