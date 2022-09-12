@@ -547,7 +547,7 @@ Then provision
 
 ```bash
 go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
-    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=5 \
+    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=39 \
     --clientVMId $TF_VAR_tc_instance_id  --secretsFile=secrets.json
 ```
 
@@ -579,7 +579,7 @@ $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_
     --useTPM --attestationPCR=0 --attestationPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f
 
 $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
-    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=5 \
+    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=39 \
     --clientVMId $TF_VAR_tc_instance_id  --secretsFile=secrets.json
 2021/06/22 08:05:00 tc-4f4f5a70  us-central1-a  8939838129032687278
 2021/06/22 08:05:00 Found  VM instanceID "8939838129032687278"
@@ -681,7 +681,7 @@ then during provisioning, the disk image and startup sequence is clearly shown (
 
 ```log
 $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
-    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=5 \
+    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=39 \
     --clientVMId $TF_VAR_tc_instance_id  --secretsFile=secrets.json
 2021/06/22 08:44:59 tc-4f4f5a70  us-central1-a  5701091505452377594
 2021/06/22 08:44:59 Found  VM instanceID "5701091505452377594"
@@ -753,7 +753,7 @@ runcmd:
 The cos-init script is saved into instance metadata and should not be editable.  If Bob edits the cos metadata before provisioning, the audit log would show that during provisioning:
 
 ```log
-$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=5     --clientVMId $TF_VAR_tc_instance_id  --secretsFile=secrets.json
+$ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=39     --clientVMId $TF_VAR_tc_instance_id  --secretsFile=secrets.json
 
 2021/06/22 08:51:58 tc-4f4f5a70  us-central1-a  6332740435730784933
 2021/06/22 08:51:58 Found  VM instanceID "6332740435730784933"
@@ -1099,7 +1099,7 @@ To use this check, add in the `--validatePeerIP --validatePeerSN` flag to the st
 
 Then during Provisioning, you must submit the argument for the `peerSerialNumber` at least and an override value (optional)
 ```bash
---peerAddress $TF_VAR_tc_address --peerSerialNumber=5
+--peerAddress $TF_VAR_tc_address --peerSerialNumber=39
 ```
 
 The net effect is the firestore `ServiceEntry` now has an entry for these values
@@ -1113,7 +1113,7 @@ TokenServer `alice/deploy/main.tf`
 
 
 ```bash
-    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --useMTLS --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f --pcr=0 --validatePeerIP --peerSerialNumber=5 --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=1 --v=20 -alsologtostderr
+    ExecStart=/usr/bin/docker run --rm -u 0 --device=/dev/tpm0:/dev/tpm0 -p 50051:50051 --name=mycloudservice gcr.io/${var.project_id}/tokenserver@${var.image_hash} --grpcport 0.0.0.0:50051 --useMTLS --tsAudience ${var.ts_audience} --useTPM --expectedPCRValue=24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f --pcr=0 --validatePeerIP --peerSerialNumber=39 --useSecrets --tlsCert projects/${var.project_number}/secrets/tls_crt --tlsKey projects/${var.project_number}/secrets/tls_key --tlsCertChain projects/${var.project_number}/secrets/tls-ca  --firestoreProjectId ${var.project_id} --firestoreCollectionName ${var.collection_id} --jwtIssuedAtJitter=1 --v=20 -alsologtostderr
 ```
 
 And during provisioning, specify the address for the TokenClient and the certificate serial number:
@@ -1122,7 +1122,7 @@ And during provisioning, specify the address for the TokenClient and the certifi
 $ go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id  \
   --firestoreCollectionName foo     --clientProjectId $TF_VAR_tc_project_id \
   --clientVMZone us-central1-a --clientVMId $TF_VAR_tc_instance_id \
-  --peerAddress $TF_VAR_tc_address --peerSerialNumber=5  --secretsFile=secrets.json
+  --peerAddress $TF_VAR_tc_address --peerSerialNumber=39  --secretsFile=secrets.json
 ```
 
 
@@ -1389,7 +1389,7 @@ On the provisioning step, specify the PCR0 value to bind to
 
 ```bash
 go run src/provisioner/provisioner.go --fireStoreProjectId $TF_VAR_ts_project_id --firestoreCollectionName foo \
-    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=5 \
+    --clientProjectId $TF_VAR_tc_project_id --clientVMZone us-central1-a --peerAddress=$TF_VAR_tc_address --peerSerialNumber=39 \
     --clientVMId $TF_VAR_tc_instance_id  --secretsFile=secrets.json \
     -attestationPCR=0 \
     -attestationPCRValue=0f35c214608d93c7a6e68ae7359b4a8be5a0e99eea9107ece427c4dea4e439cf \
