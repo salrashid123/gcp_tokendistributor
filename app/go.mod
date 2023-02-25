@@ -17,9 +17,8 @@ require (
 	github.com/lestrrat/go-pdebug v0.0.0-20180220043741-569c97477ae8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/salrashid123/gcp_tokendistributor/certparser v0.0.0
-	github.com/salrashid123/gcp_tokendistributor/oid v0.0.0
 	github.com/salrashid123/gcp_tokendistributor/tokenservice v0.0.0
-	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
+	golang.org/x/net v0.7.0
 	google.golang.org/api v0.46.0
 	google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84
 	google.golang.org/grpc v1.38.0
